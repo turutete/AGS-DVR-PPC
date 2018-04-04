@@ -1,0 +1,873 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2011-11-22 16:36+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "-"
+msgstr ""
+
+msgid "00:00"
+msgstr ""
+
+msgid "Borrar histórico de eventos"
+msgstr "Delete Event Log"
+
+msgid "Borrar histórico de huecos"
+msgstr "Delete Gap Log"
+
+msgid "Cancelar"
+msgstr "Cancel"
+
+msgid "Confirmación"
+msgstr "Confirmation"
+
+msgid ""
+"Español\n"
+"Inglés\n"
+msgstr ""
+"Spanish\n"
+"English\n"
+
+msgid "Estado"
+msgstr "Status"
+
+msgid "Eventos"
+msgstr "Events"
+
+msgid "Fábrica"
+msgstr "Factory"
+
+msgid "Guardar"
+msgstr "Save"
+
+msgid "Histórico"
+msgstr "Event Log"
+
+msgid "Histórico de EVENTOS"
+msgstr "Event Log"
+
+msgid "Histórico de HUECOS"
+msgstr "Gap Log"
+
+msgid "Idioma"
+msgstr "Language"
+
+msgid "LOGIN"
+msgstr ""
+
+msgid "La acción solicitada requiere confirmación."
+msgstr "The requested action requires confirmation"
+
+msgid "Marcha"
+msgstr "Start"
+
+msgid "Paro"
+msgstr "Stop"
+
+msgid "Parámetros"
+msgstr "Parameters"
+
+msgid "Password:"
+msgstr ""
+
+msgid "Registro Huecos"
+msgstr "Gap Log"
+
+msgid "Reiniciar"
+msgstr "Reboot"
+
+msgid "Reset"
+msgstr ""
+
+msgid "Salir"
+msgstr "Exit"
+
+msgid "Selecciona Idioma"
+msgstr "Select Language"
+
+msgid "label14"
+msgstr ""
+
+msgid "window1"
+msgstr ""
+
+msgid "DVR"
+msgstr ""
+
+msgid "Sistema"
+msgstr "System"
+
+msgid "Nombre del equipo"
+msgstr "Name"
+
+msgid "Descripción del equipo"
+msgstr "Description"
+
+msgid "Localización"
+msgstr "Location"
+
+msgid "Contacto"
+msgstr "Contact"
+
+msgid "Código del equipo"
+msgstr "Code"
+
+msgid "Configuración"
+msgstr "Configuration"
+
+msgid "Medidas"
+msgstr "Measures"
+
+msgid "Tensión de red fase R"
+msgstr "Phase R AC Voltage"
+
+msgid "Tensión de red fase S"
+msgstr "Phase S AC Voltage"
+
+msgid "Tensión de red fase T"
+msgstr "Phase T AC Voltage"
+
+msgid "Tensión de Bus"
+msgstr "Bus Voltage"
+
+msgid "Tensión de secundario fase R"
+msgstr "Phase R secondary Voltage"
+
+msgid "Tensión de secundario fase S"
+msgstr "Phase S secondary Voltage"
+
+msgid "Tensión de secundario fase T"
+msgstr "Phase T secondary Voltage"
+
+msgid "Corriente de secundario fase R"
+msgstr "Phase R secondary Current"
+
+msgid "Corriente de secundario fase S"
+msgstr "Phase S secondary Current"
+
+msgid "Corriente de secundario fase T"
+msgstr "Phase T secondary Current"
+
+msgid "Potencia de salida fase R"
+msgstr "Phase R output Power"
+
+msgid "Potencia de salida fase S"
+msgstr "Phase S output Power"
+
+msgid "Potencia de salida fase T"
+msgstr "Phase T output Power"
+
+msgid "Estado de Control"
+msgstr "Control Status"
+
+msgid "Parado"
+msgstr "Stopped"
+
+msgid "Error Vinst"
+msgstr "Vinst Error"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "Saturado"
+msgstr "Saturated"
+
+msgid "Pwm Ond On"
+msgstr "Inv. PWM On"
+
+msgid "Bypass On"
+msgstr ""
+
+msgid "Pwm Rec On"
+msgstr "Rec. PWM On"
+
+msgid "Deteccion enable"
+msgstr "Detection enable"
+
+msgid "Alarma VBus Max"
+msgstr "VBus Max Alarm"
+
+msgid "Alarma VCond Max"
+msgstr "VCond Max Alarm"
+
+msgid "Alarma VBus Min"
+msgstr "VBus Min Alarm"
+
+msgid "Alarma VRed"
+msgstr "VRed Alarm"
+
+msgid "Hueco máximo"
+msgstr "Maximun Gap"
+
+msgid "Error PLL"
+msgstr "PLL Error"
+
+msgid "Alarma Driver"
+msgstr "Driver Alarm"
+
+msgid "Parado Error"
+msgstr "Stop Error"
+
+msgid "Error Driver"
+msgstr "Driver Error"
+
+msgid "Error Termo"
+msgstr "Termo Error"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "Limitando"
+msgstr "Limiting"
+
+msgid "Error Fusible"
+msgstr "Fuse Error"
+
+msgid "Registro Hueco"
+msgstr "Gap Register"
+
+msgid "Alarma PLL"
+msgstr "PLL Alarm"
+
+msgid "Reset Driver"
+msgstr "Driver Reset"
+
+msgid "Error de comunicación DSP"
+msgstr "DSP Communication Failure"
+
+msgid "Tensión de Red Nominal"
+msgstr "Nominal AC Voltage"
+
+msgid "Parametros"
+msgstr "Parameters"
+
+msgid "Fecha"
+msgstr "Date"
+
+msgid "Dirección IP"
+msgstr "IP Address"
+
+msgid "Mascara de red"
+msgstr "Network Mask"
+
+msgid "Gateway"
+msgstr ""
+
+msgid "PIN del modem"
+msgstr "Modem PIN"
+
+msgid "Passwords"
+msgstr ""
+
+msgid "Equipo"
+msgstr "System"
+
+msgid "Tensión de red nominal"
+msgstr "Nominal AC Voltage"
+
+msgid "Tensión mínima DVR"
+msgstr "DVR Minimum Voltage"
+
+msgid "Equipos en paralelo"
+msgstr "Number of parallel units"
+
+msgid "Factor de conversión para tensiones"
+msgstr "Voltage Conversion Factor"
+
+msgid "Niveles Eventos"
+msgstr "Event Levels"
+
+msgid "Nombre"
+msgstr "Name"
+
+msgid "Valor"
+msgstr "Value"
+
+msgid "Código"
+msgstr "Code"
+
+msgid "Evento"
+msgstr "Event"
+
+msgid "Est."
+msgstr "Stat."
+
+msgid "Nivel"
+msgstr "Level"
+
+msgid "Elementos"
+msgstr "Elements"
+
+msgid "Reconocer"
+msgstr "Recognised"
+
+msgid "Rec."
+msgstr "Ack."
+
+msgid "Res."
+msgstr ""
+
+msgid "Elemento"
+msgstr "Element"
+
+msgid "Mínimo (%)"
+msgstr "Minimun /%)"
+
+msgid "Integral"
+msgstr ""
+
+msgid "Duracion (mseg)"
+msgstr "Duration (mseg)"
+
+msgid "Fase"
+msgstr "Phase"
+
+msgid "Introduce password"
+msgstr "Enter password"
+
+msgid "Comprobando password..."
+msgstr "Checking password..."
+
+msgid "Comprobando acceso nivel"
+msgstr "Checking Level Access"
+
+msgid "Error, introduce de nuevo el password"
+msgstr "Error, enter password again"
+
+msgid "Inicio sistema"
+msgstr "System Start"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "ErrorVInst"
+msgstr "Vinst Error"
+
+msgid "Evento ErrorVInst"
+msgstr "Vinst Error Event"
+
+msgid "Evento Saturado"
+msgstr "Saturated Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "VBusMax"
+msgstr ""
+
+msgid "Evento VBusMax"
+msgstr "VBusMax Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "VCondMax"
+msgstr ""
+
+msgid "Evento VCondMax"
+msgstr "VCondMax Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "VBusMin"
+msgstr ""
+
+msgid "Evento VBusMin"
+msgstr "VBusMin Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "VRed"
+msgstr ""
+
+msgid "Evento VRed"
+msgstr "VRed Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "LimitIntVSal"
+msgstr ""
+
+msgid "Evento LimitIntVSal"
+msgstr "LimitIntVSal Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "AlarmaDriver"
+msgstr "Driver Alarm"
+
+msgid "Evento AlarmaDriver"
+msgstr "Diver Alarm Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "ParadoError"
+msgstr "Stop Error"
+
+msgid "Evento ParadoError"
+msgstr "Stop Error Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "ErrorDriver"
+msgstr "Driver Error"
+
+msgid "Evento ErrorDriver"
+msgstr "Driver Error Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "ErrorTermo"
+msgstr "Termo Error"
+
+msgid "Evento ErrorTermo"
+msgstr "Termo Error Event"
+
+msgid "Evento Limitando"
+msgstr "Limiting Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "ErrorFusible"
+msgstr "Fuse Error"
+
+msgid "Evento ErrorFusible"
+msgstr "Fuse Error Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "AlarmaPLL"
+msgstr "PLL Alarm"
+
+msgid "Evento AlarmaPLL"
+msgstr "PLL Alarm Event"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "Fallo Com.DSP"
+msgstr "DSP Comm. Error"
+
+msgid "Error de comunicación con DSP"
+msgstr "DSP Communication Failure"
+
+#. Maximo 16 caracteres! Solo ASCII [Texto en LCD alphanumerico]
+msgid "CambioEstado"
+msgstr "Status Change"
+
+msgid "Cambio de estado"
+msgstr "Change of Status"
+
+#. Ocupar 11 caracteres! [usar espacios]
+msgid "   LEVE    "
+msgstr "  MINOR    "
+
+#. Ocupar 11 caracteres! [usar espacios]
+msgid "PERSISTENTE"
+msgstr "PERSISTENT "
+
+#. Ocupar 11 caracteres! [usar espacios]
+msgid "   GRAVE   "
+msgstr "  SERIOUS  "
+
+#. Ocupar 11 caracteres! [usar espacios]
+msgid "   SEVERA  "
+msgstr "  SEVERE   "
+
+msgid "?"
+msgstr ""
+
+msgid "LEVE"
+msgstr "MINOR"
+
+msgid "GRAVE"
+msgstr "SERIOUS"
+
+msgid "SEVERA"
+msgstr "SEVERE"
+
+msgid "Off"
+msgstr ""
+
+msgid "Espera Carga"
+msgstr "Load Waiting"
+
+msgid "Espera On"
+msgstr "On Waiting"
+
+msgid "On"
+msgstr ""
+
+msgid "On Saturado"
+msgstr "Saturated On"
+
+msgid "On Error Vinst"
+msgstr "Vinst. Error On"
+
+msgid "On Error Red"
+msgstr "Mains Error On"
+
+msgid "On VBus Min"
+msgstr "Min. VBus On"
+
+msgid "On Hueco Max"
+msgstr "Max. Gap On"
+
+msgid "On Alarma Driver"
+msgstr "Driver Alarm On"
+
+msgid "Espera Off"
+msgstr "Off Waiting"
+
+msgid "Error Carga"
+msgstr "Load Error"
+
+msgid "Error VCond"
+msgstr "VCond Error"
+
+msgid "Error VBus Max"
+msgstr "Max. VBus Error"
+
+msgid "Error Temperatura"
+msgstr "Temperature Error"
+
+msgid "Cerrado"
+msgstr "Closed"
+
+msgid "Abierto"
+msgstr "Opened"
+
+msgid "Si"
+msgstr "YES"
+
+msgid "No"
+msgstr "NO"
+
+msgid "Activo"
+msgstr "Active"
+
+msgid "Inactivo"
+msgstr "Inactive"
+
+msgid "Desactivado"
+msgstr "OFF"
+
+msgid "Activado"
+msgstr "ON"
+
+msgid "Temporal"
+msgstr "Temporary"
+
+msgid "Trabajo"
+msgstr "Active"
+
+msgid "Nivel de acceso"
+msgstr "Access Level"
+
+msgid "Borrando histórico..."
+msgstr "Deleting Event Log..."
+
+msgid "Histórico borrado."
+msgstr "Event Log deleted"
+
+msgid "Error, no se pudo borrar histórico."
+msgstr "Error, Event Log not deleted."
+
+msgid "Reseteando alarma..."
+msgstr "Reseting alarm..."
+
+msgid "Alarma reseteada."
+msgstr "Alarm Reset done."
+
+msgid "Error, no se pudo resetear alarma."
+msgstr "Alarm Reset error."
+
+msgid "Español"
+msgstr "Spanish"
+
+msgid "Inglés"
+msgstr "English"
+
+msgid "On Error Vins"
+msgstr "Vins. Error On"
+
+msgid "OnAlarmDriver"
+msgstr "Driver Alarm On"
+
+msgid "Error VBusMax"
+msgstr "Max. VBus Error"
+
+msgid "Aceptar"
+msgstr "Accept"
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"PROCESANDO...\n"
+"ESPERE          "
+msgstr ""
+"PROCESSING...\n"
+"PLEASE WAIT     "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"ESTADO CONTROL\n"
+"   %s           "
+msgstr ""
+"CONTROL STATUS\n"
+"   %s           "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"EVENTOS        >\n"
+"%8s eventos     "
+msgstr ""
+"EVENTS         >\n"
+"%8s events      "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"%s\n"
+"%02d %02d/%02d %s"
+msgstr ""
+
+#. Ocupar 7 caracteres! [usar espacios]
+msgid "Reset? "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"MEDIDAS        >\n"
+"                "
+msgstr ""
+"MEASURES       >\n"
+"                "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"ENTRADA        >\n"
+"                "
+msgstr ""
+"INPUT          >\n"
+"                "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Tension Entrada\n"
+"%3s %3s %3s  (V)"
+msgstr ""
+"Input Voltage\n"
+"%3s %3s %3s  (V)"
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"RECTIFICADOR   >\n"
+"                "
+msgstr ""
+"RECTIFIER      >\n"
+"                "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Tension Bus\n"
+"%10s V          "
+msgstr ""
+"Bus Voltage\n"
+"%10s V          "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Bypass\n"
+"   %s           "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"SALIDA         >\n"
+"                "
+msgstr ""
+"OUTPUT         >\n"
+"                "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Tension Salida\n"
+"%3s %3s %3s  (V)"
+msgstr ""
+"Output Voltage\n"
+"%3s %3s %3s  (V)"
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Corriente Salida\n"
+"%3s %3s %3s  (A)"
+msgstr ""
+"Output Current\n"
+"%3s %3s %3s  (A)"
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Potencia Salida\n"
+"%3s %3s %3s (kW)"
+msgstr ""
+"Output Power\n"
+"%3s %3s %3s (kW)"
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"CONFIGURACION  >\n"
+"                "
+msgstr ""
+"CONFIGURATION  >\n"
+"                "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Tension Nominal\n"
+"%10s V          "
+msgstr ""
+"Nominal Voltage\n"
+"%10s V          "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"V minima DVR\n"
+"%10s V          "
+msgstr ""
+"Min. DVR Voltage\n"
+"%10s V          "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Num. equipos\n"
+"%10s            "
+msgstr ""
+"Unit Number\n"
+"%10s            "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Fecha           \n"
+"%s              "
+msgstr ""
+"Date            \n"
+"%s  "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Direccion IP\n"
+"%03d.%03d.%03d.%03d "
+msgstr ""
+"IP Address\n"
+"%03d.%03d.%03d.%03d "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Mascara de red\n"
+"%03d.%03d.%03d.%03d "
+msgstr ""
+"Network Mask\n"
+"%03d.%03d.%03d.%03d "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Gateway\n"
+"%03d.%03d.%03d.%03d "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Idioma\n"
+"   %s           "
+msgstr ""
+"Language\n"
+"   %s           "
+
+#. Maximo 16 caracteres! Solo ASCII [LCD]
+msgid "Castellano"
+msgstr "Spanish"
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "Ingles"
+msgstr "English"
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "Frances"
+msgstr "French"
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "Italiano"
+msgstr "Italian"
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "Aleman"
+msgstr "German"
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"VERSION %s\n"
+"VERSION %s      "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"ACTUACIONES    >\n"
+"                "
+msgstr ""
+"SETTINGS       >\n"
+"                "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"MARCHA\n"
+"   %s           "
+msgstr ""
+"START\n"
+"   %s           "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"PARO\n"
+"   %s           "
+msgstr ""
+"STOP\n"
+"   %s           "
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"RESET\n"
+"   %s           "
+msgstr ""
+
+msgid "Password de usuario basico"
+msgstr "Basic User Password"
+
+msgid "Password de usuario avanzado"
+msgstr "Advanced User Password"
+
+msgid "Password de zms"
+msgstr "Maintenance Password"
+
+msgid "Password de administrador"
+msgstr "Zigor Password"
+
+msgid "Estableciendo valor..."
+msgstr "Setting value..."
+
+msgid "Valor establecido."
+msgstr "Value set."
+
+msgid "Error, no se pudo establecer valor."
+msgstr "Error, could not set value."

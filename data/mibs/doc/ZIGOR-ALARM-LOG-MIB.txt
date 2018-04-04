@@ -1,0 +1,174 @@
+ZIGOR-ALARM-LOG-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	MODULE-IDENTITY,
+	OBJECT-TYPE,
+	NOTIFICATION-TYPE,
+	Integer32
+		FROM SNMPv2-SMI
+	TEXTUAL-CONVENTION,
+	AutonomousType
+		FROM SNMPv2-TC
+	PositiveInteger,
+	ElementList,
+	ZDateAndTime
+		FROM ZIGOR-TC
+	AlarmCondition
+		FROM ZIGOR-ALARM-MIB
+	zigorMgmt,
+	zigorExperiment
+		FROM ZIGOR-SMI;
+
+zigorAlarmLogMIB     MODULE-IDENTITY
+	LAST-UPDATED	"201003071130Z"
+	ORGANIZATION	"Corporazion Zigor, S.A."
+	CONTACT-INFO
+		"	Corporacion Zigor, S.A.
+			Depto. I+D
+
+		Postal:	C/ Portal de Gamarra, 28
+			C.P 01013 Vitoria-Gasteiz , Alava
+			(Spain)
+
+		Tel:	+34 (945) 214 600
+
+		E-mail:	zigor@zigor.com"
+	DESCRIPTION
+		"Alarm Log MIB"
+	::= { zigorExperiment 8 }
+
+zigorAlarmLog OBJECT IDENTIFIER ::= { zigorAlarmLogMIB 1 }
+
+zigorAlarmLogTotalEntries OBJECT-TYPE
+	SYNTAX     Integer32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The total number of alarm entries currently in the log."
+	::= { zigorAlarmLog 1 }
+
+zigorAlarmLogMaxEntries OBJECT-TYPE
+	SYNTAX     Integer32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"This object represents the maximum number of 
+		alarm entries in the zigorAlarmLogTable. When the 
+		object zigorAlarmLogTotalEntries equals this object,
+		the next alarm appearing causes the oldest entry 
+		to be deleted.
+		If the value of this object is increased, then oldest 
+		entry removal ceases until the maximum is reached 
+		again. If management reduces the value of this 
+		object, then, starting with the oldest, alarm
+		entries are removed until the new number of 
+		entries is reached."
+	::= { zigorAlarmLog 2 }
+
+zigorAlarmLogQueueWraps OBJECT-TYPE
+	SYNTAX     Integer32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"This object represents the number of times the queue has wrapped.
+		Since circular queues are used for storing the entries, when all allocated
+		entries are used, the oldest entries are reused, thus
+		creating a wrap condition.  A value of zero indicates the
+		queue has not wrapped, except in the case that the counter
+		itself has wrapped."
+	::= { zigorAlarmLog 3 }
+
+zigorAlarmLogIndex OBJECT-TYPE
+	SYNTAX     PositiveInteger
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The current index in the circular buffer where alarms are 
+		being logged."
+	::= { zigorAlarmLog 4 }
+
+zigorAlarmLogTable OBJECT-TYPE
+	SYNTAX     SEQUENCE OF ZigorAlarmLogEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+               "Alarm log table. The number of rows in the table at 
+	       any given time is reflected by the value of zigorAlarmLogPresent."
+	::= { zigorAlarmLog 5 }
+
+zigorAlarmLogEntry OBJECT-TYPE
+	SYNTAX     ZigorAlarmLogEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"An entry containing information applicable to a
+               particular alarm log."
+	INDEX { zigorAlarmLogId }
+	::= { zigorAlarmLogTable 1 }
+
+ZigorAlarmLogEntry ::= SEQUENCE {
+	zigorAlarmLogId			PositiveInteger,
+	zigorAlarmLogDescr		AutonomousType,
+	zigorAlarmLogTime		ZDateAndTime,
+	zigorAlarmLogElementList	ElementList,
+	zigorAlarmLogCondition		AlarmCondition
+}
+
+zigorAlarmLogId OBJECT-TYPE
+	SYNTAX		PositiveInteger
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION
+		"A unique identifier for an alarm condition.  This
+		value must remain constant."
+	::= { zigorAlarmLogEntry 1 }
+
+zigorAlarmLogDescr OBJECT-TYPE
+	SYNTAX		AutonomousType
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"A reference to an alarm description object.  The
+		object referenced should not be accessible, but rather
+		be used to provide a unique description of the alarm
+		condition."
+	::= { zigorAlarmLogEntry 2 }
+
+zigorAlarmLogTime OBJECT-TYPE
+	SYNTAX		ZDateAndTime
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Date and time when the alarm condition was detected."
+	::= { zigorAlarmLogEntry 3 }
+
+zigorAlarmLogElementList OBJECT-TYPE
+	SYNTAX		ElementList
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Items where the alarm is active."
+	::= { zigorAlarmLogEntry 4 }
+
+zigorAlarmLogCondition OBJECT-TYPE
+	SYNTAX		AlarmCondition
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Indicates alarm condition."
+	::= { zigorAlarmLogEntry 5 }
+
+--
+-- Traps
+--
+zigorAlarmLogTraps OBJECT IDENTIFIER ::= { zigorAlarmLogMIB 2 }
+
+zigorTrapAlarmLogEntryAdded NOTIFICATION-TYPE
+        OBJECTS { zigorAlarmLogId, zigorAlarmLogDescr, zigorAlarmLogElementList, zigorAlarmLogCondition }
+	STATUS  current
+	DESCRIPTION
+	        "This trap is sent each time an alarm is inserted into
+		the alarm log table."
+	::= { zigorAlarmLogTraps 1 }
+
+END

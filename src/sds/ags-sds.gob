@@ -1,0 +1,44 @@
+requires 2.0.0
+
+%h{
+#include <stdlib.h>
+#include <ags-cf.h>
+#include "accessif.h"
+%}
+
+%{
+  /** \addtogroup sdsmods Módulos SDS
+   */
+  /*@{*/
+
+  /** \defgroup sds
+   */
+  /*@{*/
+%}
+
+class Ags:Sds from G:Object (interface :AccessIf) {
+
+public GObject *
+  new (char *sds_name, AgsCf *cf, CfTable *cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  return G_OBJECT (ret);
+}
+ 
+ interface :AccessIf private GValue *get(AccessIf *self (check null type), char *k)
+   {
+     printf("en sds::get");
+     return NULL;
+   }
+ interface :AccessIf private int set(AccessIf *self (check null type), char *k, GValue *v)
+   {
+     printf("en sds::set");
+   }
+ 
+}
+
+%{
+  
+  /*@}*/
+  /*@}*/
+
+%}

@@ -1,0 +1,10 @@
+Import('*')
+
+for k, v in this['modules'].iteritems():
+    if v.has_key('gobs_fn'):
+        for gob in v['gobs_fn']:
+            env.Gob(gob)
+
+    if v.has_key('lhs_fn'):
+        for lh in v['lhs_fn']:
+            env.Lh(lh)

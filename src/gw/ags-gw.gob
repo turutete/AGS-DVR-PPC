@@ -1,0 +1,19 @@
+requires 2.0.0
+
+%h{
+#include <glib-2.0/glib.h>
+#include <glib-2.0/glib-object.h>
+#include <ags-cf.h>
+%}
+
+%{
+%}
+
+class Ags:Gw from G:Object {
+  
+public GObject *new (char *gw_name, AgsCf *cf, CfTable *cft) {
+  GObject *ret = G_OBJECT(GET_NEW); 
+  return G_OBJECT (ret);
+}
+  
+}

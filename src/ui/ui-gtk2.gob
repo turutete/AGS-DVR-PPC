@@ -1,0 +1,245 @@
+%{
+/**
+   \page uigtk2 UiGtk2
+   \section uigtk2_desc DESCRIPCIÓN
+   Módulo principal GTK2. Crea una ventana GTK2 vacía.
+   \section uigtk2_reqs REQUISITOS
+     \subsection uigtk2_deps Dependencias
+     NINGUNA
+     \subsection uigtk2_pres Precarga
+     NINGUNA
+     \subsection uigtk2_evs  Eventos
+     NINGUNO*
+     \subsection uigtk2_cfs Configuración
+        -# hide_cursor
+	   - Tipo: G_TYPE_BOOLEAN
+	   - Opcional (false por defecto)
+	   - Descripción: Si verdadero, se oculta el cursor del ratón en la ventana.
+	-# timeout
+	   - Tipo: G_TYPE_INT
+	   - Opcional
+	   - Descripción: "timeout" de inactividad, si 0, no se controla inactividad
+	-# properties
+	   - Tipo: CfTable
+	   - Opcional
+	   - Descripción: Tabla de configuración que permite inicializar
+	   propiedades del objeto GtkWindow.
+	   - Formato: propiedad1 = valor1,... (propiedad es G_TYPE_STRING y 
+	   valor es variable).
+   \section uigtk2_feas CARACTERÍSTICAS
+     \subsection uigtk2_ifs  Implementa
+     NINGUNA
+     \subsection uigtk2_sigs Señales
+     NINGUNA
+*/
+%}
+
+%h{
+#include <gtk/gtk.h>
+#include <ags-ui.h>
+#include <ags-cf.h>
+%}
+
+%privateheader{
+#include <stdio.h>
+#include <accessif.h>	/*new: set/get...*/
+#include <my-defs.h>  // new
+%}
+
+requires 2.0.0
+
+class Ui:Gtk2 from Ags:Ui {
+
+private int      timeout=10; /* XXX configurable */
+private guint    timeout_id=0;
+private int      active=TRUE;
+private GObject *sds;  //new
+  
+/* señales */
+signal last NONE (NONE) void inactivitysig(self);
+signal last NONE (NONE) void wakeupsig(self);
+
+private
+gboolean
+delete_event( GtkWidget *widget, GdkEvent  *event, gpointer   data )
+  {
+    return FALSE;
+  }
+  
+private
+void
+destroy( GtkWidget *widget, gpointer   data )
+  {
+    g_main_loop_quit ( config_get_pointer(CONFIGIF(data), NULL, "main_loop") );
+  }
+  
+private
+void
+hide_cursor(GtkWidget* w)
+  {
+    static unsigned char cursor1_bits[]     = { 0x00 };
+    static unsigned char cursor1mask_bits[] = { 0x00 };    
+    
+    GdkCursor *cursor;
+    GdkPixmap *source, *mask;
+    GdkColor fg = { 0, -1, -1, -1 };
+    GdkColor bg = { 0, -1, -1, -1 };
+    
+    source = gdk_bitmap_create_from_data (NULL, cursor1_bits, 1, 1);
+    mask = gdk_bitmap_create_from_data (NULL, cursor1mask_bits, 1, 1);
+    cursor = gdk_cursor_new_from_pixmap (source, mask, &fg, &bg, 1, 1);
+    gdk_pixmap_unref (source);
+    gdk_pixmap_unref (mask);
+    
+    gdk_window_set_cursor (w->window, cursor);
+  }
+
+private
+gboolean
+timeout_handler(gpointer data)
+  {
+    UiGtk2 *self=UI_GTK2(data);
+
+    /* emitimos señal de inactividad */
+    self_inactivitysig(self);
+    self->_priv->active=FALSE;
+
+    return FALSE;
+  }
+
+private
+void
+event_handler(GdkEvent *event, gpointer data)
+  {
+    UiGtk2 *self=UI_GTK2(data);
+    GdkEventType type;
+    type = event->type;
+
+//printf("type=%d\n", type);fflush(stdout);
+
+    /* Comprobamos si evento es actividad (según tipo) */
+    if(type!=GDK_EXPOSE && type!=GDK_NO_EXPOSE) { /* (type 2 y 30) XXX comprobar otros tipos */
+      /* Comprobamos si es un "despertar" */
+      if(!self->_priv->active) {
+	/* "despertamos": pasamos a estado activo */
+	self->_priv->active=TRUE;
+	/* emitimos señal de despertar */
+	self_wakeupsig(self);
+      }
+      /* Reiniciamos contador de inactividad */
+      /* eliminamos "timeout" anterior */
+      if(self->_priv->timeout_id)
+	g_source_remove(self->_priv->timeout_id);
+      /* nuevo "timeout" de inactividad */
+      if(self->_priv->timeout!=0)
+        self->_priv->timeout_id=g_timeout_add(self->_priv->timeout*1000, self_timeout_handler, data);
+    }
+
+    /* dejamos que GTK+ procese el evento */
+    gtk_main_do_event(event);
+
+    return;
+  }
+
+// new
+private
+gint
+get_oid_int(gpointer self, char *nombre_var, int n_instancia) {
+  GValue *v;
+  char aux_str[50];
+  int n;
+  
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  v=access_get( ACCESSIF(UI_GTK2(self)->_priv->sds), aux_str );
+  n=g_value_get_int(v);
+  /* clean */
+  g_free(v);
+  return n;
+}
+
+// new
+private
+gboolean
+logout_handler(gpointer self) {
+  gint timeout;
+  timeout = self_get_oid_int(self, zigorSysLogoutTimeout, 0)*60;  // minutes en mib -> segundos
+  
+  //printf("logout_handler\n");
+  //printf("timeout: %d\n", UI_GTK2(self)->_priv->timeout);
+  
+  // Mirar por CAMBIO del timeout
+  if (timeout != UI_GTK2(self)->_priv->timeout) {
+    UI_GTK2(self)->_priv->timeout = timeout;
+    //printf("Nuevo timeout, relanzamos temporizador con nuevo valor\n");
+  
+      /* Reiniciamos contador de inactividad */
+      /* eliminamos "timeout" anterior */
+      if(UI_GTK2(self)->_priv->timeout_id)
+	g_source_remove(UI_GTK2(self)->_priv->timeout_id);
+      /* nuevo "timeout" de inactividad */
+      if(timeout!=0)
+        UI_GTK2(self)->_priv->timeout_id=g_timeout_add(UI_GTK2(self)->_priv->timeout*1000, self_timeout_handler, self);
+  }
+  
+  return TRUE;  // periodica
+}
+
+public 
+GObject *
+new (char *ui_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  GtkWidget *mainwin;
+  CfTable my_cft;
+  GValue *v;
+ 
+  gtk_set_locale ();
+  /* i18n */
+  bindtextdomain("ags","/usr/share/locale");
+  textdomain("ags");
+  /* i18n */
+  gtk_init (0, NULL);
+ 
+  mainwin = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+
+  g_signal_connect (G_OBJECT (mainwin), "delete_event", G_CALLBACK (self_delete_event), cf);
+  g_signal_connect (G_OBJECT (mainwin), "destroy", G_CALLBACK (self_destroy), cf);
+
+  my_cft=config_get_table(CONFIGIF(cf), cft, ui_name);
+  
+  /* cargar properties de GtkWindow */
+  CfTable props_cft=config_get_table(CONFIGIF(cf), my_cft, "properties");
+  set_object_props(G_OBJECT(mainwin), CONFIGIF(cf), props_cft);
+
+  g_object_set_data(ret, "mainwindow", mainwin);
+  
+  gtk_widget_show_all (mainwin);
+
+  if(config_get_boolean(CONFIGIF(cf), my_cft, "hide_cursor"))
+    self_hide_cursor(mainwin);
+
+  /* timeout de inactividad opcional, si 0 no se controla inactividad */
+  if( UI_GTK2(ret)->_priv->timeout=config_get_int(CONFIGIF(cf), my_cft, "timeout") ) {
+    gdk_event_handler_set(self_event_handler, ret, NULL);
+    UI_GTK2(ret)->_priv->timeout_id=g_timeout_add(UI_GTK2(ret)->_priv->timeout*1000, self_timeout_handler, (gpointer) ret);
+    
+    //new:
+    // Si timeout!=0 lanzar funcion periodica cada minuto para lectura nuevo parametro de timeout de logout (en minutos)
+    if(UI_GTK2(ret)->_priv->timeout!=0) {
+      UI_GTK2(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "sds");
+      g_timeout_add(60000, self_logout_handler, (gpointer) ret);  // cada minuto
+      self_logout_handler(ret);
+    }
+  }
+
+  return G_OBJECT(ret);
+}
+
+}
+
+%{
+  /**/
+  GObject *(*uigtk2_new())(char*, AgsCf*, CfTable)
+    {
+      return ui_gtk2_new;
+    }
+%}

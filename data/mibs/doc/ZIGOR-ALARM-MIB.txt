@@ -1,0 +1,265 @@
+ZIGOR-ALARM-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	MODULE-IDENTITY,
+	OBJECT-TYPE,
+	OBJECT-IDENTITY,
+	Integer32
+		FROM SNMPv2-SMI
+	TEXTUAL-CONVENTION,
+	AutonomousType,
+	TruthValue
+		FROM SNMPv2-TC
+	PositiveInteger,
+	ElementList,
+	ZDateAndTime
+		FROM ZIGOR-TC
+	zigorMgmt,
+	zigorExperiment
+		FROM ZIGOR-SMI;
+
+zigorAlarmMIB    MODULE-IDENTITY
+	LAST-UPDATED	"201003071130Z"
+	ORGANIZATION	"Corporazion Zigor, S.A."
+	CONTACT-INFO
+		"	Corporacion Zigor, S.A.
+			Depto. I+D
+
+		Postal:	C/ Portal de Gamarra, 28
+			C.P 01013 Vitoria-Gasteiz , Alava
+			(Spain)
+
+		Tel:	+34 (945) 214 600
+
+		E-mail:	zigor@zigor.com"
+	DESCRIPTION
+		"Alarm MIB"
+	::= { zigorExperiment 5 }
+
+AlarmCondition ::= TEXTUAL-CONVENTION
+	STATUS	 current
+	DESCRIPTION
+		"Tipo para representar condicion de alarma."
+	SYNTAX	INTEGER {
+		active(1),
+		inactive(2),
+		reconized(3),
+		blocked(4)
+	}
+
+AlarmSeverity ::= TEXTUAL-CONVENTION
+	STATUS	 current
+	DESCRIPTION
+		"Tipe to represent level of an alarm."
+	SYNTAX	INTEGER {
+		minor(1),
+		persistent(2),
+		serious(3),
+		severe(4)
+	}
+
+zigorAlarm OBJECT IDENTIFIER ::= { zigorAlarmMIB 1 }
+
+zigorAlarmsPresent OBJECT-TYPE
+	SYNTAX     Integer32
+	MAX-ACCESS read-only
+
+	STATUS     current
+	DESCRIPTION
+		"The present number of active alarm conditions."
+	::= { zigorAlarm 1 }
+
+zigorAlarmTable OBJECT-TYPE
+	SYNTAX     SEQUENCE OF ZigorAlarmEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+               "A list of alarm table entries.  The table contains
+               zero, one, or many rows at any moment, depending upon
+               the number of alarm conditions in effect.  The table
+               is initially empty at agent startup.  The agent
+               creates a row in the table each time a condition is
+               detected and deletes that row when that condition no
+               longer pertains.  The agent creates the first row with
+               zigorAlarmId equal to 1, and increments the value of
+               zigorAlarmId each time a new row is created, wrapping to
+               the first free value greater than or equal to 1 when
+               the maximum value of zigorAlarmId would otherwise be
+               exceeded.  Consequently, after multiple operations,
+               the table may become sparse, e.g., containing entries
+               for rows 95, 100, 101, and 203 and the entries should
+               not be assumed to be in chronological order because
+               zigorAlarmId might have wrapped.
+
+               Alarms are named by an AutonomousType (OBJECT
+               IDENTIFIER), zigorAlarmDescr, to allow a single table to
+               reflect well known alarms plus alarms defined by a
+               particular implementation, i.e., as documented in the
+               private enterprise MIB definition for the device.  No
+               two rows will have the same value of zigorAlarmDescr
+               since alarms define conditions.  In order to meet this
+               requirement, care should be taken in the definition of
+               alarm conditions to insure that a system cannot enter
+               the same condition multiple times simultaneously.
+
+               The number of rows in the table at any given time is
+               reflected by the value of zigorAlarmsPresent."
+	::= { zigorAlarm 2 }
+
+zigorAlarmEntry OBJECT-TYPE
+	SYNTAX     ZigorAlarmEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"An entry containing information applicable to a
+               particular alarm."
+	INDEX { zigorAlarmId }
+	::= { zigorAlarmTable 1 }
+
+ZigorAlarmEntry ::= SEQUENCE {
+	zigorAlarmId		PositiveInteger,
+	zigorAlarmDescr		AutonomousType,
+	zigorAlarmTime		ZDateAndTime,
+	zigorAlarmElementList	ElementList,
+	zigorAlarmCondition	AlarmCondition
+}
+
+zigorAlarmId OBJECT-TYPE
+	SYNTAX		PositiveInteger
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION
+		"A unique identifier for an alarm condition.  This
+		value must remain constant."
+	::= { zigorAlarmEntry 1 }
+
+zigorAlarmDescr OBJECT-TYPE
+	SYNTAX		AutonomousType
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"A reference to an alarm description object.  The
+		object referenced should not be accessible, but rather
+		be used to provide a unique description of the alarm
+		condition."
+	::= { zigorAlarmEntry 2 }
+
+zigorAlarmTime OBJECT-TYPE
+	SYNTAX		ZDateAndTime
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Date and time when the alarm condition was _last_
+		detected."
+	::= { zigorAlarmEntry 3 }
+
+zigorAlarmElementList OBJECT-TYPE
+	SYNTAX		ElementList
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Items where the alarm is active."
+	::= { zigorAlarmEntry 4 }
+
+zigorAlarmCondition OBJECT-TYPE
+	SYNTAX		AlarmCondition
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Indicates alarm condition."
+	::= { zigorAlarmEntry 5 }
+
+--
+-- Alarms Configuration
+--
+zigorAlarmConfig OBJECT IDENTIFIER ::= { zigorAlarmMIB 2 }
+
+zigorAlarmsCfgPresent OBJECT-TYPE
+	SYNTAX     Integer32
+	MAX-ACCESS read-only
+
+	STATUS     current
+	DESCRIPTION
+		"The present number of alarm configuration rows."
+	::= { zigorAlarmConfig 1 }
+
+zigorAlarmCfgTable OBJECT-TYPE
+	SYNTAX     SEQUENCE OF ZigorAlarmCfgEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+               "Alarms configuration table"
+	::= { zigorAlarmConfig 2 }
+
+zigorAlarmCfgEntry OBJECT-TYPE
+	SYNTAX     ZigorAlarmCfgEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"An entry containing information applicable to a
+               particular alarm."
+	INDEX { zigorAlarmCfgId }
+	::= { zigorAlarmCfgTable 1 }
+
+ZigorAlarmCfgEntry ::= SEQUENCE {
+	zigorAlarmCfgId			PositiveInteger,
+	zigorAlarmCfgDescr		AutonomousType,
+	zigorAlarmCfgSeverity		AlarmSeverity,
+	zigorAlarmCfgNotification	TruthValue
+}
+
+zigorAlarmCfgId OBJECT-TYPE
+	SYNTAX		PositiveInteger
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION
+		"A unique identifier for an alarm config.  This
+		value must remain constant."
+	::= { zigorAlarmCfgEntry 1 }
+
+zigorAlarmCfgDescr OBJECT-TYPE
+	SYNTAX		AutonomousType
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"A reference to an alarm description object.  The
+		object referenced should not be accessible, but rather
+		be used to provide a unique description of the alarm
+		condition."
+	::= { zigorAlarmCfgEntry 2 }
+
+zigorAlarmCfgSeverity OBJECT-TYPE
+	SYNTAX		AlarmSeverity
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"The severity of this alarm"
+	::= { zigorAlarmCfgEntry 3 }
+
+zigorAlarmCfgNotification OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Type of notification for an alarm."
+	::= { zigorAlarmCfgEntry 4 }
+
+--
+-- Generic alarms
+--
+zigorSysAlarms OBJECT IDENTIFIER ::= { zigorAlarmMIB 3 }
+
+zigorAlarmaStart OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"System start"
+	::= { zigorSysAlarms 1 }
+
+zigorAlarmaPasswdChange OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"Password change. Elements shows de level which password has changed."
+	::= { zigorSysAlarms 2 }
+
+
+END

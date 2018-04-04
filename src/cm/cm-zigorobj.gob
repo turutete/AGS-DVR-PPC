@@ -1,0 +1,533 @@
+%{
+/**
+   \file cm-zigorobj.c
+*/
+/**
+   \page cmzigorobj CmZigorObj
+   \section cmzigorobj_desc DESCRIPCIÓN
+   Parsea un objeto de bus Zigor y establece variables del sds
+   a partir de las variables del objeto.
+   \section cmzigorobj_reqs REQUISITOS
+     \subsection cmzigorobj_deps Dependencias
+        -# rbuffer
+	   -# \ref textbufferif
+        -# wbuffer
+	   -# \ref textbufferif
+	-# sds
+	   -# \ref accessif
+     \subsection cmzigorobj_pres Precarga
+     NINGUNA
+     \subsection cmzigorobj_evs  Eventos
+        -# rbuffer
+	   -# \ref changed
+     \subsection cmzigorobj_cfs Configuración
+        -# types
+	   - Tipo: CfTable
+	   - Requerida
+	   - Descripción: Tabla de configuración para definir los
+	   tipos de variables del bus Zigor.
+	-# objects
+	   - Tipo: CfTable
+	   - Requerida
+	   - Descripción: Tabla de configuración para mapear variables
+	   contenidas en los objetos del bus Zigor a variables del sds.
+   \section cmzigorobj_feas CARACTERÍSTICAS
+     \subsection cmzigorobj_ifs  Implementa
+     NINGUNA
+     \subsection cmzigorobj_sigs Señales
+     NINGUNA
+   \section cmzigorobj_srcs FUENTES
+     - \ref cm-zigorobj.c
+     - \ref cm-zigorobj.h
+*/
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-zigorobj"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+
+%h{
+#include <string.h>
+#include <ags-cm.h>
+#include <ags-cf.h>
+#include <textbufferif.h>
+#include <accessif.h>
+#include <busif.h>
+
+#define MAX_OBJ_SIZE 11 /* FC DA ID D1-8 */
+%}
+
+%privateheader{
+typedef struct _VarDef  VarDef;
+typedef struct _VarBind VarBind;
+typedef struct _Map     Map;
+
+struct _VarDef {
+  unsigned int start;
+  unsigned int len;
+  unsigned int cod;   /* enum? */
+  int          offset;
+  GType        type;
+  GPtrArray*   map;
+};
+
+struct _VarBind {
+  char*   oid;
+  VarDef* vardef;
+};
+
+struct _Map {
+  GValue *from;
+  GValue *to;
+};
+
+enum {
+  FC=0,
+  DA,
+  ID,
+  DATA
+};
+
+enum {
+  COD_INT=0,
+  COD_UINT,
+  COD_INT_LE,
+  COD_UINT_LE
+};
+%}
+
+class Cm:ZigorObj from Ags:Cm (interface :BusIf) {
+
+private gchar*  name = NULL destroywith g_free;
+private AgsCf*  cf;
+private CfTable cft;
+
+private GObject* robj_textbuffer = NULL unrefwith g_object_unref;
+private GObject* wobj_textbuffer = NULL unrefwith g_object_unref;
+private GObject* sds = NULL unrefwith g_object_unref;
+/* XXX comprobar si se destruyen correctamente (sin "leaks") las hash */
+private GHashTable *types_hashtable = { g_hash_table_new(g_str_hash, g_str_equal) } destroywith g_hash_table_destroy;
+private GHashTable *robjs_hashtable = { g_hash_table_new(g_str_hash, g_str_equal) } destroywith g_hash_table_destroy;
+private GHashTable *wobjs_hashtable = { g_hash_table_new(g_str_hash, g_str_equal) } destroywith g_hash_table_destroy;
+
+public
+GObject*
+new (char* cm_name, AgsCf* cf, CfTable cft) {
+  GObject* ret = G_OBJECT(GET_NEW);
+  CfTable  my_cft = config_get_table(CONFIGIF(cf), cft, cm_name);
+
+  /* guardar como privates */
+  CM_ZIGOROBJ(ret)->_priv->name = g_strdup(cm_name);
+  CM_ZIGOROBJ(ret)->_priv->cf   = cf;
+  CM_ZIGOROBJ(ret)->_priv->cft  = cft;
+
+  CM_ZIGOROBJ(ret)->_priv->robj_textbuffer = config_get_object(CONFIGIF(cf), my_cft, "rbuffer");
+  CM_ZIGOROBJ(ret)->_priv->wobj_textbuffer = config_get_object(CONFIGIF(cf), my_cft, "wbuffer");
+  CM_ZIGOROBJ(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "sds");
+
+  /* leer configuración */
+  /* crear estructuras de datos de tipos */
+  CfTable types = config_get_table(CONFIGIF(cf), my_cft, "types");
+  gchar*  type_name = NULL;
+  while(type_name=config_getnextkey(CONFIGIF(cf), types, type_name)) {
+    CfTable type=config_get_table(CONFIGIF(cf), types, type_name);
+    GHashTable* type_hashtable=g_hash_table_new(g_str_hash, g_str_equal);
+    /* rellenar type_hashtable */
+    gchar*  var_name = NULL;
+    while(var_name=config_getnextkey(CONFIGIF(cf), type, var_name)) {
+      CfTable var=config_get_table(CONFIGIF(cf), type, var_name);
+      VarDef* vardef=g_new0(VarDef, 1);
+      vardef->start =config_get_int(CONFIGIF(cf), var, "start"  );
+      vardef->len   =config_get_int(CONFIGIF(cf), var, "len"    );
+      vardef->cod   =config_get_int(CONFIGIF(cf), var, "cod"    );
+      vardef->type  =config_get_int(CONFIGIF(cf), var, "type"   );
+      vardef->offset=config_get_int(CONFIGIF(cf), var, "offset" );
+      /* leer map */
+      GPtrArray* map_array=NULL;
+      CfTable maps=config_get_table(CONFIGIF(cf), var, "maps");
+      if(config_check_table(CONFIGIF(cf), maps)) {
+	map_array=g_ptr_array_new();
+	char* map_name=NULL;
+	CfTable map;
+	while( map_name=config_getnextkey(CONFIGIF(cf), maps, map_name) ) {
+	  map=config_get_table(CONFIGIF(cf), maps, map_name);
+	  if(config_check_table(CONFIGIF(cf), map)) {
+	    Map* m=g_new0(Map, 1); /* XXX ¿leak? */
+	    m->from=config_get(CONFIGIF(cf), map, "from");
+	    m->to  =config_get(CONFIGIF(cf), map, "to");
+	    g_ptr_array_add(map_array, m);
+	  }
+	}
+      }
+
+      vardef->map=map_array;
+      g_hash_table_insert(type_hashtable, var_name, vardef);
+    }
+    /* insertar type_hashtable en 'hash' de tipos */
+    g_hash_table_insert(CM_ZIGOROBJ(ret)->_priv->types_hashtable, type_name, type_hashtable);
+  }
+  /* crear 'hashtable' DAID->VarDef */
+  CfTable objects = config_get_table(CONFIGIF(cf), my_cft, "objects");
+  gchar* object_name = NULL;
+  while(object_name=config_getnextkey(CONFIGIF(cf), objects, object_name)) {
+    CfTable object=config_get_table(CONFIGIF(cf), objects, object_name);
+    type_name=config_get_string(CONFIGIF(cf), object, "type");
+    CfTable binds = config_get_table(CONFIGIF(cf), object, "binds");
+    gboolean readable = config_get_boolean(CONFIGIF(cf), object, "read");
+    gboolean writable = config_get_boolean(CONFIGIF(cf), object, "write");
+    gchar* oid = NULL;
+    GPtrArray* varbinds=g_ptr_array_new();
+    while(oid=config_getnextkey(CONFIGIF(cf), binds, oid)) {
+      gchar* var_name=config_get_string(CONFIGIF(cf), binds, oid);
+      /* Obtenemos VarDef para este 'var_name' en este 'type_name' */
+      GHashTable* type=g_hash_table_lookup(CM_ZIGOROBJ(ret)->_priv->types_hashtable, type_name);
+      VarDef* vardef   =g_hash_table_lookup(type, var_name);
+      if(!vardef)
+	g_error("Error en configuración. No se encuentra variable %s en tipo de objeto %s.", var_name, type_name);
+      /* clean */
+      if(var_name)
+ 	free(var_name);
+      /***/
+      VarBind* varbind =g_new0(VarBind,1); /* XXX ¿leak? */
+      varbind->oid=g_strdup(oid); /* XXX ? */
+      varbind->vardef=vardef;
+      g_ptr_array_add(varbinds, (gpointer) varbind);
+    }
+    /* clean */
+    if(type_name) 
+      free(type_name);
+    /***/
+    if(readable && writable) {
+      g_critical("Objeto de lectura y escritura DAID=%s", object_name);
+    }
+    if(!readable && !writable) {
+      /* Objeto sin objeto! */
+      g_critical("No se especificó ni read ni write en conf. para DAID=%s", object_name);
+    }
+    if(readable) {
+      g_hash_table_insert(CM_ZIGOROBJ(ret)->_priv->robjs_hashtable, object_name, varbinds);
+    } 
+    if(writable) {
+      g_hash_table_insert(CM_ZIGOROBJ(ret)->_priv->wobjs_hashtable, object_name, varbinds);
+    }
+  }
+  /***/
+
+  g_signal_connect(G_OBJECT( CM_ZIGOROBJ(ret)->_priv->robj_textbuffer ), "changed", (GCallback) self_changed, (gpointer) ret);
+
+  return ret;
+}
+
+/* XXX Se puede buscar un algoritmo mas eficiente, pero de momento, bit a bit */
+private
+unsigned char
+getbit(char* buffer, unsigned int pos) {
+  unsigned int  byte_pos=pos>>3;
+  unsigned char byte    =buffer[byte_pos];
+  unsigned char bitmask =1<< 7-(pos%8);
+
+  return (byte & bitmask); /* Devuelve "verdadero" (1) o "falso" (0) */
+}
+
+private
+void
+putbit(char* buffer, unsigned int pos, unsigned char bit) {
+  unsigned int  byte_pos=pos>>3;
+  unsigned char bitmask =1<< 7-(pos%8);
+
+  if(bit)
+    buffer[byte_pos]|=bitmask;
+  else
+    buffer[byte_pos]&=~bitmask;
+}
+
+private
+unsigned int
+obj_getvar(char* buffer, VarBind* varbind, unsigned char** var) {
+  unsigned int byte_len=(varbind->vardef->len>>3);
+  byte_len+=(varbind->vardef->len%8)?1:0;
+
+  *var=g_new0(unsigned char, sizeof(int));
+  int i;
+  int j=byte_len<<3;
+  for(i=varbind->vardef->start+varbind->vardef->len-1; /* último bit */
+      i>=(int)varbind->vardef->start;                        /* hasta el primero */
+      i--) {                                           /* del último al primero */
+    unsigned char bit=self_getbit(buffer, i);
+    self_putbit(*var, --j, bit);
+  }
+
+  return byte_len;
+}
+
+private
+void
+changed (GObject *textbuffer, gpointer self) {
+  gint frame_len=0;
+  gchar* buffer = textbuffer_get(TEXTBUFFERIF(textbuffer), &frame_len);
+
+  if( !buffer || !frame_len ) {
+    g_critical("Error, buffer de entrada %p vacio o nulo.", buffer);
+    return;
+  }
+
+  int data_len=(unsigned char)buffer[FC]&0x0F;
+
+  if(!data_len) {
+    goto out;
+  }
+  if( data_len!=(frame_len-3) ) {
+    g_critical("Error, %d bytes de datos en trama, se esperaban %d.", frame_len-3, data_len);
+    goto out;
+  }
+
+  gchar object_name[5];
+  sprintf(object_name, "%02X%02X", (char)buffer[DA], (char)buffer[ID]);
+
+  GPtrArray* varbinds=g_hash_table_lookup(CM_ZIGOROBJ(self)->_priv->robjs_hashtable, object_name);
+  ags_debug(1, "BUFFER=|%s| OBJNAME=|%s| VARBINDS=|%p| DATALEN=|%d|", buffer, object_name, varbinds, data_len);
+
+  int i;
+  VarBind* varbind;
+  for(i=0;varbinds && i<varbinds->len;i++) {
+    varbind=g_ptr_array_index(varbinds, i);
+    ags_debug(1, "OID=%s", varbind->oid);
+    /* obj_getvar */
+    
+    if(varbind->vardef->type == G_TYPE_STRING){
+	    // Copiar los datos.
+	    gchar cadena[9];	//8 bytes + terminacion con caracter nulo.
+	    memset(cadena, 0, 9);
+	    memcpy(cadena, &buffer[DATA + (varbind->vardef->start / 8)], varbind->vardef->len / 8);
+	    GValue v = { 0, };
+	    g_value_init(&v, varbind->vardef->type);
+	    g_value_set_string(&v, cadena);
+	    access_set(ACCESSIF(CM_ZIGOROBJ(self)->_priv->sds), varbind->oid, &v);
+    }else{
+	    unsigned char* var;
+	    unsigned int bytes=self_obj_getvar(&buffer[3], varbind, &var); /* pasamos offset de DATA */
+	
+	    if(!bytes) {
+		 g_critical("Error, variable vacía!");
+		 /*evitar mleak*/
+		 g_free(var);
+		 goto out;
+	    }
+	
+	    /* XXX de momento, solo "int storage" */
+	    unsigned char* int_var=g_new0(char, sizeof(int));
+	
+	    /* XXX decod */
+	
+	    int j;
+	    /* endianess */
+	    switch(varbind->vardef->cod) {
+	    case COD_INT:
+	    case COD_UINT:
+		 /* invertir orden de bytes */
+		 for(j=0;j<bytes;j++)
+		int_var[j]=var[bytes-j-1];
+		 break;
+	    case COD_INT_LE:
+	    case COD_UINT_LE:
+		 for(j=0;j<bytes;j++)
+		int_var[j]=var[j];
+	    default:
+		 break;
+	    }
+	
+	    /* Expandir bit de signo */    
+	    //unsigned char sign=self_getbit(&buffer[3], varbind->vardef->start);
+	    unsigned char sign;
+	    if( varbind->vardef->len%8 ){
+		 sign=int_var[bytes-1] & (0x01 << ((varbind->vardef->len%8)-1) );
+	    } else {
+		 sign=int_var[bytes-1] & 0x80;
+	    }
+	    switch(varbind->vardef->cod) {
+	    case COD_INT_LE:
+	    case COD_INT:
+		 if(sign) {
+		/* Creamos máscara para el MSB si 'len' no es múltiplo de 8 */
+		if(varbind->vardef->len%8) {
+		  unsigned char signmask=1;
+		  signmask<<= (varbind->vardef->len%8);
+		  signmask-=1;
+		  signmask=~signmask;
+		  int_var[bytes-1]|=signmask; /* Expandimos bit de signo en MSB */
+		}
+	
+		/* Bytes altos de 'int' (32 bits) puestos a '1' (signo) */
+		int k;
+		for(k=bytes;k<sizeof(int);k++)
+		  int_var[k]=-1;
+		 }
+		 break;
+	    default:
+		 break;
+	    }
+	
+	    /* var->value (XXX otros tipos) */
+	    int *storage_int=(int*) int_var;
+	
+	    /* Ajuste de offset */
+	    *storage_int+=varbind->vardef->offset;
+	
+	    GValue v = { 0, };
+	    g_value_init(&v, varbind->vardef->type);
+	    g_value_set_int(&v, *storage_int);
+	
+	    /* Mapeo */
+	    if(varbind->vardef->map) {
+		 GPtrArray* map_array=varbind->vardef->map;
+	
+		 int i;
+		 for(i=0;i<map_array->len;i++) {
+		GValue* from= ((Map*)g_ptr_array_index(map_array, i))->from;
+		GValue* to  = ((Map*)g_ptr_array_index(map_array, i))->to;
+		if( g_value_compare(from, &v) == 0 ) {
+		  g_value_copy(to, &v);
+		  break;
+		}
+		 }
+	    }
+	
+	    /* value->SDS */ 
+	    access_set(ACCESSIF(CM_ZIGOROBJ(self)->_priv->sds), varbind->oid, &v);
+	    free(var);
+	    free(int_var);
+    }
+  }
+
+  out:
+  if(buffer)
+     g_free(buffer);
+}
+
+private
+int
+gvalue_getvar(GValue* v, VarBind* varbind, unsigned char** var)
+  {
+    size_t size=0;
+
+    switch (varbind->vardef->type) {
+    case G_TYPE_INT:
+      size=sizeof(int);
+
+      gint* int_var=g_new0(gint, 1);
+      *int_var=g_value_get_int(v);
+
+      ags_debug(2, "int_var=%d",  *int_var);
+
+      int i;
+      char aux;
+      char* p;
+      /* endianess */
+      switch(varbind->vardef->cod) {
+      case COD_INT:
+      case COD_UINT:
+	/* invertir orden de bytes */
+	p=(char*)int_var;
+	for(i=0;i<(size/2);i++) {
+	  /* swap */
+	  aux=p[size-i-1];
+	  p[size-i-1]=p[i];
+	  p[i]=aux;
+	}
+	break;
+      case COD_INT_LE:
+      case COD_UINT_LE:
+	(*int_var)>>=(sizeof(gint) - (varbind->vardef->len>>3))<<3;
+	break;
+      default:
+	break;
+      }
+
+      *var = (char*) int_var;
+
+      break;
+    }
+
+    return size;
+  }
+
+ interface :BusIf private int write(BusIf* self, gchar* obj_name, gchar* poll_da)
+   {
+     GPtrArray* varbinds;
+     VarBind*   varbind;
+     GValue*    v;
+     char       buffer[MAX_OBJ_SIZE];
+     int        size=0;
+     int        i;
+     char       fc=poll_da?0x60:0xE0;
+
+     memset((void*) buffer, 0, MAX_OBJ_SIZE);
+
+     /* FC (tamaño mas abajo) */
+     buffer[FC]=fc;
+     /* DA ID */
+     char aux[3];
+     aux[0]=obj_name[0];
+     aux[1]=obj_name[1];
+     aux[2]='\0';
+     unsigned char da=poll_da?strtol(poll_da, NULL, 16):strtol(aux, NULL, 16);
+     aux[0]=obj_name[2];
+     aux[1]=obj_name[3];
+     aux[2]='\0';
+     unsigned char id=strtol(aux, NULL, 16);
+     buffer[DA]=da;
+     buffer[ID]=id;
+     
+     /* Obtenemos lista de 'varbinds' para este objeto */
+     varbinds=g_hash_table_lookup(CM_ZIGOROBJ(self)->_priv->wobjs_hashtable, obj_name);
+     unsigned char bytes=0; /* bytes de DATA */
+     if(varbinds) {
+       for(i=0;i<varbinds->len;i++) {
+	 varbind=(VarBind*) g_ptr_array_index(varbinds, i);
+	 v=access_get(ACCESSIF(CM_ZIGOROBJ(self)->_priv->sds), varbind->oid);
+	 if(v) {
+	   unsigned char* var;
+	   size=self_gvalue_getvar(v, varbind, &var);
+	   /* meter 'var' en la trama (buffer) */
+	   gint bitsize=(size<<3); /* size*8 */
+	   gint index_src=bitsize - varbind->vardef->len;
+	   gint index_dst=varbind->vardef->start;
+	   gint bit=0;
+	   for(bit=0;bit<varbind->vardef->len;bit++) {
+	     gboolean b=self_getbit(var, index_src+bit);
+	     self_putbit(&buffer[DATA], index_dst+bit, b);
+	   }
+	   
+	   char this_bytes=1 + ((varbind->vardef->start + varbind->vardef->len - 1)>>3);
+	   if(this_bytes>bytes)
+	     bytes=this_bytes;
+	   
+	   /* clean */
+	   g_free(var);
+	   g_value_unset(v);
+	   free(v);
+	 } else {
+	   g_critical("No se encontró variable %s en SDS", varbind->oid);
+	 }	 
+       }
+     } else {
+       ags_debug(2, "No hay definición de objeto %s para escritura", obj_name);
+     }
+     
+     buffer[FC]|=bytes;
+     textbuffer_set(TEXTBUFFERIF(CM_ZIGOROBJ(self)->_priv->wobj_textbuffer), buffer, 3+bytes);
+   }
+ 
+}
+
+%{
+  GObject *(*cmzigorobj_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

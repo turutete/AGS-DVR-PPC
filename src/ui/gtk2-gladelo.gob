@@ -1,0 +1,172 @@
+%{
+/**
+   \page gtk2gladelo Gtk2GladeLo
+   \section gtk2gladelo_desc DESCRIPCIÓN
+   Carga un "layout" Glade.
+   \section gtk2gladelo_reqs REQUISITOS
+     \subsection gtk2gladelo_deps Dependencias
+        -# container_obj
+	-# textbuffer (Opcional)
+     \subsection gtk2gladelo_pres Precarga
+     NINGUNA*
+     \subsection gtk2gladelo_evs  Eventos
+     NINGUNO
+     \subsection gtk2gladelo_cfs Configuración
+	-# container_name
+	   - Tipo: G_TYPE_STRING
+	   - Requerida
+	   - Descripción: Nombre del "widget" contenedor en el que
+	   empaquetar el "layout" creado.
+	-# layout_filename
+	   - Tipo: G_TYPE_STRING
+	   - Opcional (requerido si no se especifica textbuffer).
+	   - Descripción: Nombre del fichero Glade del cual cargar el 
+	   layout.
+	-# layout_root
+	   - Tipo: G_TYPE_STRING
+	   - Requerido
+	   - Descripción: Nombre del "widget" raíz a cargar.
+     \subsection gtk2gladelo_reqpros Propiedades
+        -# textbuffer
+	   -# text
+   \section gtk2gladelo_feas CARACTERÍSTICAS
+     \subsection gtk2gladelo_ifs  Implementa
+     NINGUNA
+     \subsection gtk2gladelo_sigs Señales
+     NINGUNA
+*/
+%}
+
+%h{
+  /**
+   * GTK2 Glade Layout.
+   */
+
+#include <config.h>
+#include <gtk/gtk.h>
+#include <glade/glade.h>
+#include <ags-cf.h>
+#include <ags-type.h> /* XXX find_file_in_path() */
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "gtk2-gladelo"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+requires 2.0.0
+
+class Gtk2:GladeLo from G:Object {
+
+  /* XXX */
+
+private
+void
+register_widget(gpointer widget, gpointer this)
+{
+  const char *name;
+
+  name=glade_get_widget_name(widget);
+  ags_debug(5,"'%s' = %p", name, widget);
+  g_object_set_data(G_OBJECT(this), name, widget);
+}
+
+private
+void
+register_widgets(self, GladeXML *layout) {
+  GList *lista;
+
+  lista=glade_xml_get_widget_prefix(layout, "");
+  g_list_foreach(lista, self_register_widget, self);
+}
+
+public
+GObject *
+new (char *lo_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  CfTable my_cft;
+  GValue *v;
+  GObject *object;
+  GObject *textbuffer;
+  char *container_name;
+  char *layout_filename;
+  char *lo_root=NULL;
+  GtkWidget *widget=NULL;
+  GtkWidget *lo_widget;
+
+  my_cft=config_get_table(CONFIGIF(cf), cft, lo_name);
+
+  object=config_get_object(CONFIGIF(cf), my_cft, "container_obj");
+  container_name=config_get_string(CONFIGIF(cf), my_cft, "container_name");
+
+  if(object && container_name) {
+    widget=g_object_get_data(object, container_name);
+    free(container_name);
+  } else {
+    gtk_set_locale ();
+    /* i18n */
+    bindtextdomain("ags","/usr/share/locale");
+    textdomain("ags");
+    /* i18n */
+    gtk_init (0, NULL);
+  }
+
+  textbuffer=config_get_object(CONFIGIF(cf), my_cft, "textbuffer");
+
+  layout_filename=config_get_string(CONFIGIF(cf), my_cft, "layout_filename");
+  lo_root=config_get_string(CONFIGIF(cf), my_cft, "layout_root");
+
+  /**/
+  GladeXML *layout;
+
+  glade_init();
+
+  gchar* found;
+  if(layout_filename) {
+    found=find_file_in_path(layout_filename, AGS_UI_PATH, "AGS_UI_PATH");
+    free(layout_filename);
+  }
+
+  if(textbuffer) {
+    gchar* layout_text;
+    g_object_get(textbuffer, "text", &layout_text, NULL); /* XXX treestore_get() ??? */
+    layout=glade_xml_new_from_buffer(layout_text, strlen(layout_text), lo_root, NULL);
+  } else if(found) {
+    layout=glade_xml_new(found, lo_root, NULL);
+    free(found);
+  } else
+    g_error("No se pudo cargar Glade.");
+
+  lo_widget=glade_xml_get_widget(layout, lo_root);
+  free(lo_root);
+
+  self_register_widgets(GTK2_GLADELO(ret), layout);
+
+  if(widget)
+    gtk_container_add(GTK_CONTAINER(widget), lo_widget);
+
+  gtk_widget_show_all(lo_widget);
+
+  g_object_unref(G_OBJECT(layout));
+
+  return G_OBJECT(ret);
+}
+
+}
+
+%{
+  GObject *(*gtk2gladelo_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+
+//   void gtk2gladelo_close(void)
+//     {
+//       /* GladeXML ya liberado en new */
+//     }
+%}

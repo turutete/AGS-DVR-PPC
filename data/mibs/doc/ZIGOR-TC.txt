@@ -1,0 +1,235 @@
+ZIGOR-TC DEFINITIONS ::= BEGIN
+
+IMPORTS
+	MODULE-IDENTITY
+		FROM SNMPv2-SMI
+	TEXTUAL-CONVENTION
+		FROM SNMPv2-TC
+	zigorModules
+		FROM ZIGOR-SMI;
+
+zigorTextualConventions MODULE-IDENTITY
+	LAST-UPDATED	"201003071130Z"
+	ORGANIZATION	"Corporacion Zigor, S.A."
+	CONTACT-INFO
+		"	Corporacion Zigor, S.A.
+			Depto. I+D
+
+		Postal: C/ Portal de Gamarra, 28
+			C.P 01013 Vitoria-Gasteiz , Alava
+			(Spain)
+	
+		Tel:	+34 (945) 214 600
+
+		E-mail:	zigor@zigor.com"
+	DESCRIPTION
+		"This module defines textual conventions used 
+		throughout zigor enterprise mibs."
+	::= { zigorModules 1 }
+
+NonNegativeInteger ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT   "d"
+	STATUS	       current
+	DESCRIPTION
+		"This data type is a non-negative value."
+        SYNTAX	      INTEGER (0..2147483647)
+
+PositiveInteger ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT "d"
+	STATUS       current
+	DESCRIPTION
+		"This data type is a non-zero and non-negative value."
+	SYNTAX       INTEGER (1..2147483647)
+
+OnOff ::= TEXTUAL-CONVENTION
+	STATUS		current
+	DESCRIPTION
+		"On/Off data type."
+	SYNTAX		INTEGER { on(1), off(2) }
+
+Percent	::= TEXTUAL-CONVENTION
+	STATUS		current
+	DESCRIPTION
+		"Percent value."
+	SYNTAX		INTEGER (0..100)
+
+ElementList ::= TEXTUAL-CONVENTION
+	STATUS		current
+	DESCRIPTION
+		"An octet string containing a list of element values.
+		Values are preferably in human-readable form.
+
+		An object of this type contains a list of element values
+		which are used to select a set of entries in a table.
+
+		An element value is an arbitrary string of octets, but
+		may not contain a delimiter character.  Delimiter
+		characters are defined to be one of the following:
+
+			   -  An ASCII space character (0x20).
+
+			   -  An ASCII TAB character (0x09).
+			
+			   -  An ASCII carriage return (CR) character (0x0D).
+
+			   -  An ASCII line feed (LF) character (0x0B).
+
+		Delimiter characters are used to separate element values
+		in an element list.  Only a single delimiter character may
+		occur between two element values.  An element value may not
+		have a zero length.  These constraints imply certain
+		restrictions on the contents of this object:
+
+			   - There cannot be a leading or trailing delimiter
+			     character.
+
+			   - There cannot be multiple adjacent delimiter
+			     characters.
+
+		Some examples of valid element lists are:
+
+			   - An empty string
+
+			   - '1 3 5'
+
+			   - '8'
+
+		Note that although a element value may not have a length of
+		zero, an empty string is still valid.  This indicates
+		an empty list (i.e. there are no element values in the list).
+
+		The use of the element list to select table entries is
+		application and MIB specific.  Typically, an application
+		will provide one or more element values, and any entry
+		which contains some combination of these element values
+		will be selected."
+	SYNTAX		OCTET STRING (SIZE(0..255))
+
+ZDateAndTime ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"4a-2a-2a,2a:2a:2a.1a,1a2a:2a"
+	STATUS		current
+	DESCRIPTION
+		"A date-time specification.
+
+		field  octets  contents                  range
+		-----  ------  --------                  -----
+		  1      1-4   year                      '0000'..'9999'
+		  2      5-6   month                     '01'..'12'
+		  3      7-8   day                       '01'..'31'
+		  4      9-10  hour                      '00'..'23'
+		  5     11-12  minutes                   '00'..'59'
+		  6     13-14  seconds                   '00'..'60'
+		               (use 60 for leap-second)
+		  7      15    deci-seconds              '0'..'9'
+		  8      16    direction from UTC        '+' / '-'
+		  9     17-18  hours from UTC*           '00'..'13'
+		 10     19-20  minutes from UTC          '00'..'59'
+
+		* Notes:
+		- daylight saving time in New Zealand is +13
+
+		For example, Tuesday May 26, 1992 at 1:30:15 PM EDT would be
+		displayed as:
+
+		                 1992-05-26,13:30:15.0,-04:00
+		Note that if only local time is known, then timezone
+		information (fields 8-10) is not present."
+	SYNTAX		    OCTET STRING (SIZE (15 | 20))
+
+IntegerString ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"a"
+	STATUS		current
+	DESCRIPTION
+		"This data type is an ASCII representation of a signed or unsigned integer."
+	SYNTAX		OCTET STRING (SIZE (8))
+
+FloatString ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"a"
+	STATUS		current
+	DESCRIPTION
+		"This data type is an ASCII representation of a real number, format %8.2f."
+	SYNTAX		OCTET STRING (SIZE (8))
+
+ArchSequenceString ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"a,a"
+	STATUS		current
+	DESCRIPTION
+		"This data type is an ASCII representation of a sequence that establishes
+		the distribution of elements in racks. The sequence follows the
+		pattern: rack#,element#,rack#,element#, ... ."
+	SYNTAX		OCTET STRING (SIZE (0..63))
+
+AnalogVariableString ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"8a" "a"
+	STATUS		current
+	DESCRIPTION
+		"This data type is an ASCII representation of an analog variable
+		real time value. It is formatted as two ASCII strings separated by
+		a space (%8s %s)."
+	SYNTAX		OCTET STRING (SIZE (0..63))
+
+Flag16String ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"a"
+	STATUS		current
+	DESCRIPTION
+		"This data type is an ASCII representation of a 16 bit flag sequence."
+	SYNTAX		OCTET STRING (SIZE (16))
+
+Flag32String ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"a"
+	STATUS		current
+	DESCRIPTION
+		"This data type is an ASCII representation of a 32 bit flag sequence."
+	SYNTAX		OCTET STRING (SIZE (32))
+
+Flag64String ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"a"
+	STATUS		current
+	DESCRIPTION
+		"This data type is an ASCII representation of a 64 bit flag sequence."
+	SYNTAX		OCTET STRING (SIZE (64))
+
+DateString ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"a"
+	STATUS		current
+	DESCRIPTION
+		"This data type is an ASCII representation of a date and time,format
+		"dd-mm-yyyy hh:mm:ss:xx w" being dd: date, mm: month, yyyy:year, w: day
+		of the week (1-7),hh: hour; mm: minute, ss: second, xx: hundredths of second."
+	SYNTAX		OCTET STRING (SIZE (24))
+
+EventTableItem ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"8a" "1a" "1a" "64a" "1a" "16a"
+	STATUS		current
+	DESCRIPTION
+		"This data type is an ASCII representation of a event in the Z001's event table. It's constructed as a sequence of previously defined textual conventions using a blank character as field separator, specifically:
+
+		Field		Type		Offset
+		--------------------------------------
+		EventID		IntegerString	1
+
+		EventClass	1 ASCII char	10
+
+		EventParameter	Flag64String	12
+
+		EventFlags	Flag16String	77"
+	SYNTAX		OCTET STRING (SIZE (92))
+
+HistoryTableItem ::= TEXTUAL-CONVENTION
+	DISPLAY-HINT	"8a" "1a" "24a" "1a" "8a" "1a" "64a"
+	STATUS		current
+	DESCRIPTION
+		"This data type is an ASCII representation of a register in the Z001's history event table. It's constructed as a sequence of previously defined textual conventions using a blank character as field separator, specifically: 
+
+		Field		Type		Offset
+		--------------------------------------
+		EventCode	IntegerString	1	(EventCode is an integer that goes sequentialy around 0..65535 for every new event in the table)
+
+		EventDate	DateString	10	(hundredhts of second and day of the week not used)
+
+		EventID		IntegerString	35
+
+		EventParameter	Flag64String	44"
+	SYNTAX		OCTET STRING (SIZE (128))
+
+END

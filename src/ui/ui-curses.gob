@@ -1,0 +1,170 @@
+%{
+/**
+   \page uicurses UiCurses
+   \section uicurses_desc DESCRIPCIÓN
+   Módulo principal CURSES. Crea una ventana CURSES vacía.
+   \section uicurses_reqs REQUISITOS
+     \subsection uicurses_deps Dependencias
+     NINGUNA
+     \subsection uicurses_pres Precarga
+     NINGUNA
+     \subsection uicurses_evs  Eventos
+     NINGUNO*
+     \subsection uicurses_cfs Configuración
+        -# in_filename
+	   - Tipo: G_TYPE_STRING
+	   - Opcional (stdin por defecto)
+	   - Descripción: Fichero del que leer entrada (teclado).
+        -# out_filename
+	   - Tipo: G_TYPE_STRING
+	   - Opcional (stdout por defecto)
+	   - Descripción: Fichero en el que mostrar la salida (pantalla).
+	-# term
+	   - Tipo: G_TYPE_STRING
+	   - Opcional (Variable de entorno TERM por defecto)
+	   - Descripción: Nombre de terminal a usar.
+   \section uicurses_feas CARACTERÍSTICAS
+     \subsection uicurses_ifs  Implementa
+     NINGUNA
+     \subsection uicurses_sigs Señales
+     NINGUNA
+*/
+
+/* No podemos pasar "self", así que global privada */
+static GPollFD pfd;
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "ui-curses"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level,format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+%h{
+#include <ags-cf.h>
+#include <curses.h>
+#include <menu.h>
+#include <locale.h>  //i18n
+%}
+
+requires 2.0.0
+
+class Ui:Curses from G:Object {
+
+signal last NONE (INT) void keysig(self, int c);
+
+private gchar* term         = NULL;
+private gchar* in_filename  = NULL;
+private gchar* out_filename = NULL;
+
+private FILE* in  = NULL;
+private FILE* out = NULL;
+
+private GPtrArray* elements = { g_ptr_array_new() };
+
+private
+int
+prepare(GSource *source, gint *timeout_)
+  {
+    ags_debug(5,"prepare");
+    *timeout_=-1;
+    return FALSE;
+  }
+private
+int
+check(GSource *source)
+  {
+    int i;
+
+    if(pfd.revents && G_IO_IN) {
+      return TRUE;
+    }
+    
+    return FALSE;
+  }
+private
+int
+dispatch(GSource *source, GSourceFunc callback, gpointer self)
+  {
+    int c;
+
+    c=getch();
+    self_keysig(UI_CURSES(self), c);
+    
+    return TRUE;
+  }
+
+public
+GObject *
+new (char *ui_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  CfTable my_cft;
+  GValue *v;
+ 
+  my_cft=config_get_table(CONFIGIF(cf), cft, ui_name);
+
+  char *term         = config_get_string(CONFIGIF(cf), my_cft, "term"        );
+  char* in_filename  = config_get_string(CONFIGIF(cf), my_cft, "in_filename" );
+  char* out_filename = config_get_string(CONFIGIF(cf), my_cft, "out_filename");
+
+  UI_CURSES(ret)->_priv->term         = term;
+  UI_CURSES(ret)->_priv->in_filename  = in_filename;
+  UI_CURSES(ret)->_priv->out_filename = out_filename;
+
+  UI_CURSES(ret)->_priv->out = out_filename?
+    fopen(out_filename, "w"):fdopen(1, "w");
+  UI_CURSES(ret)->_priv->in  = (in_filename && strcmp(in_filename, "-")!=0 )?
+    fopen(in_filename, "r"):fdopen(0, "r");
+
+  /* Inicialización curses */
+  newterm(term, UI_CURSES(ret)->_priv->out, UI_CURSES(ret)->_priv->in );
+  
+  reset_prog_mode();
+  start_color();
+  cbreak();
+  noecho();
+  keypad(stdscr, TRUE);
+
+  refresh();
+
+  /* Polling de entrada en mainloop */
+  /* funciones de fuente */
+  static GSourceFuncs source_funcs;
+  source_funcs.prepare=self_prepare;
+  source_funcs.check=self_check;
+  source_funcs.dispatch=self_dispatch;
+  /* creamos fuente */
+  GSource* source = g_source_new(&source_funcs, sizeof(GSource));
+  /* inicializamos descriptor */
+  pfd.fd=fileno(UI_CURSES(ret)->_priv->in);
+  pfd.events=G_IO_IN | G_IO_PRI | G_IO_HUP | G_IO_ERR;
+  /* añadimos descriptor a fuente */
+  g_source_add_poll(source, &pfd);
+  /* conectamos fuente de eventos a mainloop */
+  g_source_set_callback(source,
+			(GSourceFunc) NULL, (gpointer) ret,
+			(GDestroyNotify) NULL);
+  g_source_attach(source, NULL);
+
+  /* i18n */
+  setlocale(LC_ALL,"");
+  bindtextdomain("ags","/usr/share/locale");
+  textdomain("ags");
+  /* i18n */
+
+  return G_OBJECT(ret);
+}
+
+}
+
+%{
+  /**/
+  GObject *(*uicurses_new())(char*, AgsCf*, CfTable)
+    {
+      return ui_curses_new;
+    }
+%}

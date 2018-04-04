@@ -1,0 +1,238 @@
+%{
+/**
+   \page xml2tslibxml2 Xml2TsLibXml2
+   \section xml2tslibxml2_desc DESCRIPCIÓN
+      Inicializa un "store" ("tree model") a partir de un XML.
+   \section xml2tslibxml2_reqs REQUISITOS
+     \subsection xml2tslibxml2_deps Dependencias
+	-# model_obj*
+	-# textbuffer (Opcional)
+	-# pixbufs_obj
+     \subsection xml2tslibxml2_pres Precarga
+        NINGUNO*
+     \subsection xml2tslibxml2_evs  Eventos
+        NINGUNO
+     \subsection xml2tslibxml2_cfs Configuración
+        -# xml_filename
+	   - Tipo: G_TYPE_STRING
+	   - Opcional (Requerido si no se especifica textbuffer).
+	   - Descripción: Nombre de fichero del que cargar el XML.
+     \subsection xml2tslibxml2_reqpros Propiedades
+	-# model_obj
+	   -# model
+        -# textbuffer
+	   -# text
+   \section xml2tslibxml2_feas CARACTERÍSTICAS
+     \subsection xml2tslibxml2_ifs  Implementa
+        NINGUNA
+     \subsection xml2tslibxml2_sigs Señales
+        NINGUNA
+     \subsection xml2tslibxml2_props Propiedades
+        NINGUNA
+*/
+%}
+
+%h{
+#include <ags-cf.h>
+#include <gtk2-pixbufs.h>
+#include <ags-type.h>
+#include <textbufferif.h>
+#include <treestoreif.h>
+%}
+
+%{
+  /**
+   * libxml2 TreeStore.
+   */
+
+#include <libxml/xmlmemory.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "xml2ts-libxml2"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+requires 2.0.0
+
+class Xml2Ts:LibXml2 from G:Object {
+
+private GObject *pixbufs   = NULL unrefwith g_object_unref;
+private GObject *treestore = NULL unrefwith g_object_unref;
+
+private 
+void
+parse(self, xmlNode *xml_root, GObject *tree_store, TsRow parent_iter) {
+  xmlChar *node_name, *var_name, *var_key, *var_n, *var;
+  xmlNode *cur_node, *child_node;
+  xmlAttrPtr prop;
+  TsRow iter;
+  GValue vv = { 0, };
+  GValue *v=&vv;
+
+  cur_node = xml_root;
+  treestore_new_iter(TREESTOREIF(tree_store), &iter);
+
+  if ( cur_node->type == XML_ELEMENT_NODE ) {
+    treestore_append(TREESTOREIF(tree_store), iter, parent_iter);
+
+    gint cn=treestore_get_column_number(TREESTOREIF(tree_store), "type");
+    
+    g_value_init(v, G_TYPE_STRING);
+    g_value_set_string(v, cur_node->name);
+    treestore_set_value(TREESTOREIF(tree_store), iter, cn, v);
+    g_value_unset(v);
+
+    GType type;
+    GdkPixbuf *pb;
+    for(prop=cur_node->properties;prop;prop=prop->next) {
+      ags_debug(5,"prop->name=%s", prop->name);
+      var=xmlGetProp(cur_node, prop->name);
+      if(var) {
+	cn=treestore_get_column_number(TREESTOREIF(tree_store), prop->name);
+	ags_debug(6,"cn=%d var=%s", cn, var);
+	if(cn>=0) {
+	  type=treestore_get_column_type(TREESTOREIF(tree_store), cn);
+	  switch(type) {
+	  case G_TYPE_INT:	    
+	    g_value_init(v, type);
+	    g_value_set_int(v, atoi(var));
+	    break;
+	  case G_TYPE_BOOLEAN:
+	    g_value_init(v, type);
+	    g_value_set_int(v, atoi(var));
+	    break;
+	  default:
+	    /* case GDK_TYPE_PIXBUF: */
+	    if(type==GDK_TYPE_PIXBUF) {
+	      pb=get_pixbuf(XML2TS_LIBXML2(self)->_priv->pixbufs, var);
+	      g_value_init(v, GDK_TYPE_PIXBUF);
+	      g_value_set_object(v, pb);
+	      treestore_set_value(TREESTOREIF(tree_store), iter, cn, v);
+	    } else {
+	      /* default: */
+	      g_value_init(v, G_TYPE_STRING);
+	      //i18n: g_value_set_string(v, var);
+	      g_value_set_string(v, gettext(var));
+	    }
+	    break;
+	  }
+	  treestore_set_value(TREESTOREIF(tree_store), iter, cn, v);
+	  g_value_unset(v);
+	}
+	xmlFree(var);
+      }
+    }
+  }
+
+//   if(node_name) xmlFree(node_name);
+//   if(var_name) xmlFree(var_name);
+//   if(var_key) xmlFree(var_key);
+  
+  if(cur_node->children) {
+    self_parse(self, cur_node->children, tree_store, iter);
+  }
+  treestore_free_iter(TREESTOREIF(tree_store), iter);
+  if(cur_node->next)
+    self_parse(self, cur_node->next, tree_store, parent_iter);
+  
+  return;
+}
+  
+public 
+GObject *
+new (char *tm_name, AgsCf *cf, CfTable *cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  CfTable my_cft;
+  char *col_name;
+  CfTable columns;
+  CfTable column;
+  GValue *v;
+  char *xml_filename;
+  GObject* textbuffer;
+  char *model_name;
+  GObject *mod_obj;
+  int i, len=0;
+  GType type;
+  GType *types=NULL;
+
+  ags_debug(1,"Leyendo configuración...");
+  my_cft=config_get_table(CONFIGIF(cf), cft, tm_name);
+
+  /* pixbufs */
+  mod_obj=config_get_object(CONFIGIF(cf), my_cft, "pixbufs_obj");
+  if(mod_obj) {
+    g_object_ref(mod_obj);
+    XML2TS_LIBXML2(ret)->_priv->pixbufs=G_OBJECT(mod_obj);
+  }
+  
+
+  /* mod_obj=model */
+  mod_obj=config_get_object(CONFIGIF(cf), my_cft, "model_obj");
+  if(mod_obj) {
+    g_object_ref(mod_obj);
+    XML2TS_LIBXML2(ret)->_priv->treestore=G_OBJECT(mod_obj);
+  }
+
+  textbuffer=config_get_object(CONFIGIF(cf), my_cft, "textbuffer");
+
+  xmlDocPtr doc;
+  if(textbuffer) {
+    gchar* xml_text;
+    gint   xml_text_len;
+    xml_text=textbuffer_get(TEXTBUFFERIF(textbuffer), &xml_text_len);
+    if(xml_text) {
+      doc = xmlParseMemory(xml_text, xml_text_len );
+      free(xml_text);
+    }
+  } else {
+    xml_filename=config_get_string(CONFIGIF(cf), my_cft, "xml_filename");
+    xml_filename=find_file_in_path(xml_filename, AGS_UI_PATH, "AGS_UI_PATH");
+    ags_debug(1,"xml_filename = %s", xml_filename);
+    if(xml_filename) {
+      doc = xmlParseFile(xml_filename);
+      if (doc == NULL) 
+        g_error("No puedo procesar %s", xml_filename);
+      free(xml_filename);
+    }
+    else
+      g_error("No se pudo cargar XML.");
+  }
+
+  xmlNode *root = NULL;
+  root = xmlDocGetRootElement(doc);
+  if( !root || !root->name || xmlStrcmp(root->name,"node") ) {
+      xmlFreeDoc(doc);
+      return FALSE;
+  }
+
+  self_parse(XML2TS_LIBXML2(ret), root, XML2TS_LIBXML2(ret)->_priv->treestore, NULL);
+
+  xmlFreeDoc(doc);
+  xmlCleanupParser();
+
+  g_object_set_data(ret, "model", XML2TS_LIBXML2(ret)->_priv->treestore);
+
+  return G_OBJECT(ret);
+}
+
+}
+
+%{
+  GObject *(*xml2tslibxml2_new())(char*, AgsCf*, CfTable*)
+    {
+      return self_new;
+    }
+
+  void xml2tslibxml2_close(void)
+    {
+      
+    }
+%}

@@ -1,0 +1,138 @@
+%{
+/**
+   \page gtk2textbuffer Gtk2TextBuffer
+   \section gtk2textbuffer_desc DESCRIPCIÓN
+      Buffer de texto GTK2.
+   \section gtk2textbuffer_reqs REQUISITOS
+     \subsection gtk2textbuffer_deps Dependencias
+        NINGUNA
+     \subsection gtk2textbuffer_pres Precarga
+        NINGUNA*
+     \subsection gtk2textbuffer_evs  Eventos
+        NINGUNO*
+     \subsection gtk2textbuffer_cfs Configuración
+        -# text
+	   - Tipo: G_TYPE_STRING
+	   - Opcional (por defecto "")
+	   - Descripción: Texto con el que inicializar el "buffer".
+     \subsection gtk2textbuffer_reqpros Propiedades
+        NINGUNA*
+   \section gtk2textbuffer_feas CARACTERÍSTICAS
+     \subsection gtk2textbuffer_ifs  Implementa
+        -# \ref textbufferif
+     \subsection gtk2textbuffer_sigs Señales
+        NINGUNA
+     \subsection gtk2textbuffer_props Propiedades
+        -# text
+	   - Tipo: G_TYPE_STRING
+	   - Descripción: Texto contenido en el "buffer".
+*/
+%}
+
+%h{
+  /**
+   * GTK2 TextBuffer.
+   */
+#include <stdio.h>
+#include <config.h>
+#include <gtk/gtk.h>
+#include <ags-cf.h>
+#include <ags-type.h>     /* XXX find_file_in_path() */
+#include <textbufferif.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "gtk2-textbuffer"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+
+#define BUFFER_SIZE 1024
+%}
+%privateheader{
+
+%}
+
+requires 2.0.0
+
+class Gtk2:TextBuffer from Gtk:Text:Buffer (interface :TextbufferIf) {
+
+property STRING text
+  (nick  = "Texto",
+   blurb = "Texto contenido en el Gtk2TextBuffer")
+ set { 
+  gchar *text=g_value_get_string(VAL);
+  if(text)
+    self_set(self, text, strlen(text) );
+  else
+    self_set(self, "", 0);
+ }
+ get { g_value_set_string(VAL, self_get(self, NULL) ); };
+  
+
+public 
+GObject *
+new (char *tb_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  CfTable my_cft;
+  gchar* text;
+  size_t    rbytes;
+  gchar  aux[BUFFER_SIZE+1];
+  gchar* txt_filename;
+
+  ags_debug(1,"Leyendo configuración...");
+  my_cft=config_get_table(CONFIGIF(cf), cft, tb_name);
+
+  txt_filename=config_get_string(CONFIGIF(cf), my_cft, "txt_filename");
+  text=config_get_string(CONFIGIF(cf), my_cft, "text");
+  
+  if(!text && txt_filename) {
+    txt_filename=find_file_in_path(txt_filename, AGS_ALL_PATHS, "AGS_ALL_PATHS");
+    /* cargar fichero en text */
+    FILE* fd=fopen(txt_filename, "r");
+    GString* gs=g_string_new ("");
+    while( !feof(fd) && (rbytes=fread(aux, sizeof(gchar), BUFFER_SIZE, fd)) ) {
+      g_string_insert_len(gs, -1, aux, rbytes);
+    }
+    fclose(fd);
+    text=gs->str;
+    g_string_free(gs, FALSE);
+  }
+
+  self_set(TEXTBUFFERIF(ret), text, strlen(text));
+
+  return G_OBJECT(ret);
+}
+ 
+ interface :TextbufferIf private gchar* get(TextbufferIf* self, gint* len)
+   {
+     GtkTextIter start;
+     GtkTextIter end;
+     gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(self), &start, &end);
+
+     gchar* buffer = gtk_text_buffer_get_text(GTK_TEXT_BUFFER(self), &start, &end, TRUE);
+     if(len)
+       *len=g_utf8_strlen(buffer, -1);
+
+     return buffer;
+   }
+ interface :TextbufferIf private void set(TextbufferIf* self, const gchar* text, gint len)
+   {
+     gtk_text_buffer_set_text(GTK_TEXT_BUFFER(self), text, len);
+
+     GtkTextIter text_iter;
+     gtk_text_buffer_get_start_iter(GTK_TEXT_BUFFER(self), &text_iter);
+     gtk_text_buffer_place_cursor(GTK_TEXT_BUFFER(self), &text_iter);
+   }
+ 
+}
+
+%{
+  GObject *(*gtk2textbuffer_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

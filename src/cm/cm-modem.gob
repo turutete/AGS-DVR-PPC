@@ -1,0 +1,439 @@
+%{
+/**
+ * \file  cm-modem.c
+ */
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-modem"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+
+%h{
+#include <ags-cf.h>
+%}
+
+%privateheader{
+#include <accessif.h>
+#include <sys/time.h>	/*temporizadores: gettimeofday...*/
+
+#include <my-defs-sunzet.h>
+
+#include <stdio.h>
+#include <unistd.h>
+#include <termios.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define ASCII_CR	13   /* ^M , Carriage Return */
+#define ASCII_LF	10   /* ^J , Line Feed */
+
+#define RCVBUF_SIZE	30
+#define CMD_BUF_SIZE	128
+
+enum MODEM_STATUS {OCUPADO=1, SIN_SIM, ESPERA_PIN, ESPERA_PUK, LIBRE, ERROR, PPP};
+%}
+
+class Cm:MODEM from G:Object {
+/* variables privadas de modulo */
+private GObject *sds;
+private guint32 temp;
+private gint fd;
+private gchar *oid_status;
+private guint n_ioport;
+private unsigned long baudrate;
+private struct termios oldtio;
+private gint my_pid;
+
+public
+GObject*
+new (char* cm_name, AgsCf* cf, CfTable cft) {
+  GObject* ret = G_OBJECT(GET_NEW);
+  CfTable  my_cft = config_get_table(CONFIGIF(cf), cft, cm_name);
+  
+  CM_MODEM(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "elsds");
+  guint n_ioport = config_get_int(CONFIGIF(cf), my_cft, "n_ioport");
+  //printf("dbg-modem>>>n_ioport:%d\n", n_ioport);
+  CM_MODEM(ret)->_priv->n_ioport = n_ioport;
+  unsigned long baudrate = config_get_int(CONFIGIF(cf), my_cft, "baudrate");   //XXX:int->ulong
+  //printf("dbg-modem>>>baudrate:%d\n", baudrate);
+  CM_MODEM(ret)->_priv->baudrate = baudrate;
+  const gchar* oid=config_get_string(CONFIGIF(cf), my_cft, "oid_status");
+  if(oid) {
+    CM_MODEM(ret)->_priv->oid_status = g_strdup(oid);  //XXX leak?
+    g_free(oid);
+  }
+  else {
+    printf("modem>>>No se especifico variable para indicar estado comunicacion con modem!\n");
+  }
+  gint timeout = config_get_int(CONFIGIF(cf), my_cft, "timeout");
+  //printf("dbg-modem>>>timeout:%d\n", timeout);
+  if(timeout) {
+    g_timeout_add(timeout, self_poll_modem, (gpointer) ret);
+  } else {
+    printf("modem>>>No se especifico timeout de interrogacion periodica!\n");
+  }
+  CM_MODEM(ret)->_priv->my_pid = (int)getpid();
+
+  //self_inicia_temp(&CM_MODEM(ret)->_priv->temp);
+  
+  return ret;
+}
+
+private
+gboolean
+poll_modem(gpointer self) {
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+
+  //printf("modem>>>------\npoll_modem\n");fflush(stdout);
+  
+  //t1=self_lee_temp(CM_MODEM(self)->_priv->temp);
+  //printf("modem>>>tiempo timeout:%d\n",t1-t_ant);fflush(stdout);
+  //t_ant=t1;
+  //---
+  
+  self_procesa_modem(self);
+
+  //---
+  //t2=self_lee_temp(CM_MODEM(self)->_priv->temp);
+  //printf("modem>>>tiempo consumido:%d\n",t2-t1);fflush(stdout);
+  //printf("modem>>>---------\n");
+  
+  return TRUE;
+}
+
+private
+int procesa_modem(gpointer self) {
+  char rbuf[RCVBUF_SIZE];
+  int r;
+  char cmd[CMD_BUF_SIZE];
+  FILE *lock_file;
+  int modem_status=ERROR;
+  int ret=-1;
+  static int busy_count;
+
+  /* ¿ocupado? check lock file */
+  /* XXX check stale locks */
+  sprintf(cmd,"test -f /var/lock/LCK..ttyS%d", CM_MODEM(self)->_priv->n_ioport);
+  gint lock = system(cmd);
+  //0: lock, other: no lock
+  if(lock==0) {
+    //printf("dbg-modem>>>lock\n");
+    modem_status=OCUPADO;
+    /* ¿ppp? */
+    if(system("ps x | grep ppp | grep -v grep")==0)  //0: running ppp, other: no ppp
+       modem_status=PPP;
+    /* captura si bloqueo y error com. (bucle en mgetty...) */
+    if(modem_status==OCUPADO) {
+       busy_count++;
+       //printf("dbg-modem>>>busy_count:%d\n", busy_count);
+       if(busy_count>4) {
+          busy_count=4;
+	  modem_status=ERROR;
+       }
+    }  
+    self_set_oid_int(self, CM_MODEM(self)->_priv->oid_status, 0, modem_status);
+    return(ret);
+  }
+  busy_count=0;
+
+  /* crear lock file (with ascii pid) */
+  sprintf(cmd,"/var/lock/LCK..ttyS%d", CM_MODEM(self)->_priv->n_ioport);
+  lock_file=fopen(cmd,"w");
+  fprintf(lock_file,"     %d\n", CM_MODEM(self)->_priv->my_pid);
+  fclose(lock_file);
+  
+  /* abre y cfg puerto serie */
+  CM_MODEM(self)->_priv->fd = self_inicia_serie(CM_MODEM(self)->_priv->n_ioport, CM_MODEM(self)->_priv->baudrate, &CM_MODEM(self)->_priv->oldtio);
+
+  sprintf(cmd,"at\r");
+  //printf("dbg-modem>>>cmd: %s\n", cmd);fflush(stdout);
+  r=self_send_read(self, cmd, rbuf, RCVBUF_SIZE-1);
+  if(r<1)
+    goto salir;
+  //printf("dbg-modem>>>read: %s\n", rbuf);fflush(stdout);
+  if(strncmp(rbuf,"OK",RCVBUF_SIZE)!=0)
+    goto salir;
+
+  sprintf(cmd,"at+cpin?\r");
+  //printf("dbg-modem>>>cmd: %s\n", cmd);fflush(stdout);
+  r=self_send_read(self, cmd, rbuf, RCVBUF_SIZE-1);
+  if(r<1)
+    goto salir;
+  //printf("dbg-modem>>>read: %s\n", rbuf);fflush(stdout);
+  if(strncmp(rbuf,"ERROR",RCVBUF_SIZE)==0) {
+     modem_status=SIN_SIM;
+  } else if(strncmp(rbuf,"+CPIN: SIM PIN",RCVBUF_SIZE)==0) {
+     modem_status=ESPERA_PIN;
+  } else if(strncmp(rbuf,"+CPIN: SIM PUK",RCVBUF_SIZE)==0) {
+     modem_status=ESPERA_PUK;
+  } else if(strncmp(rbuf,"+CPIN: READY",RCVBUF_SIZE)==0) {
+     modem_status=LIBRE;
+  } else {
+     modem_status=ERROR;
+  }
+  ret=0;
+  goto salir;
+
+  /* salir */
+  salir:
+  self_set_oid_int(self, CM_MODEM(self)->_priv->oid_status, 0, modem_status);
+  self_cierra_serie(CM_MODEM(self)->_priv->fd, &CM_MODEM(self)->_priv->oldtio);
+  /* eliminar lock file */
+  sprintf(cmd,"rm -f /var/lock/LCK..ttyS%d", CM_MODEM(self)->_priv->n_ioport);
+  system(cmd);
+  
+  return(ret);
+}
+
+
+private
+int send_read(gpointer self, const char *cmd, char *rbuf, int rmax) {
+	char c;
+	char *p;
+	unsigned long limit;
+	int r;
+	
+	p = rbuf;
+	limit = (unsigned long) p + rmax;
+	gint fd = CM_MODEM(self)->_priv->fd;
+	
+  /******************
+   *  send command  *
+   ******************/
+	if (write(fd, cmd, strlen(cmd)) == -1) {
+		printf("modem>>>self_send_read: Write error!\n");fflush(stdout);
+		return (-1);
+	}
+
+  /*******************
+   *  read response  *
+   *******************/
+	/* tratamiento eco del modem */
+	while ((unsigned long) p < limit) {
+		r = read(fd, &c, sizeof(c));
+		//printf("dbg-modem>>>self_send_read: read ECO:%c(%d)\n",c,c);fflush(stdout);
+		if ((r == -1) || (r == 0)) {
+			//printf("dbg-modem>>>self_send_read: error de lectura de ECO\n");fflush(stdout);
+			return (r);
+		}
+		if (c == ASCII_LF) {
+			break;
+		}
+	}
+	while ((unsigned long) p < limit) {
+		r = read(fd, &c, sizeof(c));
+		//printf("dbg-modem>>>self_send_read: read:%c(%d)\n",c,c);fflush(stdout);
+		if ((r == -1) || (r == 0)) {
+			//printf("dbg-modem>>>self_send_read: error de lectura\n");fflush(stdout);
+			return (r);
+		}
+		if (c == ASCII_LF) {
+			break;
+		}
+		*p++ = c;
+	}
+	// *p = 0;
+	*(p-1) = 0;
+	r = p - rbuf;
+	
+  /**********
+   *  done  *
+   **********/
+	return (r);
+}
+
+/**
+ * Abre el puerto serie.
+ */
+/*** Usamos MODO NO-CANONICO con TIMEOUT ***/
+private
+int inicia_serie(int n_port, unsigned long baudrate, struct termios *oldtio) {
+	int fd;
+	struct termios newtio;
+	const char *str_port[] = {
+		"/dev/ttyS0",
+		"/dev/ttyS1",
+		"/dev/ttyS2",
+		"/dev/ttyS3",
+		"/dev/ttyS4",
+		"/dev/ttyS5"
+	};
+
+	//printf("dbg-modem>>>inicia_serie\n");fflush(stdout);
+	//printf("dbg-modem>>>str_port:%s\n", str_port[n_port]);fflush(stdout);
+	fd = open(str_port[n_port], O_RDWR | O_NOCTTY | O_NONBLOCK);  //O_NONBLOCK==O_NDELAY
+	if (fd <0) {  return -1;  }
+  
+	/*uso de O_NONBLOCK en open para evitar bloqueos, ahora restaurar flag*/
+	fcntl(fd, F_SETFL, 0);
+  
+	tcgetattr(fd, oldtio); /* salvamos conf. actual del puerto */
+
+	//bzero(&newtio, sizeof(newtio));
+	tcgetattr(fd, &newtio);
+	
+	//Establecer cfg de velocidad (posix)
+	switch(baudrate) {
+		case 1200:
+			cfsetispeed(&newtio, B1200);
+			cfsetospeed(&newtio, B1200);
+			break;
+		case 2400:
+			cfsetispeed(&newtio, B2400);
+			cfsetospeed(&newtio, B2400);
+			break;
+		case 4800:
+			cfsetispeed(&newtio, B4800);
+			cfsetospeed(&newtio, B4800);
+			break;
+		case 9600:
+			cfsetispeed(&newtio, B9600);
+			cfsetospeed(&newtio, B9600);
+			break;
+		case 19200:
+			cfsetispeed(&newtio, B19200);
+			cfsetospeed(&newtio, B19200);
+			break;
+		case 38400:
+			cfsetispeed(&newtio, B38400);
+			cfsetospeed(&newtio, B38400);
+			break;
+		case 57600:
+			cfsetispeed(&newtio, B57600);
+			cfsetospeed(&newtio, B57600);
+			break;
+		case 115200:
+			cfsetispeed(&newtio, B115200);
+			cfsetospeed(&newtio, B115200);
+			break;
+	}
+	
+	// CONTROL MODES
+	//////////////////
+	//comunicacion 8N1,sin ctrl de flujo...
+	//newtio.c_cflag = BAUDRATE | CLOCAL | CREAD | CS8;
+	newtio.c_cflag |= (CLOCAL | CREAD);
+	newtio.c_cflag &= ~PARENB;
+	newtio.c_cflag &= ~CSTOPB;
+	newtio.c_cflag &= ~CSIZE;
+	newtio.c_cflag |= CS8;
+	//newtio.c_cflag &= ~CNEW_RTSCTS;
+	//newtio.c_cflag &= ~CRTSCTS;
+	newtio.c_cflag |= CRTSCTS;
+	
+	// INPUT MODES
+	//////////////////
+	//raw input
+	////newtio.c_iflag = 0;
+	//newtio.c_iflag |= (~ICRNL | ~INLCR | ~IXON | ~IXOFF);
+	newtio.c_iflag &= ~(ICRNL | INLCR | IXON | IXOFF | IGNCR);
+
+	// OUTPUT MODES
+	//////////////////
+	//raw output
+	//newtio.c_oflag = 0;
+	newtio.c_oflag &= ~OPOST;
+
+	// LOCAL MODES
+	//////////////////
+	//modo de entrada (canonical or raw input > raw input)
+	//newtio.c_lflag = 0;
+	newtio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+
+	// Control characters (VTIME y VMIN)
+	//////////////////
+	newtio.c_cc[VTIME]    = 10;   /* temporizador entre caracter, TIMEOUT en decimas de segundo! */
+	newtio.c_cc[VMIN]     = 0;   /* bloquea lectura hasta recibir VMIN char  */
+  
+	//tcflush(fd, TCIFLUSH);
+	tcflush(fd, TCIOFLUSH);
+	tcsetattr(fd,TCSANOW,&newtio);
+	//tcsetattr(fd,TCSAFLUSH,&newtio);
+
+	return fd;
+}
+
+
+/**
+ * Cierra el puerto serie.
+ */
+private
+void cierra_serie(int fd, struct termios *oldtio) {
+	//printf("dbg-modem>>>cierra_serie\n");fflush(stdout);
+	tcsetattr(fd,TCSANOW,oldtio);
+	//tcsetattr(fd,TCSAFLUSH,oldtio);
+	close(fd);
+}
+
+//----------
+
+private
+void
+set_oid_int(gpointer self, char *nombre_var, int n_instancia, int valor) {
+  GValue v= {0,};
+  char aux_str[50];
+
+  if(!nombre_var)
+    return;
+
+  g_value_init(&v, G_TYPE_INT);
+  g_value_set_int(&v, valor);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_MODEM(self)->_priv->sds), aux_str, &v);
+}
+
+private
+gint
+get_oid_int(gpointer self, char *nombre_var, int n_instancia) {
+  GValue *v;
+  char aux_str[50];
+  int n;
+  
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  v=access_get( ACCESSIF(CM_MODEM(self)->_priv->sds), aux_str );
+  n=g_value_get_int(v);
+  /* clean */
+  g_free(v);
+  return n;
+}
+
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;  /*mseg*/
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+}/*fin class*/
+
+
+%{
+  GObject *(*cmmodem_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

@@ -1,0 +1,159 @@
+requires 2.0.0
+
+%h{
+#include <ags-cf.h>
+#include <queryif.h>
+#include <sqlite3.h>
+%}
+
+%{
+/**
+   \file db-sqlite3.c
+*/
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "db-sqlite3"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+%privateheader{
+typedef struct _RowData RowData;
+struct _RowData {
+  sqlite3_stmt *pStmt;
+  QueryRowCallback cb;
+  gpointer         user_data;
+};
+%}
+
+class DB:SQLite3 from G:Object (interface :QueryIf) {
+
+private sqlite3 *db     = NULL;
+private char    *dbname = NULL;
+
+public
+GObject*
+new (char* db_name, AgsCf* cf, CfTable cft)
+  {
+    GObject *ret   = G_OBJECT(GET_NEW);
+    DBSQLite3 *o   = DB_SQLITE3(ret);
+    CfTable my_cft = config_get_table(CONFIGIF(cf), cft, db_name);
+
+    o->_priv->dbname = config_get_string(CONFIGIF(cf), my_cft, "dbname");
+
+    /**/
+    int rc;
+    rc=sqlite3_open(o->_priv->dbname, &(o->_priv->db));
+    if(rc){
+      sqlite3_close(o->_priv->db);
+      g_error("Failed to open database: Error: %s\n", sqlite3_errmsg(o->_priv->db));
+    }
+
+    return ret;
+  }
+
+private
+int
+row_handler(gpointer data)
+  {
+    RowData *row_data   = (RowData*) data;
+    sqlite3_stmt *pStmt = row_data->pStmt;
+    gboolean ret=TRUE;
+
+    /* XXX */
+    int num_fields=sqlite3_column_count(pStmt);
+    int rc;
+    while(ret && ((rc = sqlite3_step(pStmt)) != SQLITE_DONE) ) {
+      int i;
+      
+      if( rc==SQLITE_ROW ){
+	GArray *garray = g_array_sized_new(FALSE, TRUE, sizeof(GValue), num_fields);
+	for(i=0; i < num_fields; i++){
+	  GValue vv={0,};
+	  GValue *v=&vv;
+	  /* "demarshalling" de tipos SQLite3->GValue */
+	  int coltype=sqlite3_column_type(pStmt, i);
+	  if(coltype==SQLITE_INTEGER) {
+	    g_value_init(v, G_TYPE_INT);
+	    g_value_set_int(v, sqlite3_column_int(pStmt, i) );
+	    g_array_append_val(garray, *v);
+	  } else {
+	    g_value_init(v, G_TYPE_STRING);
+	    const unsigned char *text=sqlite3_column_text(pStmt, i);
+	    g_value_set_string(v, text?text:"NULL");
+	    g_array_append_val(garray, *v);
+	  }
+	  /* XXX manejar tipos fecha */
+	}
+	/* llamar "callback" de fila */
+	ret=row_data->cb(garray, row_data->user_data);
+      }
+    }
+    /* clean */
+    if(pStmt) {
+      if(sqlite3_finalize(pStmt) != SQLITE_OK) {
+	g_critical("Error en query"); /* XXX */
+      }
+    }
+    g_free(row_data);
+
+    return FALSE;
+  }
+
+ interface :QueryIf private int exec(QueryIf *self (check null type), char *qstr, int qlen, char ***col_names, QueryRowCallback cb, gpointer user_data)
+   {
+     DBSQLite3 *o  = DB_SQLITE3(self);
+     sqlite3   *db = o->_priv->db;
+     GPtrArray *gparray;
+     int i;
+     
+     const char *zLeftover;
+     sqlite3_stmt *pStmt = 0;
+     int rc;
+
+     rc=sqlite3_prepare(db, qstr, qlen?qlen:strlen(qstr), &pStmt, &zLeftover);
+     /* XXX comprobar pStmt */
+     if(rc == SQLITE_OK && pStmt){ /* XXX */
+       int num_fields=sqlite3_column_count(pStmt);
+       /* Nombre de columnas */
+       if(col_names) {
+	 gparray=g_ptr_array_new();
+	 for(i=0; i < num_fields; i++){
+	   g_ptr_array_add(gparray, (gpointer) (char *)sqlite3_column_name(pStmt, i));
+	 }
+	 g_ptr_array_add(gparray, (gpointer) NULL);
+	 
+	 *col_names=g_ptr_array_free(gparray, FALSE);
+       }
+       /* Filas */
+       if(cb) {
+	 RowData* row_data=g_new0(RowData, 1);
+	 row_data->pStmt=pStmt;
+	 row_data->cb=cb;
+	 row_data->user_data=user_data;
+	 g_timeout_add(0, self_row_handler, (gpointer) row_data);
+       } else {
+	 /* clean */
+	 if(pStmt)
+	   sqlite3_finalize(pStmt);
+       }
+     } else {
+       /* error */
+       g_critical("Error en query: %s", sqlite3_errmsg(db)); /* XXX ¿leak? */
+     }
+
+     return (rc == SQLITE_OK);
+   }
+}
+
+%{
+  GObject *(*dbsqlite3_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

@@ -1,0 +1,110 @@
+%{
+/**
+   \page gtk2textview Gtk2TextView
+   \section gtk2textview_desc DESCRIPCIÓN
+      Vista de texto GTK2.
+   \section gtk2textview_reqs REQUISITOS
+     \subsection gtk2textview_deps Dependencias
+        -# container_obj
+	-# text_obj*
+     \subsection gtk2textview_pres Precarga
+        NINGUNA*
+     \subsection gtk2textview_evs  Eventos
+        NINGUNO*
+     \subsection gtk2textview_cfs Configuración
+        -# container_name
+	   - Tipo: G_TYPE_STRING
+	   - Requerido
+	   - Descripción: Nombre del "widget" contenedor donde empaquetar la vista.
+     \subsection gtk2textview_reqpros Propiedades
+        -# text_obj
+	   -# text
+   \section gtk2textview_feas CARACTERÍSTICAS
+     \subsection gtk2textview_ifs  Implementa
+        NINGUNA
+     \subsection gtk2textview_sigs Señales
+        NINGUNA
+     \subsection gtk2textview_props Propiedades
+        -# text
+	   - Tipo: G_TYPE_STRING
+	   - Descripción: Texto contenido en el "buffer" asociado a la vista.
+*/
+%}
+
+%h{
+  /**
+   * GTK2 Textview.
+   */
+
+#include <gtk/gtk.h>
+#include <ags-cf.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "gtk2-textview"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+
+%}
+%privateheader{
+
+%}
+
+requires 2.0.0
+
+class Gtk2:Textview from Gtk:Text:View {
+
+/* Mapeamos propiedad de Gtk2TextBuffer asociado */
+property STRING text
+  (nick  = "Texto",
+   blurb = "Texto contenido en el Gtk2TextBuffer")
+ set { g_object_set_property(gtk_text_view_get_buffer(GTK_TEXT_VIEW(self)), "text", VAL); }
+ get { 
+  gchar* str;
+  g_object_get(gtk_text_view_get_buffer(GTK_TEXT_VIEW(self)), "text", &str);
+  g_value_set_string(VAL, str);
+  free(str);
+ };
+
+public 
+GObject *
+new (char *tb_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  CfTable my_cft;
+  GObject *mod_obj;
+  GtkWidget *mainwin;
+  char*   container_name;
+
+  ags_debug(1,"Leyendo configuración...");
+  my_cft=config_get_table(CONFIGIF(cf), cft, tb_name);
+
+  mod_obj=config_get_object(CONFIGIF(cf), my_cft, "container_obj");
+  container_name=config_get_string(CONFIGIF(cf), my_cft, "container_name");
+  mainwin=g_object_get_data(mod_obj, container_name);
+  g_object_set_data(mod_obj, tb_name, ret);
+  free(container_name);
+
+  mod_obj=config_get_object(CONFIGIF(cf), my_cft, "text_obj");
+  gtk_text_view_set_buffer(GTK_TEXT_VIEW(ret), GTK_TEXT_BUFFER(mod_obj));
+
+  gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(ret), FALSE); /* TAB es tecla de navegación, no de carácter */
+
+  gtk_container_add(GTK_CONTAINER(mainwin), GTK_WIDGET(ret));
+
+  gtk_widget_show_all(GTK_WIDGET(ret));
+
+  return G_OBJECT(ret);
+}
+ 
+}
+
+%{
+  GObject *(*gtk2textview_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

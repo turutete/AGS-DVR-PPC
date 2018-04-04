@@ -1,0 +1,762 @@
+%{
+/**
+ * \file cm-magnetekbus.c
+ */
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-magnetekbus"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+ 
+%h{
+#include <ags-cm.h>
+#include <ags-cf.h>
+
+//#define BUFFER_RESP_MAX 6  /* DA PARAM1-5 */
+#define BUFFER_PREG_MAX 8  /* DA COM PARAM1-6 */
+#define BUFFER_RESP_MAX BUFFER_PREG_MAX  /*si hay eco, iguales*/
+
+typedef struct _TramaRespuesta TramaRespuesta;
+
+struct _TramaRespuesta {
+//  unsigned char buffer_resp[BUFFER_RESP_MAX];
+//  unsigned char buffer_preg[BUFFER_PREG_MAX];
+  char buffer_resp[BUFFER_RESP_MAX];
+  char buffer_preg[BUFFER_PREG_MAX];
+};
+
+%}
+
+%privateheader{
+#include <configif.h>
+#include <textbufferif.h>
+#include <sys/time.h>  /*temporizadores: gettimeofday...*/
+
+#include <stdio.h> /*printf*/
+
+/*
+TABLA DEL CRC-CCITT-16
+*/
+const guint16 TAB_CRC [256] = {
+            0x0000            ,
+            0x1189            ,
+            0x2312            ,
+            0x329B            ,
+            0x4624            ,
+            0x57AD            ,
+            0x6536            ,
+            0x74BF            ,
+            0x8C48            ,
+            0x9DC1            ,
+            0x0AF5A           ,
+            0x0BED3           ,
+            0x0CA6C           ,
+            0x0DBE5           ,
+            0x0E97E           ,
+            0x0F8F7           ,
+            0x1081            ,
+	    0x0108            ,
+            0x3393            ,
+            0x221A            ,
+            0x56A5            ,
+            0x472C            ,
+            0x75B7            ,
+            0x643E            ,
+            0x9CC9            ,
+            0x8D40            ,
+            0x0BFDB           ,
+            0x0AE52           ,
+            0x0DAED           ,
+            0x0CB64           ,
+            0x0F9FF           ,
+            0x0E876           ,
+            0x2102            ,
+            0x308B            ,
+            0x0210            ,
+            0x1399            ,
+            0x6726            ,
+	    0x76AF            ,
+            0x4434            ,
+            0x55BD            ,
+            0x0AD4A           ,
+            0x0BCC3           ,
+            0x8E58            ,
+            0x9FD1            ,
+            0x0EB6E           ,
+            0x0FAE7           ,
+            0x0C87C           ,
+            0x0D9F5           ,
+            0x3183            ,
+            0x200A            ,
+            0x1291            ,
+            0x0318            ,
+            0x77A7            ,
+            0x662E            ,
+            0x54B5            ,
+            0x453C            ,
+            0x0BDCB           ,
+	    0x0AC42           ,
+            0x9ED9            ,
+            0x8F50            ,
+            0x0FBEF           ,
+            0x0EA66           ,
+            0x0D8FD           ,
+            0x0C974           ,
+            0x4204            ,
+            0x538D            ,
+            0x6116            ,
+            0x709F            ,
+            0x0420            ,
+            0x15A9            ,
+            0x2732            ,
+            0x36BB            ,
+            0x0CE4C           ,
+            0x0DFC5           ,
+            0x0ED5E           ,
+            0x0FCD7           ,
+            0x8868            ,
+	    0x99E1            ,
+            0x0AB7A           ,
+            0x0BAF3           ,
+            0x5285            ,
+            0x430C            ,
+            0x7197            ,
+            0x601E            ,
+            0x14A1            ,
+            0x0528            ,
+            0x37B3            ,
+            0x263A            ,
+            0x0DECD           ,
+            0x0CF44           ,
+            0x0FDDF           ,
+            0x0EC56           ,
+            0x98E9            ,
+            0x8960            ,
+            0x0BBFB           ,
+            0x0AA72           ,
+            0x6306            ,
+	    0x728F            ,
+            0x4014            ,
+            0x519D            ,
+            0x2522            ,
+            0x34AB            ,
+            0x0630            ,
+            0x17B9            ,
+            0x0EF4E           ,
+            0x0FEC7           ,
+            0x0CC5C           ,
+            0x0DDD5           ,
+            0x0A96A           ,
+            0x0B8E3           ,
+            0x8A78            ,
+            0x9BF1            ,
+            0x7387            ,
+            0x620E            ,
+            0x5095            ,
+            0x411C            ,
+            0x35A3            ,
+	    0x242A            ,
+            0x16B1            ,
+            0x0738            ,
+            0x0FFCF           ,
+            0x0EE46           ,
+            0x0DCDD           ,
+            0x0CD54           ,
+            0x0B9EB           ,
+            0x0A862           ,
+            0x9AF9            ,
+            0x8B70            ,
+            0x8408            ,
+            0x9581            ,
+            0x0A71A           ,
+            0x0B693           ,
+            0x0C22C           ,
+            0x0D3A5           ,
+            0x0E13E           ,
+            0x0F0B7           ,
+            0x0840            ,
+	    0x19C9            ,
+            0x2B52            ,
+            0x3ADB            ,
+            0x4E64            ,
+            0x5FED            ,
+            0x6D76            ,
+            0x7CFF            ,
+            0x9489            ,
+            0x8500            ,
+            0x0B79B           ,
+            0x0A612           ,
+            0x0D2AD           ,
+            0x0C324           ,
+            0x0F1BF           ,
+            0x0E036           ,
+            0x18C1            ,
+            0x0948            ,
+            0x3BD3            ,
+            0x2A5A            ,
+            0x5EE5            ,
+	    0x4F6C            ,
+            0x7DF7            ,
+            0x6C7E            ,
+            0x0A50A           ,
+            0x0B483           ,
+            0x8618            ,
+            0x9791            ,
+            0x0E32E           ,
+            0x0F2A7           ,
+            0x0C03C           ,
+            0x0D1B5           ,
+            0x2942            ,
+            0x38CB            ,
+            0x0A50            ,
+            0x1BD9            ,
+            0x6F66            ,
+            0x7EEF            ,
+            0x4C74            ,
+            0x5DFD            ,
+            0x0B58B           ,
+	    0x0A402           ,
+            0x9699            ,
+            0x8710            ,
+            0x0F3AF           ,
+            0x0E226           ,
+            0x0D0BD           ,
+            0x0C134           ,
+            0x39C3            ,
+            0x284A            ,
+            0x1AD1            ,
+            0x0B58            ,
+            0x7FE7            ,
+            0x6E6E            ,
+            0x5CF5            ,
+            0x4D7C            ,
+            0x0C60C           ,
+            0x0D785           ,
+            0x0E51E           ,
+            0x0F497           ,
+            0x8028            ,
+	    0x91A1            ,
+            0x0A33A           ,
+            0x0B2B3           ,
+            0x4A44            ,
+            0x5BCD            ,
+            0x6956            ,
+            0x78DF            ,
+            0x0C60            ,
+            0x1DE9            ,
+            0x2F72            ,
+            0x3EFB            ,
+            0x0D68D           ,
+            0x0C704           ,
+            0x0F59F           ,
+            0x0E416           ,
+            0x90A9            ,
+            0x8120            ,
+            0x0B3BB           ,
+            0x0A232           ,
+            0x5AC5            ,
+	    0x4B4C            ,
+            0x79D7            ,
+            0x685E            ,
+            0x1CE1            ,
+            0x0D68            ,
+            0x3FF3            ,
+            0x2E7A            ,
+            0x0E70E           ,
+            0x0F687           ,
+            0x0C41C           ,
+            0x0D595           ,
+            0x0A12A           ,
+            0x0B0A3           ,
+            0x8238            ,
+            0x93B1            ,
+            0x6B46            ,
+            0x7ACF            ,
+            0x4854            ,
+            0x59DD            ,
+            0x2D62            ,
+	    0x3CEB            ,
+            0x0E70            ,
+            0x1FF9            ,
+            0x0F78F           ,
+            0x0E606           ,
+            0x0D49D           ,
+            0x0C514           ,
+            0x0B1AB           ,
+            0x0A022           ,
+            0x92B9            ,
+            0x8330            ,
+            0x7BC7            ,
+            0x6A4E            ,
+            0x58D5            ,
+            0x495C            ,
+            0x3DE3            ,
+            0x2C6A            ,
+            0x1EF1            ,
+            0x0F78            };
+
+#define BUFFER_MAX 1
+
+enum {
+  ESPERA_DA=0,
+  ESPERA_COM,
+  ESPERA_PARAM,
+  ESPERA_CRC,
+  FIN,
+};
+
+typedef struct _Trama Trama;
+
+struct _Trama {
+  unsigned int len; /* bytes que queda por leer en esta trama */
+  /*calculo crc*/
+  guint16 crc;
+  char* p_byte;
+
+  TramaRespuesta resp;
+  unsigned char* p_buffer;
+};
+%}
+
+
+class Cm:MagnetekBus from Ags:Cm {
+
+/* variables privadas */
+private GObject*	r_textbuffer;		/* parametro cfg buffer de lectura */
+private GObject*	w_textbuffer;		/* parametro cfg buffer de escritura */
+private GIOChannel*	io;
+private GQueue*		queue = { g_queue_new(); };
+//private gboolean	flag_envio = TRUE;	/* flag de uso interno */
+//private guint		timeout_read;		/* parametro de cfg de timeout en la lectura canal serie */
+//private guint		tag_timeout_read;	/* tag funcion timeout para respuesta */
+private unsigned char	state = ESPERA_DA;
+private Trama		trama;
+private gboolean	eco;			/* parametro de cfg de presencia o no de eco */
+//private gboolean	flag_eco = TRUE;	/* flag tratamiento interno del eco */
+private gboolean	flag_respuesta;		/* flag tratamiento interno del eco */
+private guint32		temp;
+
+public
+GObject*
+new (char *cm_name, AgsCf *cf, CfTable cft) {
+  /* constructor de CmMagnetekBus */
+  GObject *ret = G_OBJECT(GET_NEW);
+  
+  /* obtener tabla cfg modulo */
+  CfTable my_cft= config_get_table(CONFIGIF(cf), cft, cm_name);
+
+  GError* error=NULL;
+
+  const gchar* filename=config_get_string(CONFIGIF(cf), my_cft, "bus_filename");
+  if(filename) {
+    CM_MAGNETEKBUS(ret)->_priv->io = g_io_channel_new_file(filename, "r+", &error);
+    free(filename);
+  } else {
+    g_error("Error, no se especificó bus_filename para bus magnetek.");
+  }
+
+  CM_MAGNETEKBUS(ret)->_priv->r_textbuffer = config_get_object(CONFIGIF(cf), my_cft, "rbuffer");
+  CM_MAGNETEKBUS(ret)->_priv->w_textbuffer = config_get_object(CONFIGIF(cf), my_cft, "wbuffer");
+
+  if(CM_MAGNETEKBUS(ret)->_priv->io) {
+    g_clear_error(&error);
+    g_io_channel_set_encoding(CM_MAGNETEKBUS(ret)->_priv->io, NULL, &error);
+    g_io_channel_set_buffered(CM_MAGNETEKBUS(ret)->_priv->io, FALSE);
+    ags_debug(1,"bus buffered=%d", g_io_channel_get_buffered(CM_MAGNETEKBUS(ret)->_priv->io));
+
+    ags_debug(1, "IO buffer size=%d", g_io_channel_get_buffer_size(CM_MAGNETEKBUS(ret)->_priv->io) );
+    g_io_add_watch(CM_MAGNETEKBUS(ret)->_priv->io, G_IO_IN, self_io_in, (gpointer) ret);
+
+    /* Conectar con buffer de escritura */
+    g_signal_connect(G_OBJECT(CM_MAGNETEKBUS(ret)->_priv->w_textbuffer), "changed", (GCallback) self_changed, (gpointer) ret);
+  } else {
+    g_critical("No se pudo abrir BUS Magnetek.");
+  }
+
+  /* polling */
+  gint timeout = config_get_int(CONFIGIF(cf), my_cft, "timeout_poll");
+  if(timeout) {
+    g_timeout_add(timeout, self_poll, (gpointer) ret);
+  }
+  
+  //CM_MAGNETEKBUS(ret)->_priv->timeout_read = config_get_int(CONFIGIF(cf), my_cft, "timeout_read");
+  CM_MAGNETEKBUS(ret)->_priv->eco = config_get_boolean(CONFIGIF(cf), my_cft, "eco");
+  
+  self_inicia_temp(&CM_MAGNETEKBUS(ret)->_priv->temp);
+  
+  return ret;
+}
+
+private
+void
+changed (GObject *textbuffer, gpointer self) {
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+
+  t1=self_lee_temp(CM_MAGNETEKBUS(self)->_priv->temp);
+  gchar* buffer = textbuffer_get(TEXTBUFFERIF(textbuffer), NULL);
+
+  /* Encolamos la trama */
+  g_queue_push_head(CM_MAGNETEKBUS(self)->_priv->queue, (gpointer) buffer);
+  /*
+  if(CM_MAGNETEKBUS(self)->_priv->flag_envio==TRUE) {
+    CM_MAGNETEKBUS(self)->_priv->flag_envio=FALSE;
+    self_io_out(self);
+  }*/
+
+  t2=self_lee_temp(CM_MAGNETEKBUS(self)->_priv->temp);
+//  printf("cm-magnetekbus.changed -> timeout:%d\ttiempo consumido:%d\n", t1-t_ant, t2-t1);fflush(0);
+  t_ant=t1;
+}
+
+/* interrogacion periodica a los modulos */
+private
+gboolean
+poll(gpointer self) {
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+
+  t1=self_lee_temp(CM_MAGNETEKBUS(self)->_priv->temp);
+  
+  /*
+  if(CM_MAGNETEKBUS(self)->_priv->eco==TRUE)
+    CM_MAGNETEKBUS(self)->_priv->flag_eco=TRUE;
+  */
+
+  self_io_out(self);
+
+  t2=self_lee_temp(CM_MAGNETEKBUS(self)->_priv->temp);
+  printf("cm-magnetekbus.poll -> T:%u\ttimeout:%ld\ttiempo consumido:%d\n", t1, t1-t_ant, t2-t1);fflush(0);
+  t_ant=t1;
+  
+  return TRUE;
+}
+
+private 
+gboolean
+io_out(self)
+{
+  gboolean res=FALSE;
+  //---
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+
+  t1=self_lee_temp(CM_MAGNETEKBUS(self)->_priv->temp);
+  ags_debug(2,"tiempo timeout:%d",t1-t_ant);
+  t_ant=t1;
+
+  /* ordenar en función de prioridad de mensaje en la cola y luego desencolar */
+  g_queue_sort(CM_MAGNETEKBUS(self)->_priv->queue, self_ordena_cola, (gpointer)self);
+  
+  char* buffer=g_queue_pop_tail(CM_MAGNETEKBUS(self)->_priv->queue);
+
+  ags_debug(2,"io_out");
+
+  if(buffer) {
+    gsize bytes_written;
+    GError* error=NULL;
+    guint16 crc;
+    //char buf[2]={0,0};
+    guint8 buf[2]={0,0};
+    
+    ags_debug(2, "ENVIO TRAMA POLL");
+    int i;
+    for(i=1;i<9;i++) {
+      ags_debug(2, "%2x", buffer[i]);
+      g_io_channel_write_chars(CM_MAGNETEKBUS(self)->_priv->io, &buffer[i], 1, &bytes_written, &error);
+      /* XXX comprobar error */
+      g_clear_error(&error);
+    }
+
+    /* crc */
+    crc = self_cacrc(8,buffer+1);
+    //*((int*)buf)=crc;
+    buf[0] = crc & 0x00FF;
+    buf[1] = (crc>>8) & 0x00FF;
+    
+    //ags_debug(2, "crc: %x,%x,%x", crc,buf[0],buf[1]);
+    
+    for(i=0;i<2;i++) {
+      //ags_debug(2, "%x", buf[i]);
+      g_io_channel_write_chars(CM_MAGNETEKBUS(self)->_priv->io, &buf[i], 1, &bytes_written, &error);
+      /* XXX comprobar error */
+      g_clear_error(&error);
+    }
+    printf("cm-magnetekbus.io_out -> Trama enviada T:%u\n", t1);fflush(0);
+    printf("cm-magnetekbus.io_out %2X %2X %2X %2X %2X %2X %2X %2X . %2X %2X\n", buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7], buffer[8], buf[0], buf[1]);fflush(0);
+    
+    //CM_MAGNETEKBUS(self)->_priv->tag_timeout_read = g_timeout_add(CM_MAGNETEKBUS(self)->_priv->timeout_read, self_timeout_read, (gpointer)self);
+    
+    /*XXXguardar pregunta para asociar con respuesta*/
+    memcpy(CM_MAGNETEKBUS(self)->_priv->trama.resp.buffer_preg, buffer, sizeof(buffer));
+
+    g_free(buffer);
+    res=TRUE;
+  }
+  
+  t2=self_lee_temp(CM_MAGNETEKBUS(self)->_priv->temp);
+  ags_debug(2,"tiempo consumido:%d",t2-t1);
+
+  return res;
+}
+
+private
+gint
+ordena_cola(gconstpointer a, gconstpointer b, gpointer self)
+{
+  /* 0 en adelante: de mayor a menor prioridad */
+  if(*(gchar*)a>*(gchar*)b)
+    return -1; /*a delante de b*/
+  else if(*(gchar*)a<*(gchar*)b)
+    return 1; /*a detras de b*/
+  else
+    return 0;
+}
+
+/*
+private
+int
+timeout_read(gpointer self)
+{
+  ags_debug(2, "timeout!");
+  CM_MAGNETEKBUS(self)->_priv->flag_envio=TRUE;
+  CM_MAGNETEKBUS(self)->_priv->flag_eco = TRUE;
+  return FALSE;
+}*/
+
+private
+gboolean
+io_in(GIOChannel *io, GIOCondition condition, gpointer self) 
+{
+  gchar buffer[BUFFER_MAX];
+  gchar c;
+  gsize bytes_read;
+  GError* error=NULL;
+  GIOStatus status;
+  int i;
+  guint16 cacrc;
+  //---
+  guint32 t1, t2;
+  static guint32 t_ant=0;
+  gboolean tramaRecibida = FALSE;
+  gchar *puntero;
+
+  t1=self_lee_temp(CM_MAGNETEKBUS(self)->_priv->temp);
+  ags_debug(2,"temporizador_in:%d",t1-t_ant);
+
+  status=g_io_channel_read_chars(io, buffer, BUFFER_MAX, &bytes_read, &error);
+  /* XXX comprobar error */
+  g_clear_error(&error);
+
+  ags_debug(2,"io_in (bytes_read: %d)",bytes_read);
+
+  if(status==G_IO_STATUS_NORMAL) {
+    for(i=0;i<bytes_read;i++) {
+      c=buffer[i];
+      //ags_debug(2, "state=%d c=%#x", CM_MAGNETEKBUS(self)->_priv->state, c);
+      /* Máquina de estados implementada mediante "switch" */
+      switch(CM_MAGNETEKBUS(self)->_priv->state) {
+        case ESPERA_DA:
+	  CM_MAGNETEKBUS(self)->_priv->trama.p_buffer = CM_MAGNETEKBUS(self)->_priv->trama.resp.buffer_resp;
+	  *CM_MAGNETEKBUS(self)->_priv->trama.p_buffer++=c;
+	  //if( (CM_MAGNETEKBUS(self)->_priv->eco==TRUE) && (CM_MAGNETEKBUS(self)->_priv->flag_eco==TRUE) ) { /* trama pregunta 10 bytes */
+	  if(c!=0) { /* trama pregunta 10 bytes */
+	    CM_MAGNETEKBUS(self)->_priv->flag_respuesta=0;
+            ags_debug(2,"trama 10 bytes (ECO)");
+	    CM_MAGNETEKBUS(self)->_priv->state=ESPERA_COM;
+	    CM_MAGNETEKBUS(self)->_priv->trama.len=9;
+	  }
+	  else { /* trama respuesta 8 bytes */
+	    CM_MAGNETEKBUS(self)->_priv->flag_respuesta=1;
+            ags_debug(2,"trama 8 bytes (RESPUESTA)");
+            CM_MAGNETEKBUS(self)->_priv->state=ESPERA_PARAM;
+	    CM_MAGNETEKBUS(self)->_priv->trama.len=7;
+	  }
+	  break;
+        case ESPERA_COM:
+	  *CM_MAGNETEKBUS(self)->_priv->trama.p_buffer++=c;
+          CM_MAGNETEKBUS(self)->_priv->trama.len--;
+          CM_MAGNETEKBUS(self)->_priv->state=ESPERA_PARAM;
+	  break;
+        case ESPERA_PARAM:
+          *CM_MAGNETEKBUS(self)->_priv->trama.p_buffer++=c;
+	  CM_MAGNETEKBUS(self)->_priv->trama.len--;
+	  if(CM_MAGNETEKBUS(self)->_priv->trama.len==2) {  /*¿datos completos?*/
+	    CM_MAGNETEKBUS(self)->_priv->state=ESPERA_CRC;
+	    CM_MAGNETEKBUS(self)->_priv->trama.p_byte = (char*)&CM_MAGNETEKBUS(self)->_priv->trama.crc;
+	  }
+	  break;
+        case ESPERA_CRC:
+          *CM_MAGNETEKBUS(self)->_priv->trama.p_byte++ = c;
+          CM_MAGNETEKBUS(self)->_priv->trama.len--;
+	  if(!CM_MAGNETEKBUS(self)->_priv->trama.len) {  /*¿trama completa?*/
+	    /*check crc*/
+	    //if( (CM_MAGNETEKBUS(self)->_priv->eco==TRUE) && (CM_MAGNETEKBUS(self)->_priv->flag_eco==TRUE) ) {
+	    /*XXX: quiza hacer en funcion de la lectura hasta ahora*/
+	    if(CM_MAGNETEKBUS(self)->_priv->flag_respuesta!=1) { /*eco*/
+	      //ags_debug(2, "crc 8 bytes");
+	      cacrc = self_cacrc( 8, CM_MAGNETEKBUS(self)->_priv->trama.resp.buffer_resp );
+	    }
+	    else {
+	      //ags_debug(2, "crc 6 bytes");
+	      cacrc = self_cacrc( 6, CM_MAGNETEKBUS(self)->_priv->trama.resp.buffer_resp );
+	    }
+
+	    //ags_debug(2, "recepcion crc: %x", CM_MAGNETEKBUS(self)->_priv->trama.crc);
+	    //ags_debug(2, "calculo crc: %x", cacrc);
+
+	    if(CM_MAGNETEKBUS(self)->_priv->trama.crc == cacrc) {
+	      //CM_MAGNETEKBUS(self)->_priv->state=FIN;
+	      goto fin;
+	    }
+	    else {
+	      g_critical("ERROR en check del crc");
+	      CM_MAGNETEKBUS(self)->_priv->state=ESPERA_DA;
+	    }
+	  }
+	  break;
+        //case FIN:
+	fin:
+	  /* trama OK */
+
+	  ags_debug(2, "trama ok");
+
+	  /*poner estado inicial*/
+	  CM_MAGNETEKBUS(self)->_priv->state=ESPERA_DA;
+	  
+	  /* analisis eco
+	  if(CM_MAGNETEKBUS(self)->_priv->eco==TRUE) {
+	    //CM_MAGNETEKBUS(self)->_priv->flag_eco =~ CM_MAGNETEKBUS(self)->_priv->flag_eco;
+	    if(CM_MAGNETEKBUS(self)->_priv->flag_eco==TRUE)
+	      CM_MAGNETEKBUS(self)->_priv->flag_eco = FALSE;
+	    else
+	      CM_MAGNETEKBUS(self)->_priv->flag_eco = TRUE;
+	      
+	    ags_debug(2,"flag_eco:%d", CM_MAGNETEKBUS(self)->_priv->flag_eco);
+	    
+	    //if(!CM_MAGNETEKBUS(self)->_priv->flag_eco)
+	    if(CM_MAGNETEKBUS(self)->_priv->flag_eco == FALSE)
+	      break;
+	  }*/
+	  if(CM_MAGNETEKBUS(self)->_priv->flag_respuesta==0)
+	    break;
+
+	  ags_debug(2,"RESPUESTA!!!!!");
+	  
+	  //g_source_remove(CM_MAGNETEKBUS(self)->_priv->tag_timeout_read);
+	  
+	  /*ojo devolver tb pregunta en la respuesta*/
+	  /* set de trama en buffer de lectura */
+	  textbuffer_set(TEXTBUFFERIF(CM_MAGNETEKBUS(self)->_priv->r_textbuffer), CM_MAGNETEKBUS(self)->_priv->trama.resp.buffer_resp, sizeof(TramaRespuesta));
+	  tramaRecibida = TRUE;
+	
+	  /* habilitar proximo envio
+	  if(!self_io_out(self))
+	    CM_MAGNETEKBUS(self)->_priv->flag_envio=TRUE;
+	  */
+	  break;
+	default:
+	  break;
+      }/*switch*/
+    }/*for*/
+  }/*if*/
+
+  // Incrementar la cuenta de tiempo.
+  t2=self_lee_temp(CM_MAGNETEKBUS(self)->_priv->temp);
+  t_ant += t2 - t1;
+  if(tramaRecibida) {
+	  printf("cm-magnetekbus.io_in -> Trama recibida T:%u\ttiempo consumido:%d\n", t1, t_ant);fflush(0);
+ 		puntero = CM_MAGNETEKBUS(self)->_priv->trama.resp.buffer_resp;
+    printf("cm-magnetekbus.io_in %2X %2X %2X %2X %2X\n", *(puntero+1), *(puntero+2), *(puntero+3), *(puntero+4), *(puntero+5));fflush(0);
+	  // Resetear la cuenta.
+	  t_ant = 0;
+	  tramaRecibida = FALSE;
+	}
+/*  t2=self_lee_temp(CM_MAGNETEKBUS(self)->_priv->temp);
+  printf("cm-magnetekbus.io_in -> timeout:%d\ttiempo consumido:%d\n", t1-t_ant, t2-t1);fflush(0);
+  t_ant=t1;*/
+
+  return TRUE;
+}
+
+/************************************************************************
+* FUNCION: guint16 cacrc(guint16 n, unsigned char *bufind, gpointer self)
+* OBJETO:
+* Cálculo del CRC por tabla de acuerdo a la especificación
+* estandar CRC-CCITT (polinimio generador Bn=X^16+N^12+N^5+Bn-1)
+*   	Name   : "CRC-16/CITT"
+*   	Width  : 16
+*   	Poly   : 1021
+*   	Init   : FFFF
+*   	RefIn  : False
+*   	RefOut : False
+*   	XorOut : 0000
+*   	Check  : ?
+* ENTRADA:
+*   n: número de datos
+*   *buf: puntero a la trama con datos
+* SALIDA:
+*   crc: Código CRC de la trama
+*************************************************************************/
+private
+guint16
+cacrc(guint16 n, unsigned char *bufind)
+{
+  guint16  punfr;
+  guint16  chfr;
+  guint16  crc;
+  guint16  crc1;
+  
+  for (punfr=crc=0,crc1=0x3078; punfr<n+2; ++punfr){
+    crc>>=8;
+    if (punfr<n){
+      chfr=*(bufind+punfr);
+      chfr<<=8;
+      crc+=chfr;
+    }
+    crc^=crc1;
+
+    crc1=TAB_CRC[crc & 0x00ff];
+  }
+
+  *((unsigned char *)&crc1+1)	=*((unsigned char *)&crc+1)^0xff;
+  *((unsigned char *)&crc1)	=*((unsigned char *)&crc)^0xff;
+
+  return(crc1);
+}
+
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+}/*fin class*/
+
+%{
+  GObject *(*cmmagnetekbus_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

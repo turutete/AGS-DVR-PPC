@@ -1,0 +1,682 @@
+
+_("DVR")
+_("Estado")
+_("Sistema")
+_("Nombre del equipo")
+_("Descripción del equipo")
+_("Localización")
+_("Contacto")
+_("Código del equipo")
+_("Firmware")
+_("Configuración")
+_("Estado módem")
+_("Medidas")
+_("Tensión de entrada fase R")
+_("Tensión de entrada fase S")
+_("Tensión de entrada fase T")
+_("Tensión de bus")
+_("Tensión de salida fase R")
+_("Tensión de salida fase S")
+_("Tensión de salida fase T")
+_("Corriente de salida fase R")
+_("Corriente de salida fase S")
+_("Corriente de salida fase T")
+_("Potencia de salida fase R")
+_("Potencia de salida fase S")
+_("Potencia de salida fase T")
+_("Estado")
+_("Estado de Control")
+_("Error de comunicación DSP")
+_("Parametros")
+_("Sistema")
+_("Descripción del equipo")
+_("Localización")
+_("Contacto")
+_("Fecha")
+_("Zona Horaria")
+_("Lenguaje para notificaciones")
+_("Backlight Timeout")
+_("Logout Timeout")
+_("Passwords")
+_("Comunicaciones")
+_("Dirección IP")
+_("Máscara de red")
+_("Gateway")
+_("DNS")
+_("Envio email: Servidor de correo SMTP")
+_("Envio email: Usuario")
+_("Envio email: Password")
+_("Envio email: Dirección de correo (* vs @)")
+_("Envio email: Autenticación (NO/SSL/TLS)")
+_("Envio email: Email Test Envio (* vs @)")
+_("Email 1 para envio de alarmas (* vs @)")
+_("Email 2 para envio de alarmas (* vs @)")
+_("Email 3 para envio de alarmas (* vs @)")
+_("Email 4 para envio de alarmas (* vs @)")
+_("Modo MODBUS")
+_("Modbus RTU: Direccion")
+_("Modbus RTU: Velocidad")
+_("Modbus RTU: Paridad")
+_("Modbus TCP: Puerto")
+_("Modbus TCP: Tiempo inactividad para Reset (s)")
+_("PIN del modem")
+_("Número 1 para envio SMS")
+_("Número 2 para envio SMS")
+_("Número 3 para envio SMS")
+_("Número 4 para envio SMS")
+_("Puerto TCP acceso HTTP")
+_("Puerto TCP aplicación a través de HTTP")
+_("Equipo")
+_("Tensión de red nominal")
+_("Tensión mínima DVR")
+_("Equipos en paralelo")
+_("Factor de conversión para tensiones")
+_("Frecuencia nominal")
+_("Eventos")
+_("Niveles")
+_("Notificaciones")
+_("Nombre")
+_("Nombre")
+_("Valor")
+_("Código")
+_("Evento")
+_("Est.")
+_("Nivel")
+_("Fecha")
+_("Elementos")
+_("Reconocer")
+_("Rec.")
+_("Reset")
+_("Res.")
+_("Código")
+_("Evento")
+_("Est.")
+_("Nivel")
+_("Fecha")
+_("Elemento")
+_("Mínimo (%)")
+_("Media (%)")
+_("Duración (ms)")
+_("Fase")
+_("Fecha")
+_("DVR")
+_("Estado")
+_("Parametros")
+_("Introduce password")
+_("Comprobando password...")
+_("Comprobando acceso nivel")
+_("Error, introduce de nuevo el password")
+_("Inicio sistema")
+
+_("Cambio de password")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("ErrorVInst")
+
+_("Error tensión instantánea")
+
+/* SMS [GSM 03.38] */
+_("<Error tension instantanea>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("Sobrecarga")
+
+_("Sobrecarga")
+
+/* SMS [GSM 03.38] */
+_("<Sobrecarga>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("VBusMax")
+
+_("Tensión de bus máxima")
+
+/* SMS [GSM 03.38] */
+_("<Tension de bus maxima>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("VCondMax")
+
+_("Tensión de condensador máxima")
+
+/* SMS [GSM 03.38] */
+_("<Tension de condensador maxima>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("VBusMin")
+
+_("Tensión de bus mínima")
+
+/* SMS [GSM 03.38] */
+_("<Tension de bus minima>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("FalloVRed")
+
+_("Fallo tensión de red")
+
+/* SMS [GSM 03.38] */
+_("<Fallo tension de red>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("LimitIntVSal")
+
+_("Limitación integrador de tensión de salida")
+
+/* SMS [GSM 03.38] */
+_("<Limitacion integrador de tension de salida>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("AlarmaDriver")
+
+_("Alarma driver")
+
+/* SMS [GSM 03.38] */
+_("<Alarma driver>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("ParadoPorError")
+
+_("Parado por error")
+
+/* SMS [GSM 03.38] */
+_("<Parado por error>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("ErrorDriver")
+
+_("Error driver")
+
+/* SMS [GSM 03.38] */
+_("<Error driver>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("ErrorTermo")
+
+_("Error termostato")
+
+/* SMS [GSM 03.38] */
+_("<Error termostato>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("Limitando")
+
+_("Limitando")
+
+/* SMS [GSM 03.38] */
+_("<Limitando>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("ErrorFusible")
+
+_("Error fusible")
+
+/* SMS [GSM 03.38] */
+_("<Error fusible>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("AlarmaPLL")
+
+_("Alarma PLL")
+
+/* SMS [GSM 03.38] */
+_("<Alarma PLL>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("Fallo Com.DSP")
+
+_("Error de comunicación con DSP")
+
+/* SMS [GSM 03.38] */
+_("<Error de comunicacion con DSP>")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("CambioEstado")
+
+_("Cambio de estado")
+
+/* SMS [GSM 03.38] */
+_("<Cambio de estado>")
+
+/* Ocupar 11 caracteres! [usar espacios] */
+_("   LEVE    ")
+
+/* Ocupar 11 caracteres! [usar espacios] */
+_("PERSISTENTE")
+
+/* Ocupar 11 caracteres! [usar espacios] */
+_("   GRAVE   ")
+
+/* Ocupar 11 caracteres! [usar espacios] */
+_("   SEVERA  ")
+
+_("?")
+
+_("LEVE")
+
+_("PERSISTENTE")
+
+_("GRAVE")
+
+_("SEVERA")
+
+_("OFF")
+
+_("Espera Carga")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Espera Carga_")
+
+_("Espera ON")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Espera ON_")
+
+_("ON")
+
+_("Sobrecarga")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Sobrecarga_")
+
+_("Fallo tensión instantánea")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Fallo V Inst_")
+
+_("Fallo de red")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Fallo Red_")
+
+_("Tensión de bus mínima")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_V Bus Minima_")
+
+_("Hueco máximo")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Hueco Maximo_")
+
+_("Alarma driver")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Alarma Driver_")
+
+_("Espera OFF")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Espera OFF_")
+
+_("Error de precarga")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Error precarga_")
+
+_("Error tensión de condensador")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Error VCond_")
+
+_("Error tensión de bus máxima")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Error VBusMax_")
+
+_("Error termostato")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Error Termo_")
+
+_("Error driver")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Error Driver_")
+
+_("Error fusible")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Error Fusible_")
+
+_("Error temperatura")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("_Error Temp_")
+
+_("Activación")
+
+/* Solo caracteres alfabeto SMS [GSM 03.38] */
+_("Activacion")
+
+_("Desactivación")
+
+/* Solo caracteres alfabeto SMS [GSM 03.38] */
+_("Desactivacion")
+
+_("Reconocida")
+
+/* Solo caracteres alfabeto SMS [GSM 03.38] */
+_("Reconocida")
+
+_("Bloqueada")
+
+/* Solo caracteres alfabeto SMS [GSM 03.38] */
+_("Bloqueada")
+
+/* Solo caracteres alfabeto SMS [GSM 03.38] */
+_("Leve")
+
+/* Solo caracteres alfabeto SMS [GSM 03.38] */
+_("Persistente")
+
+/* Solo caracteres alfabeto SMS [GSM 03.38] */
+_("GRAVE")
+
+/* Solo caracteres alfabeto SMS [GSM 03.38] */
+_("SEVERA")
+
+_("?")
+
+_("SI")
+
+_("NO")
+
+_("?")
+
+_("Cerrado")
+
+_("Abierto")
+
+_("?")
+
+_("Abierto")
+
+_("Cerrado")
+
+_("?")
+
+_("Si")
+
+_("No")
+
+_("?")
+
+_("Si")
+
+_("No")
+
+_("?")
+
+_("Activo")
+
+_("Inactivo")
+
+_("?")
+
+_("Inactivo")
+
+_("Activo")
+
+_("?")
+
+_("Desactivado")
+
+_("Activado")
+
+_("?")
+
+_("Activado")
+
+_("Desactivado")
+
+_("?")
+
+_("Activado")
+
+_("Desactivado")
+
+_("?")
+
+_("Marcha")
+
+_("Paro")
+
+_("?")
+
+_("Paro")
+
+_("Marcha")
+
+_("?")
+
+_("Temporal")
+
+_("Trabajo")
+
+_("Fábrica")
+
+_("?")
+
+_("Español")
+
+_("Inglés")
+
+_("?")
+
+_("OCUPADO")
+
+_("SIN TARJETA SIM")
+
+_("ESPERA PIN")
+
+_("ESPERA PUK (BLOQUEADO)")
+
+_("LIBRE")
+
+_("ERROR DE COMUNICACION")
+
+_("CONECTADO")
+
+_("?")
+
+_("Ninguna")
+
+_("Par")
+
+_("Impar")
+
+_("Nivel de acceso")
+
+_("Sistema")
+
+_("Borrando histórico...")
+
+_("Histórico borrado.")
+
+_("Error, no se pudo borrar histórico.")
+
+_("Descargas por acceso FTP")
+
+_("Borrando histórico...")
+
+_("Histórico borrado.")
+
+_("Error, no se pudo borrar histórico.")
+
+_("Reseteando alarma...")
+
+_("Alarma reseteada.")
+
+_("Error, no se pudo resetear alarma.")
+
+_("Ultimo Hueco")
+
+_("Mínimo")
+
+_("Duración")
+
+_("Español")
+
+_("Inglés")
+
+_("Activo")
+
+_("Inactivo")
+
+_("ON")
+
+_("OFF")
+
+_("Aceptar")
+
+_("Cancelar")
+
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Password:           \n    %s    ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("PROCESANDO...\nESPERE          ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("ESTADO CONTROL\n%s              ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("EVENTOS        >\n%8s eventos     ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("%s\n%02d %02d/%02d %s")
+/* Ocupar 7 caracteres! [usar espacios] */
+_("Reset? ")
+
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("MEDIDAS        >\n                ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("ENTRADA        >\n                ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Tension Ent.(%s)\n%4s %4s %4s")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("RECTIFICADOR   >\n                ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Tension Bus\n%10s V          ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Bypass\n   %s           ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("SALIDA         >\n                ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Tension Sal.(%s)\n%4s %4s %4s")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Corriente Salida\n%3s %3s %3s  (A)")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Potencia Sal. kW\n%3s %3s %3s")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("CONFIGURACION  >\n                ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Tension Nominal\n%10s V          ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("V minima DVR\n%10s V          ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Frecuencia Nom.\n%10s Hz         ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Num. equipos\n%10s            ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Fecha (aa/mm/dd)\n%s  ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Direccion IP\n%03d.%03d.%03d.%03d ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Mascara de red\n%03d.%03d.%03d.%03d ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Gateway\n%03d.%03d.%03d.%03d ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Idioma\n   %s           ")
+/* Maximo 16 caracteres! Solo ASCII [LCD] */
+_("Castellano")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("Ingles")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("Frances")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("Italiano")
+
+/* Maximo 16 caracteres! Solo ASCII */
+_("Aleman")
+
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Firmware\n%s              ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("Cambiar nivel\n  de acceso     ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("ACTUACIONES    >\n                ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("MARCHA\n   %s           ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("PARO\n   %s           ")
+// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+_("RESET\n   %s           ")
+_("Password de usuario basico.")
+
+_("Password de usuario avanzado.")
+
+_("Password de zms.")
+
+_("Password de administrador.")
+
+_("Estableciendo valor...")
+
+_("Valor establecido.")
+
+_("Error, no se pudo establecer valor.")
+
+_("Prueba envio email")
+
+_("Prueba envio email")
+
+_("Nombre del equipo")
+
+_("Descripción del equipo")
+
+_("Localización")
+
+_("Esta información ha sido elaborada por un sistema automático.\nPor favor, no responda a este correo.\n")
+
+_("INFORME DE ALARMAS")
+
+_("INFORME DE ALARMAS")
+
+_("Nombre del equipo")
+
+_("Descripción del equipo")
+
+_("Localización")
+
+_("Alarma")
+
+_("Código")
+
+_("Condición")
+
+_("Elementos")
+
+_("Severidad")
+
+_("Fecha")
+
+_("Esta información ha sido elaborada por un sistema automático.\nPor favor, no responda a este correo.\n")
+
+_("Activacion")
+
+_("Desactivacion")
+
+_("Reconocida")
+
+_("Bloqueada")
+
+_("Leve")
+
+_("Persistente")
+
+_("GRAVE")
+
+_("SEVERA")
+
+_("Elementos")
+

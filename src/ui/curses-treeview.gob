@@ -1,0 +1,260 @@
+%{
+/**
+   \page cursestreeview CursesTreeView
+   \section cursestreeview_desc DESCRIPCIÓN
+      Vista de árbol.
+      Implementación con MENU* (curses). Solo admite 2 columnas. 
+
+      estado=deprecated (reescribir "custom treeview").
+   \section cursestreeview_reqs REQUISITOS
+     \subsection cursestreeview_deps Dependencias
+	-# model_obj*
+     \subsection cursestreeview_pres Precarga
+        -# \ref xml2tslibxml2
+     \subsection cursestreeview_evs  Eventos
+        -# model_obj
+	   -# "changed_rowsig"
+     \subsection cursestreeview_cfs Configuración
+	-# columns
+	   - Tipo: CfTable
+	   - Requerido
+	   - Descripción: Tabla de configuración para definir las columnas de la vista.
+	   - Formato: XXX
+     \subsection cursestreeview_reqpros Propiedades
+        NINGUNA*
+   \section cursestreeview_feas CARACTERÍSTICAS
+     \subsection cursestreeview_ifs  Implementa
+        NINGUNA*
+     \subsection cursestreeview_sigs Señales
+        NINGUNA
+     \subsection cursestreeview_props Propiedades
+        NINGUNA
+*/
+%}
+
+%h{
+#include <ags-cf.h>
+#include <treestoreif.h>
+#include <curses.h>
+#include <menu.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "curses-treeview"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+requires 2.0.0
+
+class Curses:TreeView from G:Object {
+
+private GObject*  model_obj   = NULL;
+private GObject*  screen_obj  = NULL;
+private GArray*   columns_n   = { g_array_new(TRUE, TRUE, sizeof(int)) };
+private int       format_cols = 0;
+private int       format_rows = 0;
+
+private GPtrArray* iters = NULL;
+private GPtrArray* items = NULL;
+
+private	MENU*      menu     = NULL;
+private WINDOW*    menu_win = NULL;
+
+private int        pos = 0;
+
+private
+void
+fill_items(self, TsRow parent) {
+  TreestoreIf* store = TREESTOREIF(CURSES_TREEVIEW(self)->_priv->model_obj);
+  GArray*      colsn = CURSES_TREEVIEW(self)->_priv->columns_n;
+  GPtrArray*   iters = CURSES_TREEVIEW(self)->_priv->iters;
+  GPtrArray*   items = CURSES_TREEVIEW(self)->_priv->items;
+  MENU*        menu  = CURSES_TREEVIEW(self)->_priv->menu;
+  WINDOW*      menu_win  = CURSES_TREEVIEW(self)->_priv->menu_win;
+  int          cols = CURSES_TREEVIEW(self)->_priv->format_cols;
+  int          rows = CURSES_TREEVIEW(self)->_priv->format_rows;
+  
+  iters=g_ptr_array_new();
+  items=g_ptr_array_new();
+  
+  TsRow row;
+  treestore_new_iter(store, &row);
+  if(parent) {
+    treestore_copy(store, parent, row);
+  } else {
+    treestore_first(store, row);
+  }
+  
+  gboolean exists=row != NULL;
+  
+  for(;exists;exists=treestore_next(store, row)) {
+    int i;
+    TsRow aux;
+    treestore_new_iter(store, &aux);
+    treestore_copy(store, row, aux);
+    /* Usando MENU* son 2 columnas: valor y descripción */
+    GValue v={0,};
+    treestore_get_value(store, aux, g_array_index(colsn, int, 0), &v);
+    gchar* valor=(G_VALUE_HOLDS_STRING(&v))
+      ?g_strdup(g_value_get_string(&v))
+      :g_strdup_value_contents(&v);
+    g_value_unset(&v);
+    treestore_get_value(store, aux, g_array_index(colsn, int, 1), &v);
+    gchar* desc =(G_VALUE_HOLDS_STRING(&v))
+      ?g_strdup(g_value_get_string(&v))
+      :g_strdup_value_contents(&v);
+    g_ptr_array_add(iters, aux);
+    gsize w;
+    ITEM *item=new_item(valor?g_locale_from_utf8(valor,-1,NULL,&w,NULL):" ", desc?g_locale_from_utf8(desc,-1,NULL,&w,NULL):" ");    
+    set_item_userptr(item, aux);
+    g_ptr_array_add(items, item );
+    /* clean */
+    //    treestore_free_iter(store, aux);
+    if(valor)
+      free(valor);
+    if(desc)
+      free(desc);
+    g_value_unset(&v);
+  }
+  /* clean */
+  treestore_free_iter(store, row);
+  g_ptr_array_add(iters, NULL);
+  g_ptr_array_add(items, NULL);
+
+  menu=new_menu(items->pdata);
+
+  menu_win = newwin(LINES, COLS, 0, 0); /* XXX configurable */
+  keypad(menu_win, TRUE);
+
+  /* Set main window and sub window */
+  set_menu_win(menu, menu_win);
+  set_menu_sub(menu, derwin(menu_win, LINES, COLS, 0, 0)); /* XXX configurable */
+  set_menu_format(menu, rows, cols);
+
+  /* Set menu mark to the string " * " */
+  set_menu_mark(menu, ">"); /* XXX configurable */
+
+  /* Post the menu */
+  post_menu(menu);
+  wrefresh(menu_win);
+
+  /* guardamos en privado */
+  CURSES_TREEVIEW(self)->_priv->menu=menu;
+  CURSES_TREEVIEW(self)->_priv->menu_win=menu_win;
+}
+
+private
+void
+clean(self) {
+  MENU*      menu  = CURSES_TREEVIEW(self)->_priv->menu;
+  GPtrArray* iters = CURSES_TREEVIEW(self)->_priv->iters;
+  GPtrArray* items = CURSES_TREEVIEW(self)->_priv->items;
+
+  unpost_menu(menu);
+  free_menu(menu);
+
+  g_ptr_array_free(iters, TRUE);
+  g_ptr_array_free(items, TRUE);
+}
+
+  /* XXX en interfaz */
+public
+void
+do_key(self, int c) {
+  MENU* menu=CURSES_TREEVIEW(self)->_priv->menu;
+  TreestoreIf* store = TREESTOREIF(CURSES_TREEVIEW(self)->_priv->model_obj);
+  ITEM* item;
+
+  switch(c)
+    {
+    case KEY_DOWN:
+      menu_driver(menu, REQ_DOWN_ITEM);
+      break;
+    case KEY_UP:
+      menu_driver(menu, REQ_UP_ITEM);
+      break;
+    case KEY_LEFT:
+      menu_driver(menu, REQ_LEFT_ITEM);
+      break;
+    case KEY_RIGHT:
+      menu_driver(menu, REQ_RIGHT_ITEM);
+      break;
+    case KEY_NPAGE:
+      menu_driver(menu, REQ_SCR_DPAGE);
+      break;
+    case KEY_PPAGE:
+      menu_driver(menu, REQ_SCR_UPAGE);
+      break;
+    case '\n':
+      /* Descender árbol */
+      item=current_item(menu);
+      TsRow row=item_userptr(item);
+      /* Comprobamos si tiene children */
+      TsRow child_row;
+      treestore_new_iter(store, &child_row);
+      if(treestore_children(store, child_row, row) ) {
+	self_clean(self);
+	self_fill_items(self, child_row);
+      }
+      treestore_free_iter(store, child_row);
+      break;
+    case 27:
+      self_clean(self);
+      self_fill_items(self, NULL);
+      break;
+    }
+  
+  wrefresh(CURSES_TREEVIEW(self)->_priv->menu_win);
+  refresh();
+}
+
+public
+GObject *
+new (char *tv_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  CfTable my_cft;
+
+  ags_debug(1, "Leyendo configuración...");
+  my_cft=config_get_table(CONFIGIF(cf), cft, tv_name);
+
+  CURSES_TREEVIEW(ret)->_priv->model_obj =config_get_object(CONFIGIF(cf), my_cft, "model_obj");
+  CURSES_TREEVIEW(ret)->_priv->screen_obj=config_get_object(CONFIGIF(cf), my_cft, "screen_obj");
+
+  /* XXX sustituir por interfaz? */
+  ui_curses_add(CURSES_TREEVIEW(ret)->_priv->screen_obj, ret);
+
+  CfTable columns=config_get_table(CONFIGIF(cf), my_cft, "columns");
+  /* Leer columns */
+  int i=1;
+  gchar* column_name;
+  GString *gs_i=g_string_new("");
+  for(g_string_printf(gs_i, "%d", i)
+	;column_name=config_get_string(CONFIGIF(cf), columns, gs_i->str)
+	;g_string_printf(gs_i, "%d", ++i)) {
+    int n=treestore_get_column_number(TREESTOREIF(CURSES_TREEVIEW(ret)->_priv->model_obj), column_name);
+    g_array_append_val(CURSES_TREEVIEW(ret)->_priv->columns_n, n);
+    /* clean */
+    free(column_name);
+  }
+
+  CURSES_TREEVIEW(ret)->_priv->format_rows=LINES; /* XXX leer de configuración */
+  CURSES_TREEVIEW(ret)->_priv->format_cols=1; /* XXX fijo a 1 */
+
+  self_fill_items(ret, NULL);
+  refresh();
+
+  return ret;
+}
+}
+
+%{
+  GObject *(*cursestreeview_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

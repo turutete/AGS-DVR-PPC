@@ -1,0 +1,599 @@
+%{
+/**
+ * \file  cm-i7017.c
+ * \todo  XXX hacer modulo mas configurable via parametros de modulo
+ */
+ /* OJO, el modulo ha de estar configurado previamente de modo correcto:
+    address:01, type:0C, baudrate:9600, checksum:si
+    "%01010C06C0\r"
+    Y se hace uso del canal analogico 0.
+  */
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-i7017"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+
+%h{
+#include <ags-cf.h>
+%}
+
+%privateheader{
+#include <accessif.h>
+#include <sys/time.h>	/*temporizadores: gettimeofday...*/
+
+#include <my-defs-sunzet.h>
+
+#include <stdio.h>
+#include <unistd.h>
+#include <termios.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+
+#define BAUDRATE B9600
+//#define BAUDRATE B38400
+
+#define ASCII_CR	13   /* ^M , Carriage Return */
+#define ASCII_0       48
+#define ASCII_A       65
+/* This macro turns a 4 bits integer value to ASCII character */
+/* for example: i=4 then return '4' , i=11 then return 'B' */
+#define ASCII(i)      ( ((i) < 10) ? ((i) + ASCII_0) : ((i) - 10 + ASCII_A) )
+
+#define RCVBUF_SIZE	16
+#define CMD_BUF_SIZE 128
+#define CMD_MAX_SIZE (CMD_BUF_SIZE - 4)
+
+#define CUENTA_ERROR_MAX 120
+%}
+
+class Cm:I7017 from G:Object {
+/* variables privadas de modulo */
+private GObject *sds;
+private guint32 temp;
+private gint fd;
+private gchar *oid;
+
+public
+GObject*
+new (char* cm_name, AgsCf* cf, CfTable cft) {
+  GObject* ret = G_OBJECT(GET_NEW);
+  CfTable  my_cft = config_get_table(CONFIGIF(cf), cft, cm_name);
+
+  CM_I7017(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "elsds");
+
+  guint n_ioport = config_get_int(CONFIGIF(cf), my_cft, "n_ioport");
+  if(n_ioport) {
+    CM_I7017(ret)->_priv->fd = self_inicia_serie(n_ioport);
+    self_init_i7017( (gpointer) ret);
+  }
+  else {
+    printf("i7017>>>No se especifico puerto!\n");
+  }
+  
+  const gchar* oid=config_get_string(CONFIGIF(cf), my_cft, "oid_error");
+  if(oid) {
+    CM_I7017(ret)->_priv->oid = g_strdup(oid);
+    free(oid);
+  }
+  else {
+    printf("i7017>>>No se especifico variable para indicar fallo comunicacion!\n");
+  }
+  
+  self_inicia_temp(&CM_I7017(ret)->_priv->temp);
+  
+  guint timeout = config_get_int(CONFIGIF(cf), my_cft, "timeout");
+  if(timeout) {
+    g_timeout_add(timeout, self_poll, (gpointer) ret);
+  }
+
+  return ret;
+}
+
+private
+gboolean
+poll(gpointer self) {
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+  
+//printf("i7017>>>poll\n");fflush(stdout);
+  
+  t1=self_lee_temp(CM_I7017(self)->_priv->temp);
+//printf("i7017>>>tiempo timeout:%d\n",t1-t_ant);fflush(stdout);
+  t_ant=t1;
+  //---
+  
+  self_procesa_i7017(self);
+  
+  //---
+  t2=self_lee_temp(CM_I7017(self)->_priv->temp);
+//printf("i7017>>>tiempo consumido:%d\n",t2-t1);fflush(stdout);
+//printf("----------\n");
+  
+  return TRUE;
+}
+
+private
+int init_i7017(gpointer self) {
+	char rbuf[RCVBUF_SIZE];
+	int r;
+	//
+	const char *cmd_readname = {"$01M\r"};		/*read module name*/
+	const char *resp_readname = {"!017017\r"};
+	//
+	const char *cmd_setcfg = {"%01010C06C0\r"};	/*dir:01, new_dir:01, type:0C, baud:9600, checksum:si*/
+	//const char *cmd_setcfg = {"%01010C0680\r"}; 	/*dir:01, new_dir:01, type:0C, baud:9600, checksum:no*/
+	const char *cmd_readcfg = {"$012\r"};		/*read configuration*/
+	const char *resp_setcfg = {"!010C06C0\r"};	/*respuesta*/
+	//const char *resp_setcfg = {"!010C0680"};	/*respuesta*/
+	//	
+	const char *cmd_channel_enable = {"$015FF\r"};	/*habilitar todos los canales*/
+	const char *cmd_read_channel = {"$016\r"};
+	const char *resp_read_channel = {"!01FF\r"};
+	//
+	const char *resp_ok = {"!01\r"};
+
+
+//printf("i7017>>>init_i7017\n");fflush(stdout);
+	
+	gint fd = CM_I7017(self)->_priv->fd;
+	
+	/*verificar modulo*/
+	r=self_send_read(self, fd, cmd_readname, rbuf, RCVBUF_SIZE-1);
+	if(r<1)
+		return(-1);
+	else if(strcmp(rbuf,resp_readname)!=0) { /*si diferentes*/
+		printf("i7017>>>error en la identificacion del modulo\n");
+		return(-1);
+	}
+	
+	/*establecer cfg*/
+	r=self_send_read(self, fd, cmd_setcfg, rbuf, RCVBUF_SIZE-1);
+	if(r<1)
+		return(-1);
+	else if(strcmp(rbuf,resp_ok)!=0) { /*si diferentes*/
+		printf("i7017>>>error en la configuracion del modulo\n");
+		return(-1);
+	}	
+	/*verificar cfg establecida*/
+	r=self_send_read(self, fd, cmd_readcfg, rbuf, RCVBUF_SIZE-1);
+	if(r<1)
+		return(-1);
+	else if(strcmp(rbuf,resp_setcfg)!=0) { /*si diferentes*/
+		printf("i7017>>>error en la verificacion de configuracion del modulo\n");
+		return(-1);
+	}	
+
+	/*habilitar canales*/
+	r=self_send_read(self, fd, cmd_channel_enable, rbuf, RCVBUF_SIZE-1);
+	if(r<1)
+		return(-1);
+	else if(strcmp(rbuf,resp_ok)!=0) { /*si diferentes*/
+		printf("i7017>>>error en la habilitacion de canales del modulo\n");
+		return(-1);
+	}
+	/*verificar*/
+	r=self_send_read(self, fd, cmd_read_channel, rbuf, RCVBUF_SIZE-1);
+	if(r<1)
+		return(-1);
+	else if(strcmp(rbuf,resp_read_channel)!=0) { /*si diferentes*/
+		printf("i7017>>>error en la verificacion de habilitacion de canales del modulo\n");
+		return(-1);
+	}
+
+	return(0);
+}
+
+private
+int procesa_i7017(gpointer self) {
+	char rbuf[RCVBUF_SIZE];
+	int r;
+	char *cmd_read = {"#010\r"};		/*lectura canal analogico 0, dir:01*/
+	char signo;
+	//---
+	//int centv;
+	float medidaf;
+	//---
+	gint ganancia, offset, irradiancia;
+	
+
+//printf("i7017>>>procesa_i7017\n");fflush(stdout);
+
+	gint fd = CM_I7017(self)->_priv->fd;
+	
+	r=self_send_read(self, fd, cmd_read, rbuf, RCVBUF_SIZE-1);
+	if(r<1)
+		return(-1);
+//printf("i7017>>>read: %s\n", rbuf);fflush(stdout);
+	
+	ganancia = self_get_oid_int(self, zigorSunzetParamGanIrrad, 0);
+	offset = self_get_oid_int(self, zigorSunzetParamOffIrrad, 0);
+//printf("i7017>>>ganancia: %d\n", ganancia);fflush(stdout);
+//printf("i7017>>>offset: %d\n", offset);fflush(stdout);
+	
+	/* traduccion de ">+-000.00" */
+	r=sscanf(rbuf,">%f",&medidaf);
+	if(r!=1) return(-1);
+//printf("i7017>>>medidaf:%f\n", medidaf);fflush(stdout);
+	
+	/*convertir a W/m2*/
+	irradiancia = (medidaf/1000)*ganancia + offset;
+//printf("i7017>>>irradiancia:%d\n", irradiancia);fflush(stdout);
+	
+	//set de la irradiancia
+	self_set_oid_int(self, zigorSunzetObjIrrad, 0, irradiancia);
+
+	return(0);
+}
+
+private
+char *gum_chksum(void *cbuf, const char *cmd)
+{
+	char cL, cH;
+	char *p;
+	const char *q;
+	unsigned int chksum;
+
+	p = cbuf;
+	q = cmd;
+	chksum = 0;
+
+	while ((*q != 0) && (*q != ASCII_CR)) {
+		chksum += *q;
+		*p++ = *q++;
+	}
+	//printf("i7017>>>checksum = 0x%x\n", chksum);fflush(stdout);
+
+	cL = ASCII(chksum & 0xf);
+	cH = ASCII((chksum >> 4) & 0xf);
+
+	*p++ = cH;
+	*p++ = cL;
+	*p++ = ASCII_CR;
+	*p = 0;
+
+	return (cbuf);
+}
+
+private
+int test_chksum(const char *str)
+{
+	char cL, cH;
+	//const char *p;
+	char *p;
+	unsigned int chksum;
+
+	p = str;
+	chksum = 0;
+
+	while ((*p != ASCII_CR) && (*p != 0)) {
+		chksum += *p++;
+	}
+	chksum -= *(--p);
+	chksum -= *(--p);
+	//printf("i7017>>>test checksum = 0x%x\n", chksum);fflush(stdout);
+
+	cL = ASCII(chksum & 0xf);
+	cH = ASCII((chksum >> 4) & 0xf);
+
+	if (cH != *p++) {
+		//printf("i7017>>>test checksum KO\n");fflush(stdout);
+		return -1;
+	}
+	if (cL != *p) {
+		//printf("i7017>>>test checksum KO\n");fflush(stdout);
+		return -1;
+	}
+	
+	/* remove checksum */
+	p--;
+	*p++ = ASCII_CR;
+	*p = 0;
+	
+	return (0);
+}
+
+private
+int send_read(gpointer self, int fd, const char *cmd, char *rbuf, int rmax) {
+	char cmd_buf[CMD_BUF_SIZE];
+	char c;
+	char *p;
+	unsigned long limit;
+	int r;
+
+	p = rbuf;
+	limit = (unsigned long) p + rmax;
+	
+	static gint contador, incremento=1, fallo;
+	//---
+	
+	
+	/* comprobacion de fallo comunicacion: incrementar contadores
+	**********/
+	//printf("---\n");
+	//printf("i7017>>>contador:%d\n", contador);
+	//printf("i7017>>>incremento:%d\n", incremento);
+	//printf("i7017>>>fallo:%d\n", fallo);
+	//printf("---\n");
+	//---
+	if(contador < CUENTA_ERROR_MAX) {
+		contador+=incremento;
+		incremento<<=1;
+	}
+	else if(!fallo){  /* inicio de fallo */
+		/*set de variable indicacion de fallo*/
+		//printf("i7017>>>set de variable oid:>>>%s<<<\n", CM_I7017(self)->_priv->oid);
+		//self_set_oid_int(self, CM_I7017(self)->_priv->oid, 0, 1);
+		printf("i7017>>>Inicio fallo comunicaciones\n");
+		fallo=1;
+		contador=CUENTA_ERROR_MAX;
+		/* en caso de fallo establecer valor de irradiancia a cero */
+		//self_set_oid_int(self, zigorSunzetObjIrrad, 0, 0);
+	}
+	/* establecer estado de com. en cada iteracion para evitar su perdida */
+	if(fallo==1) {
+		/*set de variable indicacion de fallo*/
+		self_set_oid_int(self, CM_I7017(self)->_priv->oid, 0, 1);
+		/* en caso de fallo establecer valor de irradiancia a cero */
+		self_set_oid_int(self, zigorSunzetObjIrrad, 0, 0);
+	}
+	else {
+		/*set de variable indicacion de fallo*/
+		self_set_oid_int(self, CM_I7017(self)->_priv->oid, 0, 2);
+	}
+  /************************************************
+   *  gum checksum and CR code to command string  *
+   ************************************************/
+	if (strlen(cmd) <= CMD_MAX_SIZE) {
+		self_gum_chksum(cmd_buf, cmd);
+	} else {
+		printf("i7017>>>Comando excede longitud maxima\n");
+		return (-1);
+	}
+
+  /******************
+   *  send command  *
+   ******************/
+	//if (write(fd, cmd, strlen(cmd)) == -1) {
+	if (write(fd, cmd_buf, strlen(cmd_buf)) == -1) {
+		printf("i7017>>>self_send_read: Write error!\n");fflush(stdout);
+		return (-1);
+	}
+	//printf("i7017>>>self_send_read: sent command: %s\n", cmd);fflush(stdout);
+
+  /*******************
+   *  read response  *
+   *******************/
+	/*****************************************
+	 * tratamiento eco!
+	 *****************************************/
+	/*
+	do {
+	   r = read(fd, &c, sizeof(c));
+	} while(c!=ASCII_CR);
+	*/
+	while ((unsigned long) p < limit) {
+		r = read(fd, &c, sizeof(c));
+		//printf("i7017>>>while read eco:%c(%d)\n", c,c);fflush(stdout);
+		if ((r == -1) || (r == 0)) {
+			printf("i7017>>>error de lectura eco\n");fflush(stdout);
+			return (r);
+		}
+		p++;
+		if (c == ASCII_CR) {
+			break;
+		}
+	}
+	p = rbuf;
+	
+	//printf("i7017>>>leido eco\n");fflush(stdout);
+	
+	while ((unsigned long) p < limit) {
+		r = read(fd, &c, sizeof(c));
+		//printf("i7017>>>while read:%c(%d)\n", c,c);fflush(stdout);
+		if ((r == -1) || (r == 0)) {
+			//printf("i7017>>>error de lectura\n");fflush(stdout);
+			return (r);
+		}
+		if (c == ASCII_CR) {
+			break;
+		}
+		*p++ = c;
+	}
+	//printf("i7017>>>leida respuesta\n");fflush(stdout);
+	
+	*p = 0;
+	r = p - rbuf;
+	/* test checksum */
+	if (self_test_chksum(rbuf)) {
+		return (-1);
+	}
+
+  /**********
+   *  done  *
+   **********/
+	/* comprobacion de fallo comunicacion: decrementar contadores (restar, ojo 2 veces)
+	**********/
+	incremento>>=1;
+	contador-=incremento;
+	if(incremento>1)
+		incremento>>=1;
+	if(contador>0) {
+		contador-=incremento;
+	}
+	else if(fallo) {  /* fin de fallo */
+		/*set de variable indicacion de fallo*/
+		//self_set_oid_int(self, CM_I7017(self)->_priv->oid, 0, 2);
+		printf("i7017>>>Fin fallo comunicaciones\n");
+		fallo=0;
+		contador=0;
+	}
+
+	return (r);
+}
+
+/**
+ * Abre el puerto serie.
+ * \param n_port	Numero de puerto serie
+ * \param oldtio	Parámetro de salida donde la función devolverá la anterior configuración
+ *			del puerto para poder restaurarla al cerrarlo.
+ * \return	Manejador de archivo correspondiente al puerto serie abierto.
+ * \todo	Aceptar parámetros de comunicación (en lugar de defines).
+ */
+/*** Usamos MODO NO-CANONICO con TIMEOUT ***/
+private
+//int inicia_serie(int n_port, struct termios *oldtio) {
+int inicia_serie(int n_port) {
+	int fd;
+	struct termios newtio;
+	const char *str_port[] = {
+		"/dev/ttyS0",
+		"/dev/ttyS1",
+		"/dev/ttyS2",
+		"/dev/ttyS3",
+		"/dev/ttyS4",
+		"/dev/ttyS5"
+	};
+
+//printf("i7017>>>inicia_serie\n");fflush(stdout);
+  
+//printf("i7017>>>str_port:%s\n", str_port[n_port]);fflush(stdout);
+	//fd = open(str_port[n_port], O_RDWR | O_NOCTTY);
+	fd = open(str_port[n_port], O_RDWR | O_NOCTTY | O_NONBLOCK);
+	if (fd <0) {  return -1;  }
+  
+	/*uso de O_NONBLOCK en open para evitar bloqueos, ahora restaurar flag*/
+	fcntl(fd, F_SETFL, 0);
+  
+	//tcgetattr(fd, oldtio); /* salvamos conf. actual del puerto */
+
+	//bzero(&newtio, sizeof(newtio));
+	tcgetattr(fd, &newtio);
+	
+	//Establecer cfg de velocidad (posix)
+	cfsetispeed(&newtio, BAUDRATE);
+	cfsetospeed(&newtio, BAUDRATE);
+	
+	// CONTROL MODES
+	//////////////////
+	//comunicacion 8N1,sin ctrl de flujo...
+	//newtio.c_cflag = BAUDRATE | CLOCAL | CREAD | CS8;
+	newtio.c_cflag |= (CLOCAL | CREAD);
+	newtio.c_cflag &= ~PARENB;
+	newtio.c_cflag &= ~CSTOPB;
+	newtio.c_cflag &= ~CSIZE;
+	newtio.c_cflag |= CS8;
+	//newtio.c_cflag &= ~CNEW_RTSCTS;
+	newtio.c_cflag &= ~CRTSCTS;
+	
+	// INPUT MODES
+	//////////////////
+	//raw input
+	newtio.c_iflag = 0;
+	//newtio.c_iflag |= (~ICRNL | ~INLCR | ~IXON | ~IXOFF);
+
+	// OUTPUT MODES
+	//////////////////
+	//raw output
+	//newtio.c_oflag = 0;
+	newtio.c_oflag &= ~OPOST;
+
+	// LOCAL MODES
+	//////////////////
+	//modo de entrada (canonical or raw input > raw input)
+	//newtio.c_lflag = 0;
+	newtio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+
+	// Control characters (VTIME y VMIN)
+	//////////////////
+	newtio.c_cc[VTIME]    = 1;   /* temporizador entre caracter, TIMEOUT en decimas de segundo! */
+	newtio.c_cc[VMIN]     = 0;   /* bloquea lectura hasta recibir VMIN char  */
+  
+	tcflush(fd, TCIFLUSH);
+	tcsetattr(fd,TCSANOW,&newtio);
+
+	return fd;
+}
+
+
+/**
+ * Cierra el puerto serie.
+ * \param fd		Manejador de archivo correspondiente al puerto serie a cerrar.
+ * \param oldtio	Parámetros de configuración del puerto anteriores a restaurar.
+ */
+private
+void cierra_serie(int fd, struct termios *oldtio) {
+	tcsetattr(fd,TCSANOW,oldtio);
+	close(fd);
+}
+
+//----------
+
+private
+void
+set_oid_int(gpointer self, char *nombre_var, int n_instancia, int valor) {
+  GValue v= {0,};
+  char aux_str[50];
+
+  if(!nombre_var)
+    return;
+
+  g_value_init(&v, G_TYPE_INT);
+  g_value_set_int(&v, valor);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_I7017(self)->_priv->sds), aux_str, &v);
+}
+
+private
+gint
+get_oid_int(gpointer self, char *nombre_var, int n_instancia) {
+  GValue *v;
+  char aux_str[50];
+  int n;
+  
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  v=access_get( ACCESSIF(CM_I7017(self)->_priv->sds), aux_str );
+  n=g_value_get_int(v);
+  /* clean */
+  g_free(v);
+  return n;
+}
+
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;  /*mseg*/
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+}/*fin class*/
+
+
+%{
+  GObject *(*cmi7017_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

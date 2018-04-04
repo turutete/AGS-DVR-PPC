@@ -1,0 +1,157 @@
+%{
+/**
+   \page cmtextbuffer CmTextBuffer
+   \section cmtextbuffer_desc DESCRIPCIÓN
+   "Buffer" de texto.
+   \section cmtextbuffer_reqs REQUISITOS
+     \subsection cmtextbuffer_deps Dependencias
+     NINGUNA
+     \subsection cmtextbuffer_pres Precarga
+     NINGUNA
+     \subsection cmtextbuffer_evs  Eventos
+     NINGUNO
+     \subsection cmtextbuffer_cfs Configuración
+        -# txt_filename
+	   - Tipo: G_TYPE_STRING
+	   - Opcional (no tiene efecto si se especificó text).
+	   - Descripción: Nombre del fichero de texto a cargar para
+	   inicializar el "buffer".
+	-# text
+	   - Tipo: G_TYPE_STRING
+	   - Opcional
+	   - Descripción: Texto con el que inicializar el "buffer".
+   \section cmtextbuffer_feas CARACTERÍSTICAS
+     \subsection cmtextbuffer_ifs  Implementa
+        -# \ref textbufferif
+     \subsection cmtextbuffer_sigs Señales
+        -# \ref changed
+     \subsection cmtextbuffer_pros Propiedades
+        -# text
+	   - Tipo: G_TYPE_STRING
+	   - Descripción: Texto contenido en el buffer.
+   \section cmtextbuffer_srcs FUENTES
+      - \ref cm-textbuffer.c
+      - \ref cm-textbuffer.h
+*/
+%}
+
+%h{
+#include <stdio.h>
+#include <config.h>
+#include <ags-cf.h>
+#include <ags-type.h>     /* XXX find_file_in_path() */
+#include <textbufferif.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-textbuffer"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+
+#define BUFFER_SIZE 1024
+%}
+
+requires 2.0.0
+
+class Cm:TextBuffer from G:Object (interface :TextbufferIf) {
+
+signal last BOOLEAN (NONE) gboolean changed(self) ;
+
+private unsigned int len=0;
+private char* text=NULL destroywith g_free;
+property STRING text
+  (nick  = "Texto",
+   blurb = "Texto contenido en el CmTextBuffer")
+ set { 
+  const gchar *text=g_value_get_string(VAL);
+  if(text)
+    self_set(TEXTBUFFERIF(self), text, strlen(text)+1 );
+  else
+    self_set(TEXTBUFFERIF(self), "", 0+1);
+ }
+ get { char* t=self_get(TEXTBUFFERIF(self), NULL); g_value_set_string(VAL, t ); };
+  
+
+public
+GObject*
+new(char *cm_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  CfTable my_cft;
+  gchar* text;
+  GByteArray* gbarray;
+  size_t    rbytes;
+  gchar  aux[BUFFER_SIZE+1];
+  gchar* txt_filename;
+
+  ags_debug(1,"Leyendo configuración...");
+  my_cft=config_get_table(CONFIGIF(cf), cft, cm_name);
+
+  txt_filename=config_get_string(CONFIGIF(cf), my_cft, "txt_filename");
+  text=config_get_string(CONFIGIF(cf), my_cft, "text");
+  
+  if(text) {
+    self_set(TEXTBUFFERIF(ret), text, strlen(text)+1);
+    free(text);
+  } else if(txt_filename) {
+    gchar* found=find_file_in_path(txt_filename, AGS_ALL_PATHS, "AGS_ALL_PATHS");
+    /* cargar fichero */
+    FILE* fd=fopen(found, "r");
+    /* clean */
+    free(txt_filename);
+    if(found)
+      free(found);
+    /***/
+    gbarray=g_byte_array_sized_new(BUFFER_SIZE);
+    while( !feof(fd) && (rbytes=fread(aux, sizeof(gchar), BUFFER_SIZE, fd)) ) {
+      g_byte_array_append(gbarray, (guint8*) aux, rbytes);
+    }
+    fclose(fd);
+    
+    if(gbarray->data && gbarray->len) {
+      self_set(TEXTBUFFERIF(ret), gbarray->data, gbarray->len);
+      g_byte_array_free (gbarray, TRUE);
+    }
+  }
+
+  return G_OBJECT(ret);
+}
+
+ interface :TextbufferIf private gchar* get(TextbufferIf* self, gint* len)
+   {
+     char* text=CM_TEXTBUFFER(self)->_priv->text;
+     gint textlen=CM_TEXTBUFFER(self)->_priv->len;
+
+     if(len) 
+       *len=textlen;
+
+     if(text) {
+       char* t=g_memdup(text, textlen);
+       return t; 
+     } else {
+       return NULL;
+     }
+   }
+ interface :TextbufferIf private void set(TextbufferIf* self, const gchar* text, gint len)
+   {
+     char* old_text=CM_TEXTBUFFER(self)->_priv->text;
+     if(old_text)
+       free(old_text);
+
+     CM_TEXTBUFFER(self)->_priv->text=g_memdup(text, len);
+     CM_TEXTBUFFER(self)->_priv->len=len;
+
+     self_changed(CM_TEXTBUFFER(self));
+   }
+
+}
+
+%{
+  GObject *(*cmtextbuffer_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

@@ -1,0 +1,58 @@
+requires 2.0.0
+
+%h{
+#include <stdlib.h>
+#include <ags-sdsx.h>
+#include <ags-cf.h>
+#include "accessif.h"
+#include "accessxif.h"
+#include "limitsif.h"
+#include "createif.h"
+%}
+
+%{
+  /** \addtogroup sdsmods Módulos SDS
+   */
+  /*@{*/
+
+  /** \defgroup sds
+   */
+  /*@{*/
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "ags-sdscore"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+class Ags:SdsCore from Ags:SdsX (interface :AccessIf) (interface :AccessxIf) (interface :LimitsIf) (interface :CreateIf) {
+
+public GObject *
+  new (char *sds_name, AgsCf *cf, CfTable *cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  return G_OBJECT (ret);
+}
+ 
+ interface :AccessIf private GValue *get(AccessIf *self (check null type), char *k)
+   {
+     ags_debug(1,"en sdscore::get");
+     return NULL;
+   }
+ interface :AccessIf private int set(AccessIf *self (check null type), char *k, GValue *v)
+   {
+     ags_debug(1,"en sdscore::set");
+   }
+ 
+}
+
+%{
+  
+  /*@}*/
+  /*@}*/
+
+%}

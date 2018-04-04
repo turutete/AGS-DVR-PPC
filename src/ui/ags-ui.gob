@@ -1,0 +1,20 @@
+requires 2.0.0
+
+%h{
+#include <glib.h>
+#include <glib-object.h>
+#include <ags-cf.h>
+#include <treestoreif.h>
+%}
+
+%{
+%}
+
+class Ags:Ui from G:Object {
+
+public GObject *new (char *cm_name, AgsCf *cf, CfTable *cft) {
+  GObject *ret = G_OBJECT(GET_NEW); 
+  return G_OBJECT (ret);
+}
+  
+}

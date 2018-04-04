@@ -1,0 +1,143 @@
+%{
+/**
+   \file cm-script.c
+*/
+/**
+   \page cmscript CmScript
+   \section cmscript_desc DESCRIPCIÓN
+   Ejecuta un "script".
+   Opcionalmente se puede conectar al evento "clicked"
+   de un "widget" para re-lanzar el "script".
+   \section cmscript_reqs REQUISITOS
+     \subsection cmscript_deps Dependencias
+        -# interpreter
+	   -# \ref interpreterif
+	-# script_text
+	   -# \ref textbufferif
+	-# container_obj (opcional)
+     \subsection cmscript_pres Precarga
+     NINGUNA*
+     \subsection cmscript_evs  Eventos
+        -# container_obj->"run_button"
+	   -# "clicked"
+     \subsection cmscript_cfs Configuración
+        -# button_name
+	   - Tipo: G_TYPE_STRING
+	   - Opcional (requerida si se especificó container_obj).
+	   - Descripción: Nombre del widget contenido en container_obj cuyo
+	   evento "clicked" queremos que lance la ejecución del "script".
+	-# stream_filename
+	   - Tipo: G_TYPE_STRING
+	   - Opcional
+	   - Descripción: Nombre del fichero que hace de "stream" (flujo) de entrada.
+	   Se van ejecutando lineas conforme se van leyendo.
+   \section cmscript_feas CARACTERÍSTICAS
+     \subsection cmscript_ifs  Implementa
+     NINGUNA*
+     \subsection cmscript_sigs Señales
+     NINGUNA*
+   \section cmscript_srcs FUENTES
+     - \ref cm-script.c
+     - \ref cm-script.h
+*/
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-script"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+
+%h{
+#include <ags-cm.h>
+#include <ags-cf.h>
+#include <textbufferif.h>
+#include <interpreterif.h>
+%}
+
+class Cm:Script from Ags:Cm {
+
+private gchar*  name = NULL destroywith g_free;
+private AgsCf*  cf;
+private CfTable cft;
+
+private GObject* obj_interpreter = NULL unrefwith g_object_unref;
+private GObject* obj_textbuffer  = NULL unrefwith g_object_unref;
+
+public
+GObject*
+new (char* cm_name, AgsCf* cf, CfTable cft) {
+  GObject* ret = G_OBJECT(GET_NEW);
+  CfTable  my_cft = config_get_table(CONFIGIF(cf), cft, cm_name);
+  GObject* container_obj;
+  GObject* button;
+  char*    button_name;
+  char*    stream_filename;
+
+  /* guardar como privates */
+  CM_SCRIPT(ret)->_priv->name = g_strdup(cm_name);
+  CM_SCRIPT(ret)->_priv->cf   = cf;
+  CM_SCRIPT(ret)->_priv->cft  = cft;
+  CM_SCRIPT(ret)->_priv->obj_interpreter = config_get_object(CONFIGIF(cf), my_cft, "interpreter");
+  CM_SCRIPT(ret)->_priv->obj_textbuffer  = config_get_object(CONFIGIF(cf), my_cft, "script_text");
+
+
+  if( stream_filename = config_get_string(CONFIGIF(cf), my_cft, "stream_filename") ) {
+    GError *error  = NULL;
+    GIOChannel* io = g_io_channel_new_file(stream_filename, "r", &error);
+
+    if(!error) {
+      interpreter_stream(INTERPRETERIF(CM_SCRIPT(ret)->_priv->obj_interpreter), io);
+    } else {
+      g_critical("No se pudo abrir 'stream' %s.", stream_filename);
+      g_clear_error(&error);
+    }
+    free(stream_filename);
+  }
+
+  gint len;
+  gchar* script_text = textbuffer_get(TEXTBUFFERIF(CM_SCRIPT(ret)->_priv->obj_textbuffer), &len);
+  if(script_text) {
+    if( script_text[len-1] == '\0' )    /* No incluir el \0 de terminación de cadena si presente */
+      --len;
+    interpreter_run(INTERPRETERIF(CM_SCRIPT(ret)->_priv->obj_interpreter), script_text, len, cm_name, cf, cft);
+    free(script_text);
+  }
+
+  container_obj = config_get_object(CONFIGIF(cf), my_cft, "container_obj"); /* XXX ref count++ */
+  button_name = config_get_string(CONFIGIF(cf), my_cft, "button_name");
+  button = g_object_get_data(container_obj, button_name);
+
+  g_signal_connect(G_OBJECT(button), "clicked", (GCallback) self_clicked, (gpointer) ret);
+  
+  return ret;
+}
+
+private gboolean clicked (GObject* button, gpointer self)
+  {
+    gint len;
+    gchar* script_text = textbuffer_get(TEXTBUFFERIF(CM_SCRIPT(self)->_priv->obj_textbuffer), &len);
+    if(script_text) {
+      if( script_text[len] == '\0' )    /* No incluir el \0 de terminación de cadena si presente */
+	--len;
+      interpreter_run(INTERPRETERIF(CM_SCRIPT(self)->_priv->obj_interpreter), script_text, len,
+		      CM_SCRIPT(self)->_priv->name,
+		      CM_SCRIPT(self)->_priv->cf,
+		      CM_SCRIPT(self)->_priv->cft);
+      free(script_text);
+    }
+
+    return TRUE;
+  }
+}
+
+%{
+  GObject *(*cmscript_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

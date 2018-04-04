@@ -1,0 +1,28 @@
+/* XPM */
+static char *Estado[] = {
+/* width height ncolors chars_per_pixel */
+"16 16 5 1",
+/* colors */
+"  c black",
+". c #C0C0C0",
+"X c #808080",
+"o c white",
+"O c None",
+/* pixels */
+"ooooooo oooooooo",
+"ooooooo oooooooo",
+"oo ooo   ooo ooo",
+"ooo   ...   oooo",
+"ooo ...X... oooo",
+"ooo .XXX... oooo",
+"oo .XXX..... ooo",
+"   .XX......   o",
+"oo ......... ooo",
+"ooo ....... oooo",
+"ooo ....... oooo",
+"ooo   ...   oooo",
+"oo ooo   ooo ooo",
+"ooooooo oooooooo",
+"ooooooo oooooooo",
+"oooooooooooooooo"
+};

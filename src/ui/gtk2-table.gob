@@ -1,0 +1,366 @@
+%{
+/**
+   \page gtk2table Gtk2Table
+   \section gtk2table_desc DESCRIPCIÓN
+      Este módulo permite actualizar dinámicamente un "store" a partir de un SDS, agregando o eliminando filas del
+      "store" según varíe el SDS.
+      NOTA: ESTE MÓDULO ESTÁ "DEPRECATED". SE RECOMIENDA IMPLEMENTAR SU
+      FUNCIONALIDAD MEDIANTE "SCRIPTING".
+   \section gtk2table_reqs REQUISITOS
+     \subsection gtk2table_deps Dependencias
+        -# model*
+	-# sds
+	   -# \ref accessxif
+     \subsection gtk2table_pres Precarga
+        NINGUNO*
+     \subsection gtk2table_evs  Eventos
+        NINGUNO*
+     \subsection gtk2table_cfs Configuración
+        -# timeout
+	   - Tipo: G_TYPE_INT
+	   - Requerida
+	   - Descripción: Tiempo entre actualizaciones.
+	-# key
+	   - Tipo: G_TYPE_STRING
+	   - Opcional (Por defecto "key").
+	   - Descripción: Columna de la que obtener la clave.
+     \subsection gtk2table_reqpros Propiedades
+        NINGUNA
+   \section gtk2table_feas CARACTERÍSTICAS
+     \subsection gtk2table_ifs  Implementa
+        NINGUNA
+     \subsection gtk2table_sigs Señales
+        NINGUNA
+     \subsection gtk2table_props Propiedades
+        NINGUNA
+*/
+%}
+
+requires 2.0.0
+
+%{
+/**
+   \file gtk2-table.c
+*/
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "gtk2-table"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+%h{
+#include <ags-cf.h>
+#include <accessxif.h>
+#include <gtk/gtk.h>
+#include <gtk2-treestore.h> /* XXX get_column_number() */
+#include <time.h>
+%}
+
+%privateheader{
+typedef struct _TableRow TableRow;
+typedef struct _CleanData CleanData;
+
+struct _TableRow {
+  time_t       ts;
+  GArray*      iters;
+};
+struct _CleanData {
+  time_t        ts;
+  GtkTreeStore* tree_store;
+};
+%}
+
+class Gtk2:Table from G:Object {
+
+private GObject*      sds;
+private GtkTreeStore* treestore;
+private GHashTable*   tables_hashtable = { g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free) };
+private gchar*        col_key = { "key" };
+
+private
+void
+copy_row(GtkTreeModel* model, GtkTreeIter* src_iter, GtkTreeIter* dst_iter)
+  {
+    gint i, n;
+
+    n=gtk_tree_model_get_n_columns(model);
+    for(i=0;i<n;i++) {
+      GValue v = {0,};
+      gtk_tree_model_get_value(model, src_iter, i, &v);
+      gtk_tree_store_set_value(GTK_TREE_STORE(model), dst_iter, i, &v);
+    }
+  }
+
+private
+TableRow*
+add_row(GtkTreeModel* model, GtkTreeIter* tnode_iter, GtkTreeIter* tvar_iter, gchar* key, GHashTable* table_hash, time_t ts, gboolean flat, gpointer self)
+  {
+    GtkTreeIter node_iter;
+    GtkTreeIter parent_iter;
+    gchar* id;
+    TableRow*   table_row;
+    gchar*      type;
+    gint i, n;
+
+    gtk_tree_model_iter_parent(model, &parent_iter, tnode_iter);
+
+    /* añadir "row":
+       . crear node
+       . obtener "id" (número de instancia) 
+       . rellenar node con vars 
+       . crear TableRow */
+    /* crear node */
+
+    if(flat) {
+      node_iter=parent_iter;
+    } else {
+      gtk_tree_store_append(GTK_TREE_STORE(model), &node_iter, &parent_iter);
+      self_copy_row(model, tnode_iter, &node_iter);
+      gtk_tree_store_set(GTK_TREE_STORE(model), &node_iter, get_column_number(model, "type"), "node", -1);
+    }
+
+    /* buscamos el "id" (número de instancia) */
+    id=g_strrstr(key, ".");
+    if(id) { 
+      id++;
+      ags_debug(1, "id=%s", id);
+      /* Rellenar node con vars */
+      GtkTreeIter tvar_iter;
+      GtkTreeIter var_iter;
+      GArray*     iters;    /* lista de iters de esta "row" para después borrar */
+
+      iters=g_array_new(FALSE, FALSE, sizeof(GtkTreeIter));
+
+      if(!flat)
+	g_array_append_val(iters, node_iter);
+      
+      n=gtk_tree_model_iter_n_children  (model, tnode_iter);
+      for(i=0; i<n; i++) {
+	/* para cada "children"... */
+	if(gtk_tree_model_iter_nth_child(model, &tvar_iter, tnode_iter, i)) {
+	  /* ...que sea "tvar" */
+	  gtk_tree_model_get(model, &tvar_iter, get_column_number(model, "type"), &type, -1);
+	  if(strcmp(type, "tvar") == 0) {
+	    gtk_tree_store_append(GTK_TREE_STORE(model), &var_iter, &node_iter);
+	    self_copy_row(model, &tvar_iter, &var_iter);
+
+	    gtk_tree_store_set(GTK_TREE_STORE(model), &var_iter, get_column_number(model, "type"), "var", -1);
+	    gtk_tree_store_set(GTK_TREE_STORE(model), &var_iter, get_column_number(model, "id"), id, -1);
+
+	    if(flat)
+	      g_array_append_val(iters, var_iter);
+	  }
+	}
+      }
+      
+      table_row=g_new(TableRow, 1);
+      table_row->ts=ts;
+      table_row->iters=iters;
+
+      /* XXX free() node_iter??? */
+    }
+
+    return table_row;
+  }
+
+private
+gboolean
+clean(gpointer key, gpointer value, gpointer user_data)
+  {
+    TableRow*  table_row  = (TableRow*)  value;
+    CleanData* clean_data = (CleanData*) user_data;
+    int i;
+
+    if(table_row->ts != clean_data->ts) {
+      for(i=0;i<table_row->iters->len;i++)
+	gtk_tree_store_remove(clean_data->tree_store, &g_array_index(table_row->iters, GtkTreeIter, i) );
+      /* XXX free() table_row */
+      return TRUE;
+    } else {
+      return FALSE;
+    }
+  }
+
+private
+gint
+do_table(GtkTreeModel* model, GtkTreeIter* tnode_iter, gboolean flat, gpointer self)
+  {
+    gchar*      name;
+    gchar*      type;
+    gchar*      tkey;
+    gchar*      key;
+    GtkTreeIter tvar_iter;
+    gint        n=0;
+    gint        i;
+    time_t      ts=time(NULL); /* timestamp */
+    GHashTable* table_hash;
+    TableRow*   table_row;
+
+    gtk_tree_model_get(model, tnode_iter, get_column_number(model, "name"), &name, -1);
+
+    table_hash = g_hash_table_lookup(GTK2_TABLE(self)->_priv->tables_hashtable, name);
+    if(!table_hash) {
+      table_hash=g_hash_table_new(g_str_hash, g_str_equal);
+      g_hash_table_insert(GTK2_TABLE(self)->_priv->tables_hashtable, g_strdup(name), table_hash);
+    }
+
+    /* Usamos la primera "tvar" para identificar si ya está presente en el "store" */
+    if(!gtk_tree_model_iter_children(model, &tvar_iter, tnode_iter)) {
+      g_critical("tnode sin children!");
+      return 0;
+    }
+
+    /* buscamos primera "tvar" en "tnode" */
+    n=gtk_tree_model_iter_n_children  (model, tnode_iter);
+    for(i=0; i<n; i++) {
+      /* para cada "children"... */
+      if(gtk_tree_model_iter_nth_child(model, &tvar_iter, tnode_iter, i)) {
+	/* ...que sea "tvar" */
+	gtk_tree_model_get(model, &tvar_iter, get_column_number(model, "type"), &type, -1);
+	if(strcmp(type, "tvar") == 0) {
+	  break; /* encontrado */
+	}
+      }
+    }
+    
+    if(i>=n) {
+      g_critical("tnode sin tvar!");
+      return 0;
+    }
+
+    /* opcionalmente, se especifica el máximo de filas en esta tabla en "n"  */
+    gint   max=0;
+//     gchar* max_str=NULL;
+//     gtk_tree_model_get(model, tnode_iter, get_column_number(model, "n"), &max_str, -1);
+//     if(max_str) {
+//       atoi(max_str);
+//       g_free(max_str);
+//     }
+//     ags_debug(1,"MAX=%d", max);
+
+    /* bucle getnext */
+    gtk_tree_model_get(model, &tvar_iter, get_column_number(model, GTK2_TABLE(self)->_priv->col_key), &tkey, -1);
+
+    if(!tkey) {
+      g_critical("tvar sin key!");
+      return 0;
+    }
+
+    gint tkey_len=strlen(tkey);
+    for(i=0, key=accessx_getnextkey(ACCESSXIF(GTK2_TABLE(self)->_priv->sds), tkey);
+	key && (strncmp(key, tkey, tkey_len)==0) && (i++<max || !max);
+	key=accessx_getnextkey(ACCESSXIF(GTK2_TABLE(self)->_priv->sds), key) ) {
+
+      /* comprobamos si ya existe */
+      table_row=g_hash_table_lookup(table_hash, key);
+      ags_debug(1, "LOOKUP: key=%s table_row=%p", key, table_row);
+      if(table_row) {
+	/* actualizar "ts" */
+	table_row->ts=ts;
+	continue;
+      } else {
+	table_row=self_add_row(model, tnode_iter, &tvar_iter, key, table_hash, ts, flat, self);
+
+	ags_debug(1, "INSERT: key=%s table_row=%p", key, table_row);
+	g_hash_table_insert(table_hash, g_strdup(key), table_row);
+      }
+    }
+
+    /* eliminar filas de tabla no actualizadas */
+    CleanData clean_data;
+    clean_data.ts = ts;
+    clean_data.tree_store = GTK2_TABLE(self)->_priv->treestore;
+    g_hash_table_foreach_remove(table_hash, (GHRFunc) self_clean, (gpointer) &clean_data);
+
+    /* reenumerar (XXX solo si ha habido cambios) */
+    GtkTreeIter parent_iter;
+    GtkTreeIter node_iter;
+    gtk_tree_model_iter_parent(model, &parent_iter, tnode_iter);
+    n=gtk_tree_model_iter_n_children  (model, &parent_iter);
+    gint j=1; /* contador de nodes */
+    for(i=0; i<n; i++) {
+      /* para cada "children"... */
+      if(gtk_tree_model_iter_nth_child(model, &node_iter, &parent_iter, i)) {
+	/* ...que sea "node" */
+	gtk_tree_model_get(model, &node_iter, get_column_number(model, "type"), &type, -1);
+	if(strcmp(type, "node") == 0) {
+	  gchar* n_str = g_strdup_printf("%d", j++);
+	  gtk_tree_store_set(GTK_TREE_STORE(model), &node_iter, get_column_number(model, "n"), n_str, -1);
+	  g_free(n_str);
+	}
+      }
+    }
+
+    return n; /* XXX */
+  }
+
+private
+gboolean
+table_row(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer self)
+  {
+    gchar*   type;
+    gboolean type_tnode, type_fnode;
+
+    /**/
+
+    gtk_tree_model_get(model, iter, get_column_number(model, "type"), &type, -1);
+    type_tnode=(strcmp(type, "tnode")==0);
+    type_fnode=(strcmp(type, "fnode")==0);
+    if(type && (type_tnode || type_fnode) ) {
+      ags_debug(5, "type=%s", type);
+      free(type);
+
+      self_do_table(model, iter, type_fnode, self);
+    }
+
+    return FALSE;
+  }
+
+private 
+gboolean
+table(gpointer self)
+  {
+    GtkTreeStore *tree_store=GTK2_TABLE(self)->_priv->treestore;
+
+    gtk_tree_model_foreach(GTK_TREE_MODEL(tree_store), (GtkTreeModelForeachFunc)self_table_row, self);
+
+    return TRUE;
+  }
+
+public 
+GObject*
+new (char* tb_name, AgsCf* cf, CfTable cft) 
+  {
+  GObject *ret = G_OBJECT(GET_NEW);
+
+  CfTable  my_cft=config_get_table(CONFIGIF(cf), cft, tb_name);
+
+  GTK2_TABLE(ret)->_priv->sds       = config_get_object(CONFIGIF(cf), my_cft, "sds");
+  GTK2_TABLE(ret)->_priv->treestore = config_get_object(CONFIGIF(cf), my_cft, "model");
+
+  gchar* col_key = config_get_string(CONFIGIF(cf), my_cft, "key");
+  if(col_key) 
+    GTK2_TABLE(ret)->_priv->col_key = col_key;
+
+  self_table(ret);
+
+  gint timeout=config_get_int(CONFIGIF(cf), my_cft, "timeout");
+  g_timeout_add(timeout, self_table, ret);
+
+  return G_OBJECT(ret);
+  }
+
+}
+
+%{
+  GObject *(*gtk2table_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

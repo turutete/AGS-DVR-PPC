@@ -1,0 +1,535 @@
+requires 2.0.0
+
+%{
+/**
+   \file sdscore-glib.c
+   Clase SdsCore implementada mediante GLib-2.0.
+   \todo 
+   - "signal acumulator"
+   - aceptar get/set múltiples (?)
+   - eliminar dependencia con net-snmp (hacer compare() un callback externo e inicializarlo desde un cm (?) )
+*/
+/**
+   \page sdscoreglib SdsCoreGlib
+   \section sdscoreglib_desc DESCRIPCIÓN
+   Implementación de base de datos asociativa, ordenada y no persistente
+   (Shared Data Server) usando la librería GLib2. 
+   \section sdscoreglib_reqs REQUISITOS
+     \subsection sdscoreglib_deps Dependencias
+     NINGUNA
+     \subsection sdscoreglib_pres Precarga
+     NINGUNO
+     \subsection sdscoreglib_evs  Eventos
+     NINGUNO
+     \subsection sdscoreglib_cfs  Configuración
+     NINGUNA
+   \section sdscoreglib_feas CARACTERÍSTICAS
+     \subsection sdscoreglib_ifs  Implementa
+      -# \ref accessif
+      -# \ref accessxif
+      -# \ref createif
+      -# \ref limitsif
+      -# \ref trapif
+     \subsection sdscoreglib_sigs Señales
+      -# \ref setsig
+      -# \ref getsig
+      -# \ref limitssig
+      -# \ref trapsig
+   \section sdscoreglib_srcs FUENTES
+      - \ref sdscore-glib.c
+      - \ref sdscore-glib.h
+*/
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "sdscore-glib"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+%h{
+#include <stdio.h>
+#include <glib-2.0/glib-object.h>
+
+/* XXX >>> FIX ME! función string2oid() parece rota, usando read_objid() (de Net-SNMP) */
+#include <net-snmp/net-snmp-config.h>
+#include <net-snmp/net-snmp-includes.h>
+/* XXX <<< */
+
+#include "ags-sdscore.h"
+#include "accessif.h"
+#include "accessxif.h"
+#include "createif.h"
+#include "limitsif.h"
+#include <trapif.h>
+
+#define MAX_OID_LEN     128
+
+  typedef unsigned long oid;
+
+  struct data {
+    gchar *key;
+    GValue value;
+    GParamSpec *limit;
+    GSList *element;
+  };
+
+%}
+
+%{
+  /** \addtogroup sdsmods Módulos SDS
+   */
+  /*@{*/
+
+  /** \defgroup sdscore sdscore
+   */
+  /*@{*/
+%}
+class SdsCore:Glib from Ags:SdsCore (interface :AccessIf) (interface :AccessxIf) (interface :CreateIf) (interface :LimitsIf) (interface :TrapIf) {
+
+
+public GObject *new (char *sds_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW); 
+  return G_OBJECT (ret);
+}
+
+private void free_members(gpointer data) {
+  GPtrArray *members = data;
+  g_ptr_array_free(members, TRUE);
+}
+
+private void free_data(gpointer key, gpointer value, gpointer user_data) {
+  struct data *data = value;
+  GParamSpec  *pspec = G_PARAM_SPEC(data->limit);
+
+  /* XXX Liberar GParamSpec (difícil, ¡no tenemos un free!) */
+  g_param_spec_unref(pspec); 
+  g_param_spec_pool_remove(SDSCORE_GLIB(user_data)->paramspecpool, pspec);
+  /* Liberar clave y estructura data */
+  free(key);
+  free(value);
+}
+
+
+public GHashTable *hashtable = { g_hash_table_new(g_str_hash, g_str_equal) };
+public GParamSpecPool *paramspecpool = { g_param_spec_pool_new(FALSE) }; 
+public GSList *list = NULL;
+
+public GHashTable* traps_hashtable = { g_hash_table_new_full(g_str_hash, g_str_equal, g_free, self_free_members) } destroywith g_hash_table_destroy;
+
+override (G:Object) void
+finalize(GObject *obj) {
+  SdsCoreGlib *self = SDSCORE_GLIB(obj);
+
+  ags_debug(2,"finalize sdscoreglib...\n");
+  /* hashtable */
+  g_hash_table_foreach(self->hashtable, self_free_data, (gpointer) self);
+  g_hash_table_destroy(self->hashtable);
+  /* lista enlazada */
+  g_slist_free(self->list);
+  /* XXX ¿paramspecpool? */
+  PARENT_HANDLER(obj);
+}
+
+/* XXX "signal accumulator" */
+ signal last BOOLEAN (STRING, POINTER) gboolean setsig(self, char *k, GValue *v) defreturn FALSE;
+ signal last BOOLEAN (STRING) gboolean getsig(self, char *k) defreturn FALSE;
+ signal last BOOLEAN (STRING, POINTER) gboolean limitssig(self, char *k, GValue *v) defreturn TRUE;
+ signal last INT     (LONG, STRING, POINTER, POINTER) gint     trapsig(self, long uptime, char* t, GPtrArray* m, GPtrArray* v) defreturn TRUE;
+ 
+ interface :AccessIf private GValue *get(AccessIf *self (check null type), char *k)
+   {
+     struct data *d;
+     GValue *v=NULL;
+
+     ags_debug(5,"en core::get");
+
+     self_getsig(SDSCORE_GLIB(self), k);
+
+     d=self_aux_get_data(SDSCORE_GLIB(self),k);
+     if(d) {
+       v=g_new0(GValue, 1);
+       GValue *res=g_value_init(v, G_VALUE_TYPE(&d->value));
+       if(res) {
+	 g_value_copy(&d->value, v); /* XXX leak? */
+       } else {
+	 g_value_unset(v);
+	 free(v);
+	 v=NULL;
+       }
+     }
+
+     return v;
+   }
+ interface :AccessIf private int set(AccessIf *self (check null type), char *k, GValue *v)
+   {
+     ags_debug(5,"en core::set %s", k);
+     struct data *d=self_aux_get_data(SDSCORE_GLIB(self), k); /* mira si existe */
+     int res=-1; /* error, set no realizado */
+
+     if(self_setsig(SDSCORE_GLIB(self), k, v)) {
+       res=0;
+       return res;
+     }
+
+     /* si v=NULL, se quiere borrar la variable */
+     if(!v) {
+       /* si existe, la borramos y retornamos no error */
+       if(d) {
+	 self_aux_del(SDSCORE_GLIB(self), d);
+	 return 0;
+       } else {
+	 /* si no existe, mensage y retornamos error */
+	 g_critical("Se intenta eliminar variable inexistente! %s", k);
+	 return res;
+       }
+     }
+
+     GPtrArray* members;
+     if( (members=g_hash_table_lookup(SDSCORE_GLIB(self)->traps_hashtable, (gpointer) k) )) {
+       int n=g_value_get_int(v); /* Número de instancia */
+       self_do_trap(SDSCORE_GLIB(self), k, n, members);
+       return res;
+     }
+
+     /* si no existe, creamos */
+     if(!d) d=self_aux_add_value(SDSCORE_GLIB(self), k, NULL);
+
+     k=d->key;
+
+     /* Si no está definido límite O no está fuera de límites O señal devuelve FALSE (no manejó este "set"): hacer "set" */
+     if(!d->limit || !self_aux_check_limit(SDSCORE_GLIB(self), d->limit, v) || !self_limitssig(SDSCORE_GLIB(self), k, v)) {
+       /* clean valor actual */
+       if( G_IS_VALUE(&d->value))
+	 g_value_unset(&d->value);
+       /* si no está definido límite, permitimos cualquier tipo */
+       if(!d->limit)
+	 memset(&d->value, 0, sizeof(GValue));
+       /* Inicializamos tipo */
+       g_value_init(&d->value, G_VALUE_TYPE(v)); /* XXX warning */
+       /* copiamos nuevo valor */
+       g_value_copy(v, &d->value); /* XXX ¿leak? */
+       self_aux_set(SDSCORE_GLIB(self), d);
+       res=0; /* no error, set realizado */
+     }
+
+     return res;
+   }
+ interface :AccessxIf private GValue *getnext(AccessxIf *self (check null type), char *k)
+   {
+     char *key;
+     key=self_getnextkey(self, k);
+     return self_get(ACCESSIF(self), key);
+   }
+ interface :AccessxIf private char *getnextkey(AccessxIf *self (check null type), char *k)
+   {
+     struct data *d=NULL;
+     char *key;
+     GSList **list=&SDSCORE_GLIB(self)->list;
+     
+     ags_debug(5,"en core::getnextkey");
+     GSList *next_element=NULL;
+     /* Primero comprobamos si "k" existe en la "hash" */
+     d=self_aux_get_data(SDSCORE_GLIB(self),k);
+     if(d) {
+       next_element=d->element->next;
+       d=NULL;
+     } else {
+       /* Sino, búsqueda */
+       next_element=g_slist_find_custom(*list, k, (GCompareFunc) self_findnext);
+     }
+     if(next_element)
+       d=next_element->data;
+     if(d) {
+       key=g_strdup(d->key);
+     } else {
+       key=NULL;
+     }
+
+     return key; 
+   }
+ interface :CreateIf private int add_value(CreateIf *self (check null type), char *k, char *name)
+   {
+     struct data *d;
+     ags_debug(5,"en core::add");
+     GParamSpec *limit=self_aux_get_limit(SDSCORE_GLIB(self), name);
+     if(limit) {
+       d=self_aux_add_value(SDSCORE_GLIB(self), k, limit);
+       self_aux_set(SDSCORE_GLIB(self), d);
+     }
+     return 0;
+   }
+
+ interface :LimitsIf private gboolean add_limit(LimitsIf *self (check null type), GParamSpec *limit)
+   {
+     ags_debug(5,"en core::add (LimitIf)");
+     GParamSpecPool *pool=SDSCORE_GLIB(self)->paramspecpool;
+     g_param_spec_pool_insert(pool, limit, TYPE_LIMITSIF);
+     return TRUE;
+   }
+
+ interface :LimitsIf private gboolean check_limit(LimitsIf *self (check null type), char *k, GValue  *v)
+   {
+     gboolean res=TRUE;
+     struct data *d;
+
+     ags_debug(5,"en core::check (LimitIf)");
+     d=self_aux_get_data(SDSCORE_GLIB(self), k);
+     if(d)
+       res=self_aux_check_limit(SDSCORE_GLIB(self), d->limit, v);
+
+     return res;
+   }
+ interface :LimitsIf private gboolean set_limit(LimitsIf *self (check null type), char *k, char *name)
+   {
+     struct data *d;
+     GParamSpec *l;
+     gboolean res=TRUE;
+     
+     ags_debug(5,"en core::set_limit");
+     d=self_aux_get_data(SDSCORE_GLIB(self), k);
+     l=self_aux_get_limit(SDSCORE_GLIB(self), name);
+     if(d) {
+       d->limit=l;
+     }
+     ags_debug(5,"\td=%p l=%p",d,l);
+     return res;
+   }
+
+ interface :TrapIf private int add_trap(TrapIf *self (check null type), char* t)
+   {
+     GPtrArray* members;
+
+     ags_debug(2, "TRAP: %s", t);
+
+     members=g_ptr_array_new();
+     g_hash_table_insert(SDSCORE_GLIB(self)->traps_hashtable, g_strdup(t), members);
+
+     return 0;
+   }
+ interface :TrapIf private int add_member(TrapIf *self (check null type), char* t, char* m)
+   {
+     ags_debug(2, "MEMBER(%s): %s", t, m);
+     GPtrArray *members;
+     int res=-1;
+
+     members=g_hash_table_lookup(SDSCORE_GLIB(self)->traps_hashtable, t);
+     if(members) {
+       g_ptr_array_add(members, (gpointer) g_strdup(m));
+       res=0;
+     }
+
+     return res;
+   }
+
+ /* funciones auxiliares "helpers" */
+private gboolean aux_check_limit(self, GParamSpec *limit, GValue *v)
+   {
+     gboolean res=FALSE;
+     GValue vv = { 0, };
+
+     ags_debug(6,"en core::aux_check_limit");
+     if(limit) {
+       g_value_init(&vv, G_VALUE_TYPE(v)); /* XXX warning */
+       g_value_copy(v, &vv);
+       res=g_param_value_validate(limit, &vv);
+       g_value_unset(&vv);
+     }
+     ags_debug(6,"\tlimit=%p v=%p res=%d", limit, v, res);
+
+     return res;
+   }
+
+private struct data *aux_get_data(self, char *k)
+  {
+    GHashTable *hashtable=SDSCORE_GLIB(self)->hashtable;
+    return (struct data*)g_hash_table_lookup(hashtable, k);
+  }
+
+private GParamSpec *aux_get_limit(self, char *name)
+  {
+    GParamSpecPool *pool=SDSCORE_GLIB(self)->paramspecpool;
+    return g_param_spec_pool_lookup(pool, name, TYPE_LIMITSIF, FALSE);
+  } 
+private void aux_set(self, struct data *d) 
+  { 
+    GHashTable *hashtable=SDSCORE_GLIB(self)->hashtable;
+    GSList **list=&SDSCORE_GLIB(self)->list;
+    
+    g_hash_table_insert(hashtable, d->key, d);
+    if(!g_slist_find(*list, d)) {
+      *list=g_slist_insert_sorted(*list, d, (GCompareFunc) self_compare_oid);
+      d->element=g_slist_find(*list, d);
+    }
+  }
+private void aux_del(self, struct data *d)
+  {
+    GHashTable *hashtable=SDSCORE_GLIB(self)->hashtable;
+    GSList **list=&SDSCORE_GLIB(self)->list;
+
+    g_value_unset(&d->value);
+    g_hash_table_remove(hashtable, d->key);
+    g_free(d->key);
+    g_slist_remove(*list, d);
+  }
+
+private struct data *aux_add_value(self, char *k, GParamSpec *limit)
+  {
+    struct data *d=NULL;
+    GType type=0;
+
+    d=self_aux_get_data(SDSCORE_GLIB(self), k);
+    if(!d) {
+      d=g_new(struct data, 1); /* XXX leak */
+      ags_debug(6,"g_new de data %p", d);
+      memset(d, 0, sizeof(struct data));
+      if(limit) {
+	type=G_PARAM_SPEC_VALUE_TYPE(limit);
+	g_value_init(&d->value, type);
+	g_param_value_set_default(limit, &d->value); /* XXX ¿leak? */
+      }
+      d->limit=limit;
+      d->key=g_strdup(k); /* XXX ¿leak? */
+    }
+    return d;
+  }
+
+private gint findnext(struct data *d, char *k)
+  {
+    char *a, *b;
+    a=d->key;
+    b=k;
+
+    gint res=(self_aux_compare_oid(a, b)>0)?0:1;
+
+    return res;
+  }
+
+private gint compare_oid(struct data *a, struct data *b)
+  {
+    return self_aux_compare_oid(a->key, b->key);
+  }
+
+private void string2oid(char *a, oid a_oid[], size_t *a_oid_len)
+  {
+    char *p1=(a[0]=='.')?(a+1):a, *p2=NULL;
+    int i=0; /* i=índice en oid */
+    
+    for(p2=p1; *p2 != '\0' && i<MAX_OID_LEN; p2++) {
+      if(*p2=='.') {
+	*p2='\0';
+	a_oid[i++]=(oid) atol(p1);
+	*p2='.';
+	p1=(p2+1);
+      }
+    }
+    a_oid[i++]=(oid) atol(p1);
+    *a_oid_len=i;
+  }
+
+private int oid_compare(oid a_oid[], size_t a_oid_len, oid b_oid[], size_t b_oid_len)
+  {
+    int i;
+    int len=(a_oid_len>b_oid_len)?b_oid_len:a_oid_len;
+    for(i=0;i<len && a_oid[i]==b_oid[i];i++);
+    if(i<len)
+      return a_oid[i]-b_oid[i];
+    else
+      return a_oid_len-b_oid_len;
+  }
+
+private gint aux_compare_oid(char *a, char *b)
+  {
+    oid a_oid[MAX_OID_LEN];
+    size_t a_oid_len = MAX_OID_LEN;
+    oid b_oid[MAX_OID_LEN];
+    size_t b_oid_len = MAX_OID_LEN;
+
+    ags_debug(6,"en aux_compare_oid");
+    ags_debug(6,"compare %s %s", a, b);
+
+    /* XXX >>> FIX ME! función string2oid() parece rota, usando read_objid() (de Net-SNMP) */
+    //     self_string2oid(a, a_oid, &a_oid_len);
+    //     self_string2oid(b, b_oid, &b_oid_len);
+    read_objid(a, a_oid, &a_oid_len);
+    read_objid(b, b_oid, &b_oid_len);
+    /* XXX <<< */
+
+    return self_oid_compare(a_oid, a_oid_len, b_oid, b_oid_len);
+  }
+
+private long get_uptime(void)
+  {
+    FILE* in = fopen("/proc/uptime", "r");
+    long  uptime = 0, a, b;
+    if (in) {
+      if (2 == fscanf(in, "%ld.%ld", &a, &b))
+	uptime = a * 100 + b;
+      fclose(in);
+    }
+    return uptime;
+  }
+
+private gint do_trap(self, char* t, int n, GPtrArray* members)
+  {
+    int i;
+    GValue*  v;
+    GPtrArray*  members_n;
+    GPtrArray*  values;
+    GString* gs_member;
+    char*    member;
+    char*    aux;
+
+    ags_debug(2, "TRAP! %s", t);
+    values=g_ptr_array_new();
+    members_n=g_ptr_array_new();
+    for(i=0;i<members->len;i++) {
+      member=g_ptr_array_index(members, i);
+
+      gs_member=g_string_new("");
+      g_string_printf(gs_member, "%s.%d", member, n);
+
+      v=self_get(ACCESSIF(self), gs_member->str);
+      if(!v) {
+	g_critical("No existe 'member' %s. Anulando 'trap'.", gs_member->str);
+	g_ptr_array_free(members_n, TRUE);
+	g_ptr_array_free(values, TRUE);
+	g_string_free(gs_member, TRUE);
+	return -1;
+      }
+
+      g_ptr_array_add(members_n, (gpointer) gs_member->str);
+      g_ptr_array_add(values, (gpointer) v);
+      
+      aux=g_strdup_value_contents(v);
+      ags_debug(2, "MEMBER: %s=%s", gs_member->str, aux);
+      free(aux);
+
+      g_string_free(gs_member, FALSE);
+    }
+
+    self_trapsig(self, self_get_uptime(), t, members_n, values);
+
+    /* clean */
+    g_ptr_array_free(members_n, TRUE);
+    g_ptr_array_foreach(values, (GFunc) g_value_unset, NULL);
+    g_ptr_array_foreach(values, (GFunc) g_free, NULL);		/* Evitar leak by C.C. */
+    g_ptr_array_free(values, TRUE);
+
+    return 0;
+  }
+}
+
+%{
+  GObject* (*sdscoreglib_new(void))(char *sds_name, AgsCf *cf, CfTable cft) /* XXX */
+    {
+      return sdscore_glib_new;
+    }
+  /*@}*/
+  /*@}*/
+
+%}

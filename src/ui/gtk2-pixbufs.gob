@@ -1,0 +1,104 @@
+%{
+/**
+   \page gtk2pixbufs Gtk2PixBufs
+   \section gtk2pixbufs_desc DESCRIPCIÓN
+      Carga "pixbufs" (ficheros de imagen) y les asocia un nombre, de forma que otros módulos pueden obtener imágenes
+      precargadas a partir del nombre.
+   \section gtk2pixbufs_reqs REQUISITOS
+     \subsection gtk2pixbufs_deps Dependencias
+        NINGUNA
+     \subsection gtk2pixbufs_pres Precarga
+        NINGUNO*
+     \subsection gtk2pixbufs_evs  Eventos
+        NINGUNO
+     \subsection gtk2pixbufs_cfs Configuración
+	-# pixbufs
+	   - Tipo: CfTable
+	   - Opcional
+	   - Descripción: Tabla de configuración para especificar los "pixbufs" a cargar.
+	   - Formato: nombre_pix1 = TABLA_PB, ... (nombre1 es G_TYPE_STRING).
+	   - Formato TABLA_PB: pb_filename = nombre_fichero1, ... (nombre_fichero1 es G_TYPE_STRING).
+     \subsection gtk2pixbufs_reqpros Propiedades
+        NINGUNA
+     \subsection gtk2pixbufs_data Data
+        Se almacenan las imágenes como "data" del objeto. Cada imagen es un GdkPixbuf y se almacena con el 
+	nombre especificado en la configuración.
+   \section gtk2pixbufs_feas CARACTERÍSTICAS
+     \subsection gtk2pixbufs_ifs  Implementa
+        NINGUNA
+     \subsection gtk2pixbufs_sigs Señales
+        NINGUNA
+     \subsection gtk2pixbufs_props Propiedades
+        NINGUNA
+*/
+%}
+
+%h{
+  /**
+   * GTK2 PixBufs.
+   */
+
+#include <config.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <ags-cf.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "gtk2-pixbufs"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+
+#define get_pixbuf(pb, name) ( (GdkPixbuf*) g_object_get_data(G_OBJECT(pb), name) )
+%}
+
+requires 2.0.0
+
+class Gtk2:PixBufs from G:Object {
+
+public
+GObject *
+new (char *pb_name, AgsCf *cf, CfTable *cft) {
+    GObject *ret = G_OBJECT(GET_NEW);
+    CfTable my_cft;
+    CfTable pixbufs;
+
+    my_cft=config_get_table(CONFIGIF(cf), cft, pb_name);
+    pixbufs=config_get_table(CONFIGIF(cf), my_cft, "pixbufs");
+
+    GdkPixbuf *pb;
+    gchar *pb_filename;
+    GError *pb_error=NULL;
+    CfTable *pb_table;
+    gchar *pb_name=NULL;
+    while(pb_name=config_getnextkey(CONFIGIF(cf), pixbufs, pb_name)) {
+      pb_table=config_get_table(CONFIGIF(cf), pixbufs, pb_name);
+      pb_filename=config_get_string(CONFIGIF(cf), pb_table, "pb_filename");
+      gchar* found=find_file_in_path(pb_filename, AGS_PIXBUF_PATH, "AGS_PIXBUF_PATH");
+      if(pb=gdk_pixbuf_new_from_file(found, &pb_error)) {
+	g_object_set_data(G_OBJECT(ret), pb_name, pb);
+      }
+      /* XXX comprobar error */
+      g_clear_error(&pb_error);
+      /* clean */
+      if(pb_filename)
+	free(pb_filename);
+      if(found)
+	free(found);
+      /**/
+    }
+
+    return G_OBJECT(ret);
+}
+
+}
+
+%{
+  GObject *(*gtk2pixbufs_new())(char*, AgsCf*, CfTable*)
+    {
+      return self_new;
+    }
+%}

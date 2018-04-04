@@ -1,0 +1,542 @@
+%{
+/**
+ * \file cm-enatel.c
+ * \todo implementar como parametros de cfg las tramas de polling
+ */
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-enatel"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+ 
+%h{
+#include <ags-cm.h>
+#include <ags-cf.h>
+
+#define N_REC_MAX	20
+
+
+%}
+
+%privateheader{
+#include <my-defs-pwc.h>
+#include <configif.h>
+#include <textbufferif.h>
+#include <busmagif.h>
+#include <accessif.h>
+#include <cm-enatelbus.h>  /*estructura de los mensajes*/
+#include <string.h>
+
+#include <sys/time.h>  /*temporizadores: gettimeofday...*/
+#include <stdio.h> /*printf*/
+#include <rectificador.h>
+
+#define MAX_BUFFER_SIZE 9 /* DA COM PARAM1-6 + PRIORIDAD*/
+
+#define N_TRAMAS 8
+#define N_TRAMAS_CONFIG 3
+
+#define BROADCAST 0
+#define DIRS_POR_RACK	9	// Número de direcciones en cada rack.
+
+#define N_MENSAJES_POR_REFERENCIA 3
+
+#define CUENTA_ERROR_MAX	120
+%}
+
+
+class Cm:Enatel from Ags:Cm (interface :BusMagIf) {
+//class Cm:Enatel from Ags:Cm {
+
+/* variables privadas */
+private GObject* sds;
+private GObject* r_textbuffer;
+private GObject* w_textbuffer;
+private int indice=0;
+private int recsPorRack;
+private tipo_EstadoRectificador emag[N_REC_MAX];  /*XXX asignacion dinamica*/
+private guint32 temp;
+private tipo_InformacionMensaje tramasPeriodicas[N_TRAMAS];
+private tipo_InformacionMensaje tramasConfig[N_TRAMAS_CONFIG];
+private gboolean pendienteEnviarConfig = TRUE;	// Indica que hay que enviar los parámetros de configuración.
+public
+GObject*
+new (char *cm_name, AgsCf *cf, CfTable cft) {
+  int i;
+  
+  /* constructor de CmEnatel */
+  GObject *ret = G_OBJECT(GET_NEW);
+  
+  /* obtener tabla cfg modulo */
+  CfTable my_cft= config_get_table(CONFIGIF(cf), cft, cm_name);
+  
+  CM_ENATEL(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "elsds");
+  CM_ENATEL(ret)->_priv->r_textbuffer = config_get_object(CONFIGIF(cf), my_cft, "rbuffer");
+  CM_ENATEL(ret)->_priv->w_textbuffer = config_get_object(CONFIGIF(cf), my_cft, "wbuffer");
+  CM_ENATEL(ret)->_priv->recsPorRack = config_get_int(CONFIGIF(cf), my_cft, "modulos_rack");
+
+  /* polling */
+  gint timeout = config_get_int(CONFIGIF(cf), my_cft, "timeout_poll");
+  if(timeout) {
+    g_timeout_add(timeout, self_poll, (gpointer) ret);
+  }
+  //Inicializar las tensiones.
+  g_timeout_add(0, self_iniciaTensionesTiempo, (gpointer) ret);
+  
+  for(i=0;i<N_REC_MAX;i++) {
+    CM_ENATEL(ret)->_priv->emag[i].error_com=0;
+    CM_ENATEL(ret)->_priv->emag[i].contador=0;
+    CM_ENATEL(ret)->_priv->emag[i].incremento=1;
+    CM_ENATEL(ret)->_priv->emag[i].ps_state = POWER_RUN;
+  }
+  
+  g_signal_connect(G_OBJECT( CM_ENATEL(ret)->_priv->r_textbuffer ), "changed", (GCallback) self_changed, (gpointer) ret);
+
+  self_inicia_temp(&CM_ENATEL(ret)->_priv->temp);
+
+	// Crear las tramas periódicas.
+	for(i = 0; i < N_TRAMAS; i++) {
+		CM_ENATEL(ret)->_priv->tramasPeriodicas[i].Estructura.prioridad = 2;
+		CM_ENATEL(ret)->_priv->tramasPeriodicas[i].Estructura.hayParametro = FALSE;
+		CM_ENATEL(ret)->_priv->tramasPeriodicas[i].Estructura.parametro = 0;
+	}
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[0].Estructura.comando[0] = 'I';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[0].Estructura.comando[1] = 'O';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[1].Estructura.comando[0] = 'S';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[1].Estructura.comando[1] = 'V';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[2].Estructura.comando[0] = 'T';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[2].Estructura.comando[1] = '1';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[3].Estructura.comando[0] = 'T';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[3].Estructura.comando[1] = '2';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[4].Estructura.comando[0] = 'I';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[4].Estructura.comando[1] = 'O';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[5].Estructura.comando[0] = 'V';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[5].Estructura.comando[1] = 'O';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[6].Estructura.comando[0] = 'A';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[6].Estructura.comando[1] = '#';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[7].Estructura.comando[0] = 'S';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[7].Estructura.comando[1] = 'D';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[7].Estructura.hayParametro = TRUE;
+/*	CM_ENATEL(ret)->_priv->tramasPeriodicas[6].Estructura.comando[0] = 'I';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[6].Estructura.comando[1] = 'L';
+	CM_ENATEL(ret)->_priv->tramasPeriodicas[6].Estructura.hayParametro = TRUE;
+*/
+	// Crear las tramas de configuración.
+	for(i = 0; i < N_TRAMAS_CONFIG; i++) {
+		CM_ENATEL(ret)->_priv->tramasPeriodicas[i].Estructura.prioridad = 2;
+		CM_ENATEL(ret)->_priv->tramasConfig[i].Estructura.hayParametro = TRUE;
+		CM_ENATEL(ret)->_priv->tramasConfig[i].Estructura.direccion = BROADCAST;
+	}
+	CM_ENATEL(ret)->_priv->tramasConfig[0].Estructura.comando[0] = 'V';
+	CM_ENATEL(ret)->_priv->tramasConfig[0].Estructura.comando[1] = 'P';
+	CM_ENATEL(ret)->_priv->tramasConfig[1].Estructura.comando[0] = 'C';
+	CM_ENATEL(ret)->_priv->tramasConfig[1].Estructura.comando[1] = 'V';
+	CM_ENATEL(ret)->_priv->tramasConfig[2].Estructura.comando[0] = 'V';
+	CM_ENATEL(ret)->_priv->tramasConfig[2].Estructura.comando[1] = 'M';
+  return ret;
+}
+
+/**
+*Activa la transmisión de parámetros de configuración a los rectificadores.
+*/
+public
+void
+ponPendienteEnvioConfig(gpointer self) {
+
+	CM_ENATEL(self)->_priv->pendienteEnviarConfig = TRUE;
+}
+
+/**
+*Inicia las tensiones de los rectificadores a una tensión por encima 
+*de la de apertura del desconectador, y el tiempo de trabajo a 0.
+*/
+private
+gboolean
+iniciaTensionesTiempo(gpointer self) {
+	gint indice;
+	gint numRecs;
+	gint tension;
+	
+  numRecs = self_get_oid_int(self, zigorPwCObjBRNumRecs, 0);
+  tension = self_get_oid_int(self, zigorPwCObjBDPVAperDesc, 0);
+  tension += 10;	// 1 voltio por encima.
+//  printf("cm-enatel.iniciaTensionesTiempo -> nrecs: %d, tension: %d\n", numRecs, tension);fflush(0);
+	for(indice = 1; indice <= numRecs; indice++) {
+		self_set_oid_int(self, zigorPwCObjRecVSal, indice, tension);
+		CM_ENATEL(self)->_priv->emag[indice - 1].vsal = tension;
+  	// Reiniciar la cuenta de tiempo de trabajo.
+  	self_set_oid_int(self, zigorPwCObjRecHoras, indice, 0);
+  	CM_ENATEL(self)->_priv->emag[indice - 1].milisegundosTrabajo = 0;
+  	CM_ENATEL(self)->_priv->emag[indice - 1].horasTrabajo = 0;
+	}
+	
+	return FALSE;	// No volver a ejecutar esta función.
+}
+
+private
+gboolean
+poll(gpointer self) {
+  int i, j;
+  char buffer[MAX_BUFFER_SIZE];
+  tipo_EstadoRectificador *emag;
+  static gint n_rec = 1;	// Número del rectificador (empezando en 1).
+	static gint indiceConfig = 0;	// Número del mensaje de configuración a enviar.
+	static gboolean enviandoConfig = FALSE;
+	gint numRecs;	// Número de rectificadores.
+
+  char str_aux[50];
+  guint cvflot;
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+	static guint enviados = 0;	// Cuenta de mensajes enviados. Se utiliza para enviar la referencia.
+	tipo_InformacionMensaje * bufferEnatel;
+	tipo_InformacionMensaje bufferEnatel2;
+	tipo_InformacionMensaje * bufferEnatelConfig;
+  GValue vset= {0,};
+	
+  t1=self_lee_temp(CM_ENATEL(self)->_priv->temp);
+
+  
+  numRecs = self_get_oid_int(self, zigorPwCObjBRNumRecs, 0);
+  ags_debug(2,"n_rec: %d", n_rec);
+
+	// Mirar si hay que dar orden de enviar la configuración a los rectificadores.
+  i = self_get_oid_int(self, zigorPwCObjBROEnvioConfig, 0);
+	if(i == VERDADERO) {
+		CM_ENATEL(self)->_priv->pendienteEnviarConfig = TRUE;
+		// Borrar la órden de envío de configuración.
+	  g_value_init(&vset, G_TYPE_INT);
+	  g_value_set_int(&vset, FALSO);
+	  sprintf(str_aux, "%s%s", zigorPwCObjBROEnvioConfig, ".0");
+	  access_set(ACCESSIF(CM_ENATEL(self)->_priv->sds), str_aux, &vset);
+//	  printf("cm-enatel.poll -> Trama config Configuración cambiada.\n", i);fflush(0);
+	}
+	
+	if((CM_ENATEL(self)->_priv->pendienteEnviarConfig) && !(enviandoConfig)) {
+		// Marcar para enviar.
+		enviandoConfig = TRUE;
+		CM_ENATEL(self)->_priv->pendienteEnviarConfig = FALSE;
+	}
+	if(enviandoConfig) {
+	  i = self_get_oid_int(self, zigorPwCObjNASupVSevero, 0);
+	  i *= 10;	// Pasar de dV a cV.
+		CM_ENATEL(self)->_priv->tramasConfig[2].Estructura.parametro = i;
+	  i = self_get_oid_int(self, zigorPwCObjCFGCTComReplay, 0);
+		CM_ENATEL(self)->_priv->tramasConfig[1].Estructura.parametro = i;
+	  i = self_get_oid_int(self, zigorPwCObjCFGCVReplay, 0);
+	  i *= 10;	// Pasar de dV a cV.
+		CM_ENATEL(self)->_priv->tramasConfig[0].Estructura.parametro = i;
+		bufferEnatelConfig = &CM_ENATEL(self)->_priv->tramasConfig[indiceConfig];
+	  printf("cm-enatel.poll -> Trama config T:%u\t(0): %2X %2X %2X %2X %2X %2X\n", t1, bufferEnatelConfig->caracteres[2], bufferEnatelConfig->caracteres[3], bufferEnatelConfig->caracteres[4], bufferEnatelConfig->caracteres[5], bufferEnatelConfig->caracteres[6], bufferEnatelConfig->caracteres[7]);fflush(0);
+	  textbuffer_set(TEXTBUFFERIF(CM_ENATEL(self)->_priv->w_textbuffer), bufferEnatelConfig->caracteres, sizeof(tipo_InformacionMensaje));
+	  enviados++;
+		// Rotación de la trama.
+	  indiceConfig++;  /*incremento trama*/
+	  if(indiceConfig >= N_TRAMAS_CONFIG) {
+	    indiceConfig = 0;
+	    // No seguir enviando tramas de configuración.
+	    enviandoConfig = FALSE;
+	  }
+	}
+	else {
+		bufferEnatel = &CM_ENATEL(self)->_priv->tramasPeriodicas[CM_ENATEL(self)->_priv->indice];
+		bufferEnatel->Estructura.direccion = (n_rec -1) / CM_ENATEL(self)->_priv->recsPorRack * DIRS_POR_RACK;	// Nº de rack.
+		bufferEnatel->Estructura.direccion += ((n_rec -1) % CM_ENATEL(self)->_priv->recsPorRack) + 1;	// Posición en el rack.
+		if(CM_ENATEL(self)->_priv->indice == 7) {
+			// Enviar la orden de marcha o paro, según esté habilitado o no.
+			i = self_get_oid_int(self, zigorPwCObjRecHab, n_rec);
+			j = self_get_oid_int(self, zigorPwCObjRecParado, n_rec);
+			if ((i == VERDADERO) && (j == FALSO)) {
+				bufferEnatel->Estructura.parametro = (gint16)0;
+			}
+			else {
+				bufferEnatel->Estructura.parametro = (gint16)1;
+			}
+		}
+	
+	  /*rotacion de trama*/
+	  /*rotacion de direccion da*/
+	  n_rec++;
+	  if(n_rec > numRecs) {
+	  	n_rec = 1;
+	  	CM_ENATEL(self)->_priv->indice++;
+		  if(CM_ENATEL(self)->_priv->indice>=N_TRAMAS) {
+		    CM_ENATEL(self)->_priv->indice=0;
+		  }
+	  }
+	
+	  ags_debug(2,"Encolo trama");
+	  
+	/*  // Establecer la corriente de limitación.
+	  cvflot = self_get_oid_int(self, zigorPwCObjCFGCLimIBat, 0);
+		cvflot *= self_get_oid_int(self, zigorPwCObjCFCapacidadBatNom, 0);
+		cvflot /= 100;		// Paso de % a unidades.
+	  CM_ENATEL(self)->_priv->tramasPeriodicas[6].Estructura.direccion = BROADCAST;
+	  CM_ENATEL(self)->_priv->tramasPeriodicas[6].Estructura.parametro = (gint16)cvflot;
+	*/
+	  printf("cm-enatel.poll -> Trama transmitida T:%u\t(0): %2X %2X %2X %2X %2X %2X\n", t1, bufferEnatel->caracteres[2], bufferEnatel->caracteres[3], bufferEnatel->caracteres[4], bufferEnatel->caracteres[5], bufferEnatel->caracteres[6], bufferEnatel->caracteres[7]);fflush(0);
+	  textbuffer_set(TEXTBUFFERIF(CM_ENATEL(self)->_priv->w_textbuffer), bufferEnatel->caracteres, sizeof(tipo_InformacionMensaje));
+	  enviados++;
+	
+	  /*gestion fallo comunicaciones*/
+	  emag = &CM_ENATEL(self)->_priv->emag[n_rec - 1];
+	  if(emag->contador<CUENTA_ERROR_MAX) {
+	    if(emag->incremento<=0) /*seguridad*/
+	      emag->incremento=1;
+	    emag->contador+=emag->incremento;
+	    emag->incremento<<=1;
+	  }
+	  else {
+	     emag->error_com=1;
+	     emag->contador=CUENTA_ERROR_MAX;
+	  }
+	  ags_debug(2,"contador: %d", emag->contador);
+	  ags_debug(2,"incremento: %d", emag->incremento);
+	  ags_debug(2,"ecom: %d", emag->error_com);
+	}
+  
+  // Envío de la consigna de tensión. Se envía una vez por cada N_MENSAJES_POR_REFERENCIA mensajes del resto.
+  if(enviados >= N_MENSAJES_POR_REFERENCIA) {
+    cvflot = self_get_oid_int(self, zigorPwCObjBRVref, 0);
+    bufferEnatel2.Estructura.prioridad = 2;
+    bufferEnatel2.Estructura.hayParametro = TRUE;
+    bufferEnatel2.Estructura.direccion = BROADCAST;
+    bufferEnatel2.Estructura.comando[0] = 'V';
+    bufferEnatel2.Estructura.comando[1] = 'S';
+    bufferEnatel2.Estructura.parametro = (gint16)cvflot;
+//    printf("cm-enatel.poll -> Parámetro transmitido: %d\n", bufferEnatel2.Estructura.parametro);fflush(0);
+//	  printf("cm-enatel.poll -> Trama transmitida T:%u\t(3):", t1);
+//	  for(i = 2; i < sizeof(tipo_InformacionMensaje); i++) {
+//	  	printf(" %2X", bufferEnatel2.caracteres[i]);
+//	  }
+//	  printf("\n");fflush(0);
+	  textbuffer_set(TEXTBUFFERIF(CM_ENATEL(self)->_priv->w_textbuffer), bufferEnatel2.caracteres, sizeof(tipo_InformacionMensaje));
+    ags_debug(2,">>>envio trama vflot<<<");
+    enviados = 0;	// Reiniciar la cuenta de mensajes.
+  }
+  /**
+  * Gestion remote_mode y operation_mode de los modulos magnetek
+  */
+/*  //XXX
+  //establecer remote_mode (local/remoto) en funcion de consigna establecida fuera
+  emag->c_mode16 = MODO_REMOTO;  //XXX de momento siempre modo remoto
+  ags_debug(2,"emag->mode16: %d", emag->mode16);
+  if(emag->mode16 != emag->c_mode16) {
+    emag->mode16 = emag->c_mode16;
+    buffer[0] = 3;		//prioridad
+    //da el mismo
+    buffer[1] = BROADCAST;
+    buffer[2] = COM_REMOTE;	//command
+    buffer[3] = emag->c_mode16;
+//	  printf("cm-magnetek.poll -> Trama transmitida T:%u\t(1): %2X %2X %2X %2X %2X %2X %2X %2X\n", t1, buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7], buffer[8]);fflush(0);
+    textbuffer_set(TEXTBUFFERIF(CM_ENATEL(self)->_priv->w_textbuffer), buffer, MAX_BUFFER_SIZE);
+    enviados++;
+    ags_debug(2,">>>envio trama remote_mode<<<");
+  }
+*/
+  //establecer operation_mode a Floating_Mode
+  ags_debug(2,"emag->mode24: %d", emag->mode24);
+/*  if(emag->mode24 != FLOATING) {
+    emag->mode24 = FLOATING;
+    buffer[0] = 3;		//prioridad
+    //da el mismo
+    buffer[1] = BROADCAST;
+    buffer[2] = COM_MODE;	//command
+    buffer[3] = FLOATING;
+	  printf("cm-magnetek.poll -> Trama transmitida  T: %u\t(2): %2X %2X %2X %2X %2X %2X %2X %2X\n", t1, buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7], buffer[8]);fflush(0);
+    textbuffer_set(TEXTBUFFERIF(CM_ENATEL(self)->_priv->w_textbuffer), buffer, MAX_BUFFER_SIZE);
+    enviados++;
+    ags_debug(2,">>>envio trama operation_mode<<<");
+  }
+*/
+  t2 = self_lee_temp(CM_ENATEL(self)->_priv->temp);
+  printf("cm-enatel.poll -> T:%u\ttimeout:%d\ttiempo consumido:%d\n", t1, t1-t_ant, t2-t1);fflush(0);
+  t_ant = t1;
+
+  return TRUE;
+}
+
+/*XXX: crear variable privada dinamica para variables rectificadores */
+private
+void
+changed (GObject *textbuffer, gpointer self) {
+  tipo_InformacionMensaje * resp;
+  int n_rec;	// Número del rectificador, empezando en 0.
+  int dir_rec;	// Dirección del rectificador en el bus.
+  tipo_EstadoRectificador *emag;
+  
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+	gint numRecs;	// Número de rectificadores.
+
+  t1=self_lee_temp(CM_ENATEL(self)->_priv->temp);
+
+  ags_debug(2,"changed");
+
+  numRecs = self_get_oid_int(self, zigorPwCObjBRNumRecs, 0);
+  
+  (char *)resp = textbuffer_get(TEXTBUFFERIF(textbuffer), NULL);
+
+  printf("cm-enatel.changed -> Trama recibida T:%u\t Dir:%02X, Comando:%c%c, Param: %ld\n", t1, resp->Estructura.direccion, resp->Estructura.comando[0], resp->Estructura.comando[1], resp->Estructura.parametro);fflush(0);
+
+  /*analisis respuesta*/
+  /*XXX*/
+  dir_rec = resp->Estructura.direccion;
+  // Dar por buenas las respuestas extrañas de los módulos (dir 8X).
+  dir_rec &= 0x7F;
+  n_rec = (dir_rec / DIRS_POR_RACK) * CM_ENATEL(self)->_priv->recsPorRack;	// Nº rack.
+  n_rec += (dir_rec % DIRS_POR_RACK) - 1;	// Posición en el rack.
+  if(n_rec < numRecs) {
+	  if((resp->Estructura.comando[0] == 'V') && (resp->Estructura.comando[1] == 'O')) {
+	  	CM_ENATEL(self)->_priv->emag[n_rec].vsal = (resp->Estructura.parametro + 5) / 10;
+	  }
+	  else if((resp->Estructura.comando[0] == 'T') && (resp->Estructura.comando[1] == '1')) {
+	  	CM_ENATEL(self)->_priv->emag[n_rec].trad = (resp->Estructura.parametro + 5) / 10;
+	  }
+	  else if((resp->Estructura.comando[0] == 'T') && (resp->Estructura.comando[1] == '2')) {
+	  	CM_ENATEL(self)->_priv->emag[n_rec].tamb = (resp->Estructura.parametro + 5) / 10;
+	  }
+	  else if((resp->Estructura.comando[0] == 'I') && (resp->Estructura.comando[1] == 'O')) {
+	  	CM_ENATEL(self)->_priv->emag[n_rec].isal = resp->Estructura.parametro;
+	  }
+	  else if((resp->Estructura.comando[0] == 'S') && (resp->Estructura.comando[1] == 'V')) {
+	  	sprintf(CM_ENATEL(self)->_priv->emag[n_rec].version, "%d", resp->Estructura.parametro);
+	  }
+	  else if((resp->Estructura.comando[0] == 'A') && (resp->Estructura.comando[1] == '#')) {
+	  	CM_ENATEL(self)->_priv->emag[n_rec].estadoEnatel = resp->Estructura.parametro;
+	  }
+	  
+	  /*gestion fallo comunicaciones*/
+	  emag = &CM_ENATEL(self)->_priv->emag[n_rec];
+	  /*decrementar y restar, ojo 2 veces*/
+	  emag->incremento>>=1;
+	  emag->contador-=emag->incremento;
+	  if(emag->incremento>1)
+	    emag->incremento>>=1;
+	  if(emag->contador>0) {
+	    emag->contador-=emag->incremento;
+	  }
+	  else {
+	  	if(emag->error_com == 1) {
+	  		// Probocar el envío de los parámetros de configuración.
+	  		CM_ENATEL(self)->_priv->pendienteEnviarConfig = TRUE;
+	  	}
+	    emag->error_com=0;
+	    emag->contador=0;
+	  }
+	}
+  
+  t2=self_lee_temp(CM_ENATEL(self)->_priv->temp);
+  printf("cm-enatel.changed -> T:%u\ttimeout:%d\ttiempo consumido:%d\n", t1, t1-t_ant, t2-t1);fflush(0);
+  t_ant=t1;
+
+  g_free(resp);
+}
+
+/* interfaces */
+interface :BusMagIf
+private int write(BusMagIf* self, gchar da, gchar com, gchar* param, guint8 len, guint8 prioridad)
+{
+  char buffer[MAX_BUFFER_SIZE];
+  int i;
+
+  memset((void*) buffer, 0, MAX_BUFFER_SIZE);
+  
+  buffer[0]=(char)prioridad;
+  buffer[1]=da;
+  buffer[2]=com;
+  for(i=0; i<len; i++) {
+    buffer[i]=*param++;
+  }
+  
+//  printf("cm-enatel.write -> Trama transmitida: %2X %2X %2X %2X %2X %2X %2X %2X\n", buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7], buffer[8]);fflush(0);
+  textbuffer_set(TEXTBUFFERIF(CM_ENATEL(self)->_priv->w_textbuffer), buffer, MAX_BUFFER_SIZE);
+}
+
+interface :BusMagIf
+private tipo_EstadoRectificador lee_rec(BusMagIf* self, guint n_rec)
+{
+  tipo_EstadoRectificador rec;
+  
+  rec = CM_ENATEL(self)->_priv->emag[n_rec];
+ 
+  return rec;
+}
+
+interface :BusMagIf
+private void escribe_milisegundosTrabajo(BusMagIf* self, guint n_rec, guint32 milis)
+{
+  
+  CM_ENATEL(self)->_priv->emag[n_rec].milisegundosTrabajo = milis;
+}
+
+interface :BusMagIf
+private void escribe_horasTrabajo(BusMagIf* self, guint n_rec, guint horas)
+{
+  
+  CM_ENATEL(self)->_priv->emag[n_rec].horasTrabajo = horas;
+}
+
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+private
+void
+set_oid_int(gpointer self, char *nombre_var, int n_instancia, int valor) {
+  GValue v= {0,};
+  char aux_str[50];
+  
+  g_value_init(&v, G_TYPE_INT);
+  g_value_set_int(&v, valor);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_ENATEL(self)->_priv->sds), aux_str, &v);
+}
+
+private
+gint
+get_oid_int(gpointer self, char *nombre_var, int n_instancia) {
+  GValue *v;
+  char aux_str[50];
+  int n;
+  
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  v=access_get( ACCESSIF(CM_ENATEL(self)->_priv->sds), aux_str );
+  n=g_value_get_int(v);
+  /* clean */
+  g_free(v);
+  return n;
+}
+
+}/*fin class*/
+
+
+%{
+  GObject *(*cmenatel_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

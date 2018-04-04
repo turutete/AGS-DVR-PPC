@@ -1,0 +1,10 @@
+#define AGS_MOD_PATH    "%(AGS_MOD_PATH)s"
+
+#define AGS_PIXBUF_PATH "%(AGS_PIXBUFS_PATH)s"
+#define AGS_CONFIG_PATH "%(AGS_CONFIG_PATH)s"
+#define AGS_UI_PATH     "%(AGS_UI_PATH)s"
+
+#define AGS_ALL_PATHS   "%(AGS_ALL_PATHS)s"
+
+#define AGS_MOD_PREFIX  "%(AGS_MOD_PREFIX)s"
+#define AGS_LMOD_PREFIX "%(AGS_LMOD_PREFIX)s"

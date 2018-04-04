@@ -1,0 +1,515 @@
+%{
+/**
+ * \file cm-magnetek.c
+ * \todo implementar como parametros de cfg las tramas de polling
+ */
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-magnetek"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+ 
+%h{
+#include <ags-cm.h>
+#include <ags-cf.h>
+
+#define N_REC_MAX	20
+
+enum REMOTE_MODE {MODO_LOCAL=0, MODO_REMOTO};
+enum OPERATION_MODE {EQUALIZE=0, FLOATING, TEST_BATTERY, TRIMMING};
+%}
+
+%privateheader{
+#include <my-defs-pwc.h>
+#include <configif.h>
+#include <textbufferif.h>
+#include <busmagif.h>
+#include <accessif.h>
+#include <cm-magnetekbus.h>  /*trama respuesta*/
+#include <string.h>
+
+#include <sys/time.h>  /*temporizadores: gettimeofday...*/
+#include <stdio.h> /*printf*/
+#include <rectificador.h>
+
+#define MAX_BUFFER_SIZE 9 /* DA COM PARAM1-6 + PRIORIDAD*/
+
+// Códigos de comandos.
+#define COM_READ_PARAM		16
+#define COM_NEW_STATUS		24
+#define COM_REMOTE		10
+#define COM_MODE		11
+#define COM_ON_OFF		12
+#define COM_WRITE_PARAM		13
+
+// Parámetros de lectura.
+#define PARAM_RELEASE		4
+#define PARAM_GENERIC		5
+#define PARAM_TEMPERATURE	6
+#define PARAM_OUTPUT		7
+#define PARAM_MINUTES		11
+// Parámetros de escritura.
+#define PARAM_VFLOAT		1
+
+#define N_TRAMAS 6
+const char TRAMAS[N_TRAMAS][7]={
+	{COM_NEW_STATUS,0,0,0,0,0,0},
+	{COM_READ_PARAM,PARAM_RELEASE,0,0,0,0,0},
+	{COM_READ_PARAM,PARAM_GENERIC,0,0,0,0,0},
+	{COM_READ_PARAM,PARAM_TEMPERATURE,0,0,0,0,0},
+	{COM_READ_PARAM,PARAM_OUTPUT,0,0,0,0,0},
+	{COM_READ_PARAM,PARAM_MINUTES,0,0,0,0,0},
+};
+
+#define BROADCAST 255
+
+#define N_MENSAJES_POR_REFERENCIA 2
+
+//#define I_NOMINAL	50
+//#define DISYUNTOR_CERRADO	0
+//#define DISYUNTOR_ABIERTO	1
+
+#define CUENTA_ERROR_MAX	120
+
+// Para la interpolación de temperatura.
+#define N_PUNTOS_TEMP 18
+const int tabla_temp[36]={
+	0,-20,416,-20,438,-10,460,0,481,10,502,20,522,30,541,40,560,50,
+	578,60,596,70,613,80,629,90,644,100,659,110,672,120,683,130,65535,130};
+%}
+
+
+class Cm:Magnetek from Ags:Cm (interface :BusMagIf) {
+
+/* variables privadas */
+private GObject* sds;
+private GObject* r_textbuffer;
+private GObject* w_textbuffer;
+private int n_modulos_rack;
+private int off_rack=1;
+private int off_modulo=1;
+private int indice=0;
+private int n_racks;
+private tipo_EstadoRectificador emag[N_REC_MAX];  /*XXX asignacion dinamica*/
+private guint32 temp;
+
+public
+GObject*
+new (char *cm_name, AgsCf *cf, CfTable cft) {
+  GValue *v;
+  int i;
+  char str_aux[50];
+  
+  /* constructor de CmMagnetek */
+  GObject *ret = G_OBJECT(GET_NEW);
+  
+  /* obtener tabla cfg modulo */
+  CfTable my_cft= config_get_table(CONFIGIF(cf), cft, cm_name);
+  
+  CM_MAGNETEK(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "elsds");
+  CM_MAGNETEK(ret)->_priv->r_textbuffer = config_get_object(CONFIGIF(cf), my_cft, "rbuffer");
+  CM_MAGNETEK(ret)->_priv->w_textbuffer = config_get_object(CONFIGIF(cf), my_cft, "wbuffer");
+
+  CM_MAGNETEK(ret)->_priv->n_modulos_rack = config_get_int(CONFIGIF(cf), my_cft, "modulos_rack");
+  
+  /* polling */
+  gint timeout = config_get_int(CONFIGIF(cf), my_cft, "timeout_poll");
+  if(timeout) {
+    g_timeout_add(timeout, self_poll, (gpointer) ret);
+    /* n_racks */
+    sprintf(str_aux,"%s%s", zigorPwCObjBRNumRecs, ".0");
+    //v=access_get( ACCESSIF(CM_MAGNETEK(ret)->_priv->sds), zigorPwCObjBRNumRecs);
+    v=access_get( ACCESSIF(CM_MAGNETEK(ret)->_priv->sds), str_aux);
+    CM_MAGNETEK(ret)->_priv->n_racks = g_value_get_int(v) / CM_MAGNETEK(ret)->_priv->n_modulos_rack;
+    if(g_value_get_int(v) % CM_MAGNETEK(ret)->_priv->n_modulos_rack)
+      CM_MAGNETEK(ret)->_priv->n_racks++;
+  }
+  
+  /*XXX*/
+  for(i=0;i<N_REC_MAX;i++) {
+    CM_MAGNETEK(ret)->_priv->emag[i].error_com=0;
+    CM_MAGNETEK(ret)->_priv->emag[i].contador=0;
+    CM_MAGNETEK(ret)->_priv->emag[i].incremento=1;
+  }
+  
+  g_signal_connect(G_OBJECT( CM_MAGNETEK(ret)->_priv->r_textbuffer ), "changed", (GCallback) self_changed, (gpointer) ret);
+
+  self_inicia_temp(&CM_MAGNETEK(ret)->_priv->temp);
+
+  return ret;
+}
+
+/*XXX*/
+private
+gboolean
+poll(gpointer self) {
+  int i;
+  char buffer[MAX_BUFFER_SIZE];
+  tipo_EstadoRectificador *emag;
+  gint n_rec;
+
+  char str_aux[50];
+  GValue *v;
+  guint cvflot, vflot;
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+	static guint enviados = 0;	// Cuenta de mensajes enviados. Se utiliza para enviar la referencia.
+	gfloat auxfloat;
+
+  t1=self_lee_temp(CM_MAGNETEK(self)->_priv->temp);
+
+  
+  /*prioridad*/
+  buffer[0]=2;
+  
+  /*da*/
+  buffer[1] = CM_MAGNETEK(self)->_priv->off_rack*16+CM_MAGNETEK(self)->_priv->off_modulo;
+
+  //n_rec = CM_MAGNETEK(self)->_priv->off_rack*CM_MAGNETEK(self)->_priv->n_modulos_rack + CM_MAGNETEK(self)->_priv->off_modulo + 1;
+  //n_rec = CM_MAGNETEK(self)->_priv->off_rack*CM_MAGNETEK(self)->_priv->n_modulos_rack + CM_MAGNETEK(self)->_priv->off_modulo;
+  n_rec = (CM_MAGNETEK(self)->_priv->off_rack-1)*CM_MAGNETEK(self)->_priv->n_modulos_rack + (CM_MAGNETEK(self)->_priv->off_modulo-1);
+  ags_debug(2,"n_rec: %d", n_rec);
+
+  /*com,param*/
+  for(i=0;i<7;i++) {
+    buffer[i+2]=TRAMAS[CM_MAGNETEK(self)->_priv->indice][i];
+  }
+  /*rotacion de trama*/
+  /*rotacion de direccion da*/
+  CM_MAGNETEK(self)->_priv->off_modulo++;  /*incremento modulo*/
+  //if(CM_MAGNETEK(self)->_priv->off_modulo >= CM_MAGNETEK(self)->_priv->n_modulos_rack) {
+  if(CM_MAGNETEK(self)->_priv->off_modulo > CM_MAGNETEK(self)->_priv->n_modulos_rack) {
+    CM_MAGNETEK(self)->_priv->off_modulo=1;
+    CM_MAGNETEK(self)->_priv->off_rack++;
+    //if(CM_MAGNETEK(self)->_priv->off_rack >= CM_MAGNETEK(self)->_priv->n_racks)
+    if(CM_MAGNETEK(self)->_priv->off_rack > CM_MAGNETEK(self)->_priv->n_racks) {
+      CM_MAGNETEK(self)->_priv->off_rack=1;
+		  CM_MAGNETEK(self)->_priv->indice++;  /*incremento trama*/
+		  if(CM_MAGNETEK(self)->_priv->indice>=N_TRAMAS) {
+		    CM_MAGNETEK(self)->_priv->indice=0;
+		  }
+		}
+  }
+
+  ags_debug(2,"Encolo trama");
+  
+  printf("cm-magnetek.poll -> Trama transmitida T:%u\t(0): %2X %2X %2X %2X %2X %2X %2X %2X\n", t1, buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7], buffer[8]);fflush(0);
+  textbuffer_set(TEXTBUFFERIF(CM_MAGNETEK(self)->_priv->w_textbuffer), buffer, MAX_BUFFER_SIZE);
+  enviados++;
+
+  /*gestion fallo comunicaciones*/
+  emag = &CM_MAGNETEK(self)->_priv->emag[n_rec];
+  if(emag->contador<CUENTA_ERROR_MAX) {
+    //if(emag.incremento<=0) /*XXX seguridad*/
+      //emag.incremento=1;
+    emag->contador+=emag->incremento;
+    emag->incremento<<=1;
+  }
+  else {
+     emag->error_com=1;
+     emag->contador=CUENTA_ERROR_MAX;
+  }
+  ags_debug(2,"contador: %d", emag->contador);
+  ags_debug(2,"incremento: %d", emag->incremento);
+  ags_debug(2,"ecom: %d", emag->error_com);
+  
+  //XXX
+  // Envío de la consigna de tensión. Se envía una vez por cada N_MENSAJES_POR_REFERENCIA mensajes del resto.
+  if(enviados >= N_MENSAJES_POR_REFERENCIA) {
+    sprintf(str_aux,"%s%s", zigorPwCObjBRVref, ".0");
+    v=access_get( ACCESSIF(CM_MAGNETEK(self)->_priv->sds), str_aux);
+    cvflot = g_value_get_int(v);
+    g_free(v);
+//    vflot = cvflot/100*66.801;
+		auxfloat = (cvflot * 66.801) / 100;
+		auxfloat += 0.5;	// Redondeo.
+		vflot = (gint)auxfloat;
+    buffer[0] = 2;		//prioridad
+    buffer[1] = BROADCAST;
+    //da el mismo
+    buffer[2] = COM_WRITE_PARAM;	//command
+    buffer[3] = PARAM_VFLOAT;		//Floating Voltage
+    buffer[4] = vflot/256;
+    buffer[5] = vflot%256;
+	  printf("cm-magnetek.poll -> Trama transmitida T:%u\t(3): %2X %2X %2X %2X %2X %2X %2X %2X\n", t1, buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7], buffer[8]);fflush(0);
+    textbuffer_set(TEXTBUFFERIF(CM_MAGNETEK(self)->_priv->w_textbuffer), buffer, MAX_BUFFER_SIZE);
+    ags_debug(2,">>>envio trama vflot<<<");
+    enviados = 0;	// Reiniciar la cuenta de mensajes.
+  }
+  /**
+  * Gestion remote_mode y operation_mode de los modulos magnetek
+  */
+  //XXX
+  //establecer remote_mode (local/remoto) en funcion de consigna establecida fuera
+  emag->c_mode16 = MODO_REMOTO;  //XXX de momento siempre modo remoto
+  ags_debug(2,"emag->mode16: %d", emag->mode16);
+  if(emag->mode16 != emag->c_mode16) {
+    emag->mode16 = emag->c_mode16;
+    buffer[0] = 3;		//prioridad
+    //da el mismo
+    buffer[1] = BROADCAST;
+    buffer[2] = COM_REMOTE;	//command
+    buffer[3] = emag->c_mode16;
+	  printf("cm-magnetek.poll -> Trama transmitida T:%u\t(1): %2X %2X %2X %2X %2X %2X %2X %2X\n", t1, buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7], buffer[8]);fflush(0);
+    textbuffer_set(TEXTBUFFERIF(CM_MAGNETEK(self)->_priv->w_textbuffer), buffer, MAX_BUFFER_SIZE);
+    enviados++;
+    ags_debug(2,">>>envio trama remote_mode<<<");
+  }
+  //establecer operation_mode a Floating_Mode
+  ags_debug(2,"emag->mode24: %d", emag->mode24);
+  if(emag->mode24 != FLOATING) {
+    emag->mode24 = FLOATING;
+    buffer[0] = 3;		//prioridad
+    //da el mismo
+    buffer[1] = BROADCAST;
+    buffer[2] = COM_MODE;	//command
+    buffer[3] = FLOATING;
+	  printf("cm-magnetek.poll -> Trama transmitida  T: %u\t(2): %2X %2X %2X %2X %2X %2X %2X %2X\n", t1, buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7], buffer[8]);fflush(0);
+    textbuffer_set(TEXTBUFFERIF(CM_MAGNETEK(self)->_priv->w_textbuffer), buffer, MAX_BUFFER_SIZE);
+    enviados++;
+    ags_debug(2,">>>envio trama operation_mode<<<");
+  }
+
+  t2=self_lee_temp(CM_MAGNETEK(self)->_priv->temp);
+  printf("cm-magnetek.poll -> T:%u\ttimeout:%d\ttiempo consumido:%d\n", t1, t1-t_ant, t2-t1);fflush(0);
+  t_ant=t1;
+
+  return TRUE;
+}
+
+/*XXX: crear variable privada dinamica para variables rectificadores */
+private
+void
+changed (GObject *textbuffer, gpointer self) {
+  TramaRespuesta* resp;
+  int off_rack, off_modulo, n_rec;
+  //char limit, mode, ps_state, fault, mag_sal;
+  //gint aux_int, aux_int2;
+  //gboolean aux_boolean;
+  //char aux_str[50];
+  //char version[5];
+  //float tamb, trad;
+  unsigned char Val1, Val2, Val3, Val4;
+  //gint vsal, isal;
+  //GValue v = { 0, };
+  //gint min;
+  tipo_EstadoRectificador *emag;
+  gint longitud = 0;
+  
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+
+  t1=self_lee_temp(CM_MAGNETEK(self)->_priv->temp);
+
+  /*gint frame_len=0;
+  gchar* buffer = textbuffer_get(TEXTBUFFERIF(textbuffer), &frame_len);
+
+  if( !buffer || !frame_len ) {
+    g_critical("Error, buffer de entrada %p vacio o nulo.", buffer);
+    return;
+  }*/
+
+  ags_debug(2,"changed");
+  
+//  resp = textbuffer_get(TEXTBUFFERIF(textbuffer), NULL);
+	resp = textbuffer_get(TEXTBUFFERIF(textbuffer), &longitud);
+
+  printf("cm-magnetek.changed -> Trama recibida T:%u\t: %2X %2X %2X %2X %2X %2X\n", t1, resp[1], resp[2], resp[3], resp[4], resp[5], resp[6]);fflush(0);
+
+  /*analisis respuesta*/
+  /*XXX*/
+  off_rack = (resp->buffer_preg[1]>>4) & 0x0F;
+  off_modulo = resp->buffer_preg[1] & 0x0F;
+  //n_rec = off_rack*CM_MAGNETEK(self)->_priv->n_modulos_rack + off_modulo+1;
+  //n_rec = off_rack*CM_MAGNETEK(self)->_priv->n_modulos_rack + off_modulo;
+  n_rec = (off_rack-1)*CM_MAGNETEK(self)->_priv->n_modulos_rack + (off_modulo-1);
+  
+  ags_debug(2, "off_rack:%d, off_modulo:%d, n_rec:%d", off_rack, off_modulo, n_rec);
+  
+  switch(resp->buffer_preg[2]) {
+    case COM_NEW_STATUS:
+      /*XXX*/
+      CM_MAGNETEK(self)->_priv->emag[n_rec].limit = resp->buffer_resp[1];
+      CM_MAGNETEK(self)->_priv->emag[n_rec].mode24 = resp->buffer_resp[2];
+      CM_MAGNETEK(self)->_priv->emag[n_rec].ps_state = resp->buffer_resp[3];
+      CM_MAGNETEK(self)->_priv->emag[n_rec].fault = resp->buffer_resp[4];
+      CM_MAGNETEK(self)->_priv->emag[n_rec].mag_sal = resp->buffer_resp[5];
+      break;
+    case COM_READ_PARAM:
+      Val1 = resp->buffer_resp[2];
+      Val2 = resp->buffer_resp[3];
+      Val3 = resp->buffer_resp[4];
+      Val4 = resp->buffer_resp[5];
+      switch(resp->buffer_preg[3]) {
+        case PARAM_RELEASE:
+	  ags_debug(2,"param release");
+	  //g_value_init(&v, G_TYPE_STRING);
+	  //strncpy(version, &resp->buffer_resp[2], 4);
+	  //g_value_set_string(&v, version);
+	  //sprintf(aux_str,"%s.%d",zigorPwCObjRecVersion,n_rec);
+	  //access_set(ACCESSIF(CM_MAGNETEK(self)->_priv->sds), aux_str, &v);
+	  strncpy(CM_MAGNETEK(self)->_priv->emag[n_rec].version, &resp->buffer_resp[2], 4);
+	  break;
+        case PARAM_GENERIC:
+	  ags_debug(2,"param generic");
+	  CM_MAGNETEK(self)->_priv->emag[n_rec].mode16 = Val1;
+	  break;
+        case PARAM_TEMPERATURE:
+	  ags_debug(2,"param temperature");
+	  //g_value_init(&v, G_TYPE_INT);
+	  //tamb=Val1*256+Val2;
+	  //trad=Val3*256+Val4;
+	  //g_value_set_int(&v, tamb);
+	  //sprintf(aux_str,"%s.%d",zigorPwCObjRecTVent,n_rec);
+	  //access_set(ACCESSIF(CM_MAGNETEK(self)->_priv->sds), aux_str, &v);
+	  //g_value_set_int(&v, trad);
+	  //sprintf(aux_str,"%s.%d",zigorPwCObjRecTInt,n_rec);
+	  //access_set(ACCESSIF(CM_MAGNETEK(self)->_priv->sds), aux_str, &v);
+	  /*XXX: interpolar segun tabla dada*/
+	  CM_MAGNETEK(self)->_priv->emag[n_rec].tamb = self_interpolar(Val1*256+Val2);  /*internal*/
+	  CM_MAGNETEK(self)->_priv->emag[n_rec].trad = self_interpolar(Val3*256+Val4);  /*headsink*/
+	  break;
+        case PARAM_OUTPUT:
+	  ags_debug(2,"param output");
+	  //g_value_init(&v, G_TYPE_INT);
+	  //vsal = (Val1*256+Val2)*1000/1024;  /*0.1V*/
+	  //isal = (Val3*256+Val4)*1000/1024;  /*0.1A*/
+	  //g_value_set_int(&v, vsal);
+	  //sprintf(aux_str,"%s.%d",zigorPwCObjRecVsal,n_rec);
+	  //access_set(ACCESSIF(CM_MAGNETEK(self)->_priv->sds), aux_str, &v);
+	  //g_value_set_int(&v, isal);
+	  //sprintf(aux_str,"%s.%d",zigorPwCObjRecIsal,n_rec);
+	  //access_set(ACCESSIF(CM_MAGNETEK(self)->_priv->sds), aux_str, &v);
+	  CM_MAGNETEK(self)->_priv->emag[n_rec].vsal = (Val1*256+Val2)*1000/1024;
+	  CM_MAGNETEK(self)->_priv->emag[n_rec].isal = (Val3*256+Val4)*1000/1024;
+	  break;
+        case PARAM_MINUTES:
+	  ags_debug(2,"param minutes");
+	  //g_value_init(&v, G_TYPE_INT);
+	  //min = (Val1*256+Val2)*65535+(Val3*256+Val4);
+	  //g_value_set_int(&v, min/60);  /*horas*/
+	  //sprintf(aux_str,"%s.%d",zigorPwCObjRecHoras,n_rec);
+	  //access_set(ACCESSIF(CM_MAGNETEK(self)->_priv->sds), aux_str, &v);
+	  ags_debug(2,"val1:%d,val2:%d,val3:%d,val4:%d", Val1,Val2,Val3,Val4);
+	  ags_debug(2,"minutes:%d",(Val1*256+Val2)*65535+(Val3*256+Val4));
+	  CM_MAGNETEK(self)->_priv->emag[n_rec].minutes = (Val1*256+Val2)*65535+(Val3*256+Val4);
+	  break;
+      }
+      break;
+  }
+  
+  /*gestion fallo comunicaciones*/
+  emag = &CM_MAGNETEK(self)->_priv->emag[n_rec];
+  /*decrementar y restar, ojo 2 veces*/
+  emag->incremento>>=1;
+  emag->contador-=emag->incremento;
+  if(emag->incremento>1)
+    emag->incremento>>=1;
+  if(emag->contador>0) {
+    emag->contador-=emag->incremento;
+  }
+  else {
+    emag->error_com=0;
+    emag->contador=0;
+  }
+  
+  t2=self_lee_temp(CM_MAGNETEK(self)->_priv->temp);
+  printf("cm-magnetek.changed -> T:%u\ttimeout:%d\ttiempo consumido:%d\n", t1, t1-t_ant, t2-t1);fflush(0);
+  t_ant=t1;
+
+  g_free(resp);
+}
+
+/* interfaces */
+interface :BusMagIf
+private int write(BusMagIf* self, gchar da, gchar com, gchar* param, guint8 len, guint8 prioridad)
+{
+  char buffer[MAX_BUFFER_SIZE];
+  int i;
+
+  memset((void*) buffer, 0, MAX_BUFFER_SIZE);
+  
+  buffer[0]=(char)prioridad;
+  buffer[1]=da;
+  buffer[2]=com;
+  for(i=0; i<len; i++) {
+    buffer[i]=*param++;
+  }
+  
+  printf("cm-magnetek.write -> Trama transmitida: %2X %2X %2X %2X %2X %2X %2X %2X\n", buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7], buffer[8]);fflush(0);
+  textbuffer_set(TEXTBUFFERIF(CM_MAGNETEK(self)->_priv->w_textbuffer), buffer, MAX_BUFFER_SIZE);
+}
+
+interface :BusMagIf
+private tipo_EstadoRectificador lee_rec(BusMagIf* self, guint n_rec)
+{
+  tipo_EstadoRectificador rec;
+  
+  rec = CM_MAGNETEK(self)->_priv->emag[n_rec];
+  
+  return rec;
+}
+
+private
+gint
+interpolar(guint medida) {
+  guint i;
+  guint vbi,vbi_1,vb;
+  gint vmi,vmi_1;
+
+  vb=medida;
+
+  for(i=0;i<N_PUNTOS_TEMP-1;i++) {
+     vbi_1=((guint)(tabla_temp[i<<1]));
+     vmi_1=((gint)(tabla_temp[(i<<1)+1]));
+     vbi=((guint)(tabla_temp[(i<<1)+2]));
+     vmi=((gint)(tabla_temp[(i<<1)+3]));
+     if(vb<=vbi)
+          break;
+  }
+  
+  if((vbi-vbi_1)!=0){ /*seguridad por si la tabla esta mal*/
+	vmi=((1.0*vb-vbi_1)*(vmi-vmi_1))/(1.0*vbi-vbi_1);
+  	vmi+=vmi_1;
+  }
+  ags_debug(2,"interpolar: %d", vmi);
+  
+  return vmi;
+}
+
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+}/*fin class*/
+
+
+%{
+  GObject *(*cmmagnetek_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

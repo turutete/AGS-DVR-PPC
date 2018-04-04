@@ -1,0 +1,788 @@
+%{
+/**
+ * \file  cm-strings.c
+ */
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-strings"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+
+%h{
+#include <ags-cf.h>
+%}
+
+%privateheader{
+#include <accessif.h>
+#include <sys/time.h>	/*temporizadores: gettimeofday...*/
+
+#include <my-defs-sunzet.h>
+
+#include <stdio.h>
+#include <unistd.h>
+#include <termios.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+
+#define ASCII_CR	13   /* ^M , Carriage Return */
+#define ASCII_0       48
+#define ASCII_A       65
+/* This macro turns a 4 bits integer value to ASCII character */
+/* for example: i=4 then return '4' , i=11 then return 'B' */
+#define ASCII(i)      ( ((i) < 10) ? ((i) + ASCII_0) : ((i) - 10 + ASCII_A) )
+
+/*#define RCVBUF_SIZE	16*/
+#define RCVBUF_SIZE	64
+#define CMD_BUF_SIZE 128
+#define CMD_MAX_SIZE (CMD_BUF_SIZE - 4)
+
+#define CUENTA_ERROR_MAX 120
+
+#define N_STRINGS_MAX 16
+#define N_MODULOS_MAX 16
+#define N_DIN_STRING  2
+#define N_AIN_STRING  8
+
+typedef struct _StringData StringData;
+
+struct _StringData {
+  GObject *object;
+  guint   string_id;
+};
+%}
+
+class Cm:STRINGS from G:Object {
+/* variables privadas de modulo */
+private GObject *sds;
+private guint32 temp;
+private gint fd;
+private guint checksum;
+private guint n_strings;
+private guint timeout;
+
+public
+GObject*
+new (char* cm_name, AgsCf* cf, CfTable cft) {
+  GObject* ret = G_OBJECT(GET_NEW);
+  CfTable  my_cft = config_get_table(CONFIGIF(cf), cft, cm_name);
+  guint string_id;
+  
+  /* acceso al sds */
+  CM_STRINGS(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "elsds");
+
+  /* lectura variables cfg */
+  CM_STRINGS(ret)->_priv->checksum = config_get_int(CONFIGIF(cf), my_cft, "checksum");
+  guint n_strings = config_get_int(CONFIGIF(cf), my_cft, "n_strings");
+  CM_STRINGS(ret)->_priv->n_strings = n_strings;
+  guint n_ioport = config_get_int(CONFIGIF(cf), my_cft, "n_ioport");
+  unsigned long baudrate = config_get_int(CONFIGIF(cf), my_cft, "baudrate");   //XXX:int->ulong
+  if(n_ioport) {
+    if(baudrate) {
+      CM_STRINGS(ret)->_priv->fd = self_inicia_serie(n_ioport, baudrate);
+    } else {
+      CM_STRINGS(ret)->_priv->fd = self_inicia_serie(n_ioport, 9600);
+      printf("strings>No se especifico baudrate! (por defecto 9600)\n");fflush(stdout);
+    }
+  } else {
+    printf("strings>No se especifico puerto!\n");fflush(stdout);
+  }
+  
+  /* polling modulos icpdas */
+  guint timeout = config_get_int(CONFIGIF(cf), my_cft, "timeout");
+  CM_STRINGS(ret)->_priv->timeout = timeout;
+  if(timeout) {
+    for(string_id=1; string_id<=n_strings; string_id++) {
+      StringData *data = g_new0(StringData,1);   //XXX leak?
+      data->object = ret;
+      data->string_id = string_id;
+      g_timeout_add(timeout, self_string, (gpointer)data);
+    }
+    g_timeout_add(timeout, self_otros, (gpointer)ret);
+  }  
+  
+  //self_inicia_temp(&CM_STRINGS(ret)->_priv->temp);
+
+  return ret;
+}
+
+
+private
+gboolean
+string(gpointer data) {
+   guint hab=0;
+   static guint hab_ant[N_STRINGS_MAX];
+   static int conta_act[N_AIN_STRING*N_STRINGS_MAX];
+   static int conta_des[N_AIN_STRING*N_STRINGS_MAX];
+   guint input;
+   GObject *self;
+   guint string_id;
+   int fallo,ain,fact,fdes,imin,iout,imedtotal;
+   //---
+   float nivel;
+   
+   self =      ((StringData*)data)->object;
+   string_id = ((StringData*)data)->string_id;
+
+   //printf("strings>>>----------\n");fflush(stdout);
+   //printf("strings>>>string_id:%d\n", string_id);fflush(stdout);
+   
+   /* hab general? */
+   hab = self_get_oid_int(self, zigorSunzetParamStringsHab, string_id);
+   //printf("strings>>>habilitacion:%d\n", hab);fflush(stdout);
+   if(hab!=1) {
+      /* resetar alarmas?
+      for(input=1;input<=N_AIN_STRING;input++) {
+         conta_act[input+((string_id-1)*N_AIN_STRING)-1]=0;
+         conta_des[input+((string_id-1)*N_AIN_STRING)-1]=0;
+	 self_set_oid_int(self, zigorSunzetObjStringsAinAlarm, input+((string_id-1)*N_AIN_STRING), 2);
+      }*/
+      /* resetear valores en caso de deshabilitacion */
+      if(hab!=hab_ant[string_id]) {
+         hab_ant[string_id]=hab;
+         /* reset lecturas */
+         for(input=1;input<=N_AIN_STRING;input++)
+	    self_set_oid_int(self, zigorSunzetObjStringsAinValue, input+((string_id-1)*N_AIN_STRING), 0);
+         for(input=1;input<=N_DIN_STRING;input++)
+	    self_set_oid_int(self, zigorSunzetObjStringsDinValue, input+((string_id-1)*N_DIN_STRING), 2);
+         self_set_oid_int(self, zigorSunzetObjStringsImed, string_id, 0);
+	 /* reset tambien de errores de comunicacion */
+         self_set_oid_int(self, zigorSunzetObjStringsAinECom, string_id, 2);
+         self_set_oid_int(self, zigorSunzetObjStringsDinECom, string_id, 2);
+      }
+      return TRUE;
+   }
+   hab_ant[string_id]=hab;
+      
+   /* polling */
+   self_poll_7017(self, string_id);
+   self_poll_7053(self, string_id);
+   
+   /* alarmas */
+   /* para optimizar rendimiento si hay fallo com. ni evaluar */
+   fallo = self_get_oid_int(self, zigorSunzetObjStringsAinECom, string_id);
+   if(fallo!=1) {
+      /* contemplar timeout... */
+      fact = self_get_oid_int(self, zigorSunzetParamStringsTact, 0)*60/(CM_STRINGS(self)->_priv->timeout/1000); /* min -> seg */
+      fdes = self_get_oid_int(self, zigorSunzetParamStringsTdes, 0)*60/(CM_STRINGS(self)->_priv->timeout/1000); /* min -> seg */
+      //printf("strings>>>alarmas>>>evaluar alarmas------\n", fact);fflush(stdout);
+      //printf("strings>>>alarmas>>>fact:%d\n", fact);fflush(stdout);
+      //printf("strings>>>alarmas>>>fdes:%d\n", fdes);fflush(stdout);
+      for(input=1;input<=N_AIN_STRING;input++) {
+         /*hab? */
+         hab = self_get_oid_int(self, zigorSunzetParamStringsAinHab, input+((string_id-1)*N_AIN_STRING));
+         if(hab==1) {
+            /* rango de evaluacion? */
+	    imedtotal = self_get_oid_int(self, zigorSunzetObjStringsImedTotal, 0); /*mA*/
+	    imin = self_get_oid_int(self, zigorSunzetParamStringsImin, 0); /*mA*/
+	    //printf("strings>>>alarmas>>>evaluando alarmas de string(%d),input(%d). imin=%d,imedtotal=%d\n",string_id,input,imin,imedtotal);fflush(stdout);
+            if(imedtotal>imin) {
+	       ain = self_get_oid_int(self, zigorSunzetObjStringsAinValue, input+((string_id-1)*N_AIN_STRING)); /*mA*/
+	       iout = self_get_oid_int(self, zigorSunzetParamStringsIout, 0); /* % */
+	       nivel = imedtotal*(1-(float)iout/100);
+	       //printf("strings>>>alarmas>>>ain=%d,nivel=%f\n",ain,nivel);fflush(stdout);
+	       /* condicion */
+	       //printf("strings>>>alarmas>>>contadores(%d): act=%d; des=%d\n", input+((string_id-1)*N_AIN_STRING)-1, conta_act[input+((string_id-1)*N_AIN_STRING)-1], conta_des[input+((string_id-1)*N_AIN_STRING)-1]);fflush(stdout);
+	       if(ain < nivel) {
+	          //printf("strings>>>alarmas>>>por debajo del nivel!\n");fflush(stdout);
+		  if(conta_act[input+((string_id-1)*N_AIN_STRING)-1] >= fact) {
+		     //printf("strings>>>alarmas>>>SET ALARMA\n");fflush(stdout);
+		     self_set_oid_int(self, zigorSunzetObjStringsAinAlarm, input+((string_id-1)*N_AIN_STRING), 1);
+		  }
+		  else {
+		     conta_act[input+((string_id-1)*N_AIN_STRING)-1]++;
+		     conta_des[input+((string_id-1)*N_AIN_STRING)-1]=0;
+		     //printf("strings>>>alarmas>>>incrementando contador de activacion: %d\n", conta_act[input+((string_id-1)*N_AIN_STRING)-1]);fflush(stdout);
+		  }
+	       }
+	       else {
+	          //printf("strings>>>alarmas>>>por encima del nivel\n");fflush(stdout);
+		  if(conta_des[input+((string_id-1)*N_AIN_STRING)-1] >= fdes) {
+		     self_set_oid_int(self, zigorSunzetObjStringsAinAlarm, input+((string_id-1)*N_AIN_STRING), 2);
+		     //printf("strings>>>alarmas>>>UNSET ALARMA\n");fflush(stdout);
+		  }
+		  else {
+		     conta_des[input+((string_id-1)*N_AIN_STRING)-1]++;
+		     conta_act[input+((string_id-1)*N_AIN_STRING)-1]=0;
+		     //printf("strings>>>alarmas>>>incrementando contador de desactivacion: %d\n", conta_des[input+((string_id-1)*N_AIN_STRING)-1]);fflush(stdout);
+		  }
+	       }/* condicion */
+            }
+         }
+      }
+   }
+   //printf("strings>>>---------\n");fflush(stdout);
+   return TRUE;
+}
+
+
+private
+gboolean
+otros(gpointer self) {
+   guint string_id, n_strings;
+   gint imed=0;
+   gint count=0;
+   guint hab=0;
+   guint fallo=0;
+   static guint init=0;
+
+   n_strings = CM_STRINGS(self)->_priv->n_strings;
+   //printf("strings>>>OTROS\n");fflush(stdout);
+   
+   /* inicializacion de tablas... */
+   if(init==0) {
+      self_set_oid_int(self, zigorSunzetObjStringsPresent, 0, n_strings);
+      self_set_oid_int(self, zigorSunzetObjStringsDinPresent, 0, n_strings*N_DIN_STRING);
+      self_set_oid_int(self, zigorSunzetObjStringsAinPresent, 0, n_strings*N_AIN_STRING);
+      init=1;
+   }
+
+   /* imed total */
+   for(string_id=1; string_id<=n_strings; string_id++) {
+      hab = self_get_oid_int(self, zigorSunzetParamStringsHab, string_id);
+      fallo = self_get_oid_int(self, zigorSunzetObjStringsAinECom, string_id);
+      if(hab==1 && fallo!=1) {
+         count+=1;
+	 imed += self_get_oid_int(self, zigorSunzetObjStringsImed, string_id);
+	 //printf("strings>>>string_id:%d, imed:%d count:%d\n",string_id, imed, count);fflush(stdout);
+      }
+   }
+   if(count!=0) {
+      imed /= count;
+      //printf("strings>>>imedtotal final:%d\n", imed);fflush(stdout);
+      self_set_oid_int(self, zigorSunzetObjStringsImedTotal, 0, imed);
+   }
+   else
+      self_set_oid_int(self, zigorSunzetObjStringsImedTotal, 0, 0);
+
+   return TRUE;
+}
+
+
+private
+gint
+poll_7017(gpointer self, int string_id) {
+  char cmd[CMD_BUF_SIZE];
+  char rbuf[RCVBUF_SIZE];
+  int r;
+  gint fallo;
+  float medidaf[8];
+  gint gan, valor;
+  guint hab, input;
+  //---
+  int i;
+  int count=0;
+  int imed=0;
+  
+  //printf("strings>>>poll_7017---\n");fflush(stdout);
+
+  sprintf(cmd,"#%02X\r", string_id<<4 | 1);
+
+  //printf("strings>>>cmd:%s\n",cmd);fflush(stdout);
+
+  /* resetear valores en caso de fallo */
+  fallo=self_get_oid_int(self, zigorSunzetObjStringsAinECom, string_id);
+  if(fallo==1) {
+    for(input=1;input<=N_AIN_STRING;input++)
+      self_set_oid_int(self, zigorSunzetObjStringsAinValue, input+((string_id-1)*N_AIN_STRING), 0);
+    self_set_oid_int(self, zigorSunzetObjStringsImed, string_id, 0);
+  }
+  r=self_send_cmd(self, cmd, string_id, zigorSunzetObjStringsAinECom, 2*string_id-2, rbuf, RCVBUF_SIZE-1);
+  if(r<1) return(-1);
+
+  //printf("strings>read: %s\n", rbuf);fflush(stdout);
+
+  /* Lectura de formato "Engineer Unit Format" type 08 (+-10.000) */
+  r=sscanf(rbuf,">%7f%7f%7f%7f%7f%7f%7f%7f",&medidaf[0],&medidaf[1],&medidaf[2],&medidaf[3],&medidaf[4],&medidaf[5],&medidaf[6],&medidaf[7]);
+  if(r!=8) return(-1);
+
+  /*
+  for(i=0;i<N_AIN_STRING;i++) {
+    printf("string>medida[%d]:%.4f\n",i,medidaf[i]);fflush(stdout);
+  }
+  */
+
+  /*establecer si habilitados*/
+  gan=self_get_oid_int(self, zigorSunzetParamStringsGan, string_id);
+  /* bucle */
+  for(input=1;input<=N_AIN_STRING;input++) {
+     hab = self_get_oid_int(self, zigorSunzetParamStringsAinHab, input+((string_id-1)*N_AIN_STRING));
+     if(hab==1 && gan!=0) {
+        /* LEM 1:1000 y Rshunt => I/1000*R=V => ganancia(A/V) es 1000/R (ahora R=402) Guardamos en milesimas */
+	valor = medidaf[input-1]*gan;
+	//printf("strings>>>valor(%d):%d\n", input,valor);fflush(stdout);
+	self_set_oid_int(self, zigorSunzetObjStringsAinValue, input+((string_id-1)*N_AIN_STRING), valor);
+	/*imed*/
+	imed += valor;
+	count++;
+	//printf("strings>imed:%d,count:%d\n", imed,count);fflush(stdout);
+     }
+     else {
+        self_set_oid_int(self, zigorSunzetObjStringsAinValue, input+((string_id-1)*N_AIN_STRING), 0);
+     }
+  }
+  /*imed*/
+  if(count!=0) {
+     imed /= count;
+     //printf("strings>>>imed:%d\n", imed);fflush(stdout);
+     self_set_oid_int(self, zigorSunzetObjStringsImed, string_id, imed);
+  }
+  else
+     self_set_oid_int(self, zigorSunzetObjStringsImed, string_id, 0);
+
+  //printf("strings>>>------\n");fflush(stdout);
+  return(0);
+}
+
+
+private
+gint
+poll_7053(gpointer self, int string_id) {
+  char cmd[CMD_BUF_SIZE];
+  char rbuf[RCVBUF_SIZE];
+  int r;
+  guint input, fallo, hab, valor;
+  long int all_inputs;
+  
+  //printf("strings>>>poll_7053---\n");fflush(stdout);
+  sprintf(cmd,"@%02X\r", string_id<<4 | 2);
+  //printf("strings>>>cmd:%s\n",cmd);fflush(stdout);
+  
+  /* resetear valores en caso de fallo */
+  fallo=self_get_oid_int(self, zigorSunzetObjStringsDinECom, string_id);
+  if(fallo==1) {
+    for(input=1;input<=N_DIN_STRING;input++)
+      self_set_oid_int(self, zigorSunzetObjStringsDinValue, input+((string_id-1)*N_DIN_STRING), 2);
+  }
+  
+  r=self_send_cmd(self, cmd, string_id, zigorSunzetObjStringsDinECom, 2*string_id-1, rbuf, RCVBUF_SIZE-1);
+  if(r<1) return(-1);
+  //printf("strings>>>read: %s\n", rbuf);fflush(stdout);
+
+  /* traduccion de ">FFFF" */
+  r=sscanf(rbuf,">%X",&all_inputs);
+  if(r!=1) return;//(-1);
+  //printf("strings>all_inputs:%04X(%d)\n", all_inputs,all_inputs);fflush(stdout);
+
+  /* bucle */
+  for(input=1;input<=N_DIN_STRING;input++) {
+    valor = all_inputs>>input-1;
+    valor = valor & 0x0001;
+    //printf("strings>>>valor(%d):%d\n", input+((string_id-1)*N_DIN_STRING), valor);fflush(stdout);
+    /* ojo, a GND=>0(read) y a 5V o al aire=>1(read) 
+       como 0 es situacion de OK en magneto y SupVDC, hacer aqui 0->2(sds) y 1->1(sds) */
+    hab = self_get_oid_int(self, zigorSunzetParamStringsDinHab, input+((string_id-1)*N_DIN_STRING));
+    //printf("strings>hab:%d(string_id:%d)\n", hab,string_id);fflush(stdout);
+    if(hab==1)
+      self_set_oid_int(self, zigorSunzetObjStringsDinValue, input+((string_id-1)*N_DIN_STRING), valor==0?2:1);
+    else
+      self_set_oid_int(self, zigorSunzetObjStringsDinValue, input+((string_id-1)*N_DIN_STRING), 2);
+  }
+	
+  //printf("strings>>>------\n");fflush(stdout);
+  return(0);
+}
+
+
+private
+char *gum_chksum(void *cbuf, const char *cmd)
+{
+	char cL, cH;
+	char *p;
+	const char *q;
+	unsigned int chksum;
+
+	p = cbuf;
+	q = cmd;
+	chksum = 0;
+
+	while ((*q != 0) && (*q != ASCII_CR)) {
+		chksum += *q;
+		*p++ = *q++;
+	}
+	//printf("strings>checksum = 0x%x\n", chksum);fflush(stdout);
+
+	cL = ASCII(chksum & 0xf);
+	cH = ASCII((chksum >> 4) & 0xf);
+
+	*p++ = cH;
+	*p++ = cL;
+	*p++ = ASCII_CR;
+	*p = 0;
+
+	return (cbuf);
+}
+
+private
+int test_chksum(const char *str)
+{
+	char cL, cH;
+	//const char *p;
+	char *p;
+	unsigned int chksum;
+
+	p = str;
+	chksum = 0;
+
+	while ((*p != ASCII_CR) && (*p != 0)) {
+		chksum += *p++;
+	}
+	chksum -= *(--p);
+	chksum -= *(--p);
+	//printf("strings>test checksum = 0x%x\n", chksum);fflush(stdout);
+
+	cL = ASCII(chksum & 0xf);
+	cH = ASCII((chksum >> 4) & 0xf);
+
+	if (cH != *p++) {
+		printf("strings>test checksum KO\n");fflush(stdout);
+		return -1;
+	}
+	if (cL != *p) {
+		printf("strings>test checksum KO\n");fflush(stdout);
+		return -1;
+	}
+	
+	/* remove checksum */
+	p--;
+	*p++ = ASCII_CR;
+	*p = 0;
+	
+	return (0);
+}
+
+private
+int send_cmd(gpointer self, const char *cmd, int string_id, char *error_oid, int module_id, char *rbuf, int rmax) {
+	char cmd_buf[CMD_BUF_SIZE];
+	char c;
+	char *p;
+	unsigned long limit;
+	int r;
+	p = rbuf;
+	limit = (unsigned long) p + rmax;
+	//static gint contador, incremento=1, fallo;
+	static gint contador[N_STRINGS_MAX*N_MODULOS_MAX];
+	static gint incremento[N_STRINGS_MAX*N_MODULOS_MAX];
+	static gint fallo[N_STRINGS_MAX*N_MODULOS_MAX];
+	static gint init=0;
+	int i;
+	
+	if(init==0) {
+	   for(i=0;i<N_STRINGS_MAX*N_MODULOS_MAX;i++)
+	      incremento[i]=1;
+	   init=1;
+	}
+	
+	//printf("strings>>>module_id:%d\n", module_id);fflush(stdout);
+	gint fd = CM_STRINGS(self)->_priv->fd;
+	guint checksum = CM_STRINGS(self)->_priv->checksum;
+	//printf("strings>checksum:%d\n", checksum);fflush(stdout);
+	
+	/* comprobacion de fallo comunicacion: incrementar contadores
+	**********/
+	if(contador[module_id] < CUENTA_ERROR_MAX) {
+		contador[module_id]+=incremento[module_id];
+		incremento[module_id]<<=1;
+	}
+	else if(!fallo[module_id]){  /* inicio de fallo */
+		//printf("strings>>>Inicio fallo comunicaciones, modulo(direccion=%d)\n", module_id);fflush(stdout);
+		fallo[module_id]=1;
+		contador[module_id]=CUENTA_ERROR_MAX;
+	}
+	/* establecer estado de com. en cada iteracion para evitar su perdida */
+	if(fallo[module_id]==1) {
+		if(error_oid)
+			self_set_oid_int(self, error_oid, string_id, 1);
+	}
+	else {
+		if(error_oid)
+			self_set_oid_int(self, error_oid, string_id, 2);
+	}
+  /************************************************
+   *  gum checksum and CR code to command string  *
+   ************************************************/
+	if(checksum==1) {
+		if (strlen(cmd) <= CMD_MAX_SIZE) {
+			self_gum_chksum(cmd_buf, cmd);
+		} else {
+			printf("strings>Comando excede longitud maxima\n");fflush(stdout);
+			return (-1);
+		}
+	} else {
+		strncpy(cmd_buf,cmd,CMD_BUF_SIZE);
+	}
+
+  /******************
+   *  send command  *
+   ******************/
+	if (write(fd, cmd_buf, strlen(cmd_buf)) == -1) {
+		printf("strings>self_send_read: Write error!\n");fflush(stdout);
+		return (-1);
+	}
+
+  /*******************
+   *  read response  *
+   *******************/
+	/*****************************************
+	 * tratamiento eco!
+	 *****************************************/
+	/*
+	do {
+	   r = read(fd, &c, sizeof(c));
+	} while(c!=ASCII_CR);
+	*/
+	while ((unsigned long) p < limit) {
+		r = read(fd, &c, sizeof(c));
+		if ((r == -1) || (r == 0)) {
+			printf("strings>error de lectura eco\n");fflush(stdout);
+			return (r);
+		}
+		p++;
+		if (c == ASCII_CR) {
+			break;
+		}
+	}
+	p = rbuf;
+
+	while ((unsigned long) p < limit) {
+		r = read(fd, &c, sizeof(c));
+		if ((r == -1) || (r == 0)) {
+			printf("strings>error de lectura\n");fflush(stdout);
+			return (r);
+		}
+		if (c == ASCII_CR) {
+			break;
+		}
+		*p++ = c;
+
+	}
+	
+	*p = 0;
+	r = p - rbuf;
+	
+	/* test checksum */
+	if(checksum==1) {
+		if (self_test_chksum(rbuf)) {
+			printf("strings>fallo checksum\n");fflush(stdout);
+			return (-1);
+		}
+	}
+
+  /**********
+   *  done  *
+   **********/
+	/* comprobacion de fallo comunicacion: decrementar contadores (restar, ojo 2 veces)
+	**********/
+	//printf("strings>>>restar\n");fflush(stdout);
+	incremento[module_id]>>=1;
+	contador[module_id]-=incremento[module_id];
+	if(incremento[module_id]>1)
+		incremento[module_id]>>=1;
+	if(contador[module_id]>0) {
+		contador[module_id]-=incremento[module_id];
+	}
+	else if(fallo[module_id]) {  /* fin de fallo */
+		//printf("strings>>>Fin fallo comunicaciones en modulo(direccion=%d)\n", module_id);fflush(stdout);
+		fallo[module_id]=0;
+		contador[module_id]=0;
+	}
+
+	return (r);
+}
+
+/**
+ * Abre el puerto serie.
+ * \param n_port	Numero de puerto serie
+ * \param oldtio	Parámetro de salida donde la función devolverá la anterior configuración
+ *			del puerto para poder restaurarla al cerrarlo.
+ * \return	Manejador de archivo correspondiente al puerto serie abierto.
+ * \todo	Aceptar parámetros de comunicación (en lugar de defines).
+ */
+/*** Usamos MODO NO-CANONICO con TIMEOUT ***/
+private
+//int inicia_serie(int n_port, struct termios *oldtio) {
+int inicia_serie(int n_port, unsigned long baudrate) {
+	int fd;
+	struct termios newtio;
+	const char *str_port[] = {
+		"/dev/ttyS0",
+		"/dev/ttyS1",
+		"/dev/ttyS2",
+		"/dev/ttyS3",
+		"/dev/ttyS4",
+		"/dev/ttyS5"
+	};
+
+	//printf("strings>inicia_serie\n");fflush(stdout);
+  
+	//printf("string>str_port:%s\n", str_port[n_port]);fflush(stdout);
+	//fd = open(str_port[n_port], O_RDWR | O_NOCTTY);
+	fd = open(str_port[n_port], O_RDWR | O_NOCTTY | O_NONBLOCK);
+	if (fd <0) {  return -1;  }
+  
+	/*uso de O_NONBLOCK en open para evitar bloqueos, ahora restaurar flag*/
+	fcntl(fd, F_SETFL, 0);
+  
+	//tcgetattr(fd, oldtio); /* salvamos conf. actual del puerto */
+
+	//bzero(&newtio, sizeof(newtio));
+	tcgetattr(fd, &newtio);
+	
+	//Establecer cfg de velocidad (posix)
+	switch(baudrate) {
+		case 1200:
+			cfsetispeed(&newtio, B1200);
+			cfsetospeed(&newtio, B1200);
+			break;
+		case 2400:
+			cfsetispeed(&newtio, B2400);
+			cfsetospeed(&newtio, B2400);
+			break;
+		case 4800:
+			cfsetispeed(&newtio, B4800);
+			cfsetospeed(&newtio, B4800);
+			break;
+		case 9600:
+			cfsetispeed(&newtio, B9600);
+			cfsetospeed(&newtio, B9600);
+			break;
+		case 19200:
+			cfsetispeed(&newtio, B19200);
+			cfsetospeed(&newtio, B19200);
+			break;
+		case 38400:
+			cfsetispeed(&newtio, B38400);
+			cfsetospeed(&newtio, B38400);
+			break;
+		case 57600:
+			cfsetispeed(&newtio, B57600);
+			cfsetospeed(&newtio, B57600);
+			break;
+		case 115200:
+			cfsetispeed(&newtio, B115200);
+			cfsetospeed(&newtio, B115200);
+			break;
+	}
+	
+	// CONTROL MODES
+	//////////////////
+	//comunicacion 8N1,sin ctrl de flujo...
+	//newtio.c_cflag = BAUDRATE | CLOCAL | CREAD | CS8;
+	newtio.c_cflag |= (CLOCAL | CREAD);
+	newtio.c_cflag &= ~PARENB;
+	newtio.c_cflag &= ~CSTOPB;
+	newtio.c_cflag &= ~CSIZE;
+	newtio.c_cflag |= CS8;
+	//newtio.c_cflag &= ~CNEW_RTSCTS;
+	newtio.c_cflag &= ~CRTSCTS;
+	
+	// INPUT MODES
+	//////////////////
+	//raw input
+	newtio.c_iflag = 0;
+	//newtio.c_iflag |= (~ICRNL | ~INLCR | ~IXON | ~IXOFF);
+
+	// OUTPUT MODES
+	//////////////////
+	//raw output
+	//newtio.c_oflag = 0;
+	newtio.c_oflag &= ~OPOST;
+
+	// LOCAL MODES
+	//////////////////
+	//modo de entrada (canonical or raw input > raw input)
+	//newtio.c_lflag = 0;
+	newtio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+
+	// Control characters (VTIME y VMIN)
+	//////////////////
+	newtio.c_cc[VTIME]    = 1;   /* temporizador entre caracter, TIMEOUT en decimas de segundo! */
+	newtio.c_cc[VMIN]     = 0;   /* bloquea lectura hasta recibir VMIN char  */
+  
+	tcflush(fd, TCIFLUSH);
+	tcsetattr(fd,TCSANOW,&newtio);
+
+	return fd;
+}
+
+
+/**
+ * Cierra el puerto serie.
+ * \param fd		Manejador de archivo correspondiente al puerto serie a cerrar.
+ * \param oldtio	Parámetros de configuración del puerto anteriores a restaurar.
+ */
+private
+void cierra_serie(int fd, struct termios *oldtio) {
+	tcsetattr(fd,TCSANOW,oldtio);
+	close(fd);
+}
+
+//----------
+
+private
+void
+set_oid_int(gpointer self, char *nombre_var, int n_instancia, int valor) {
+  GValue v= {0,};
+  char aux_str[50];
+
+  if(!nombre_var)
+    return;
+
+  g_value_init(&v, G_TYPE_INT);
+  g_value_set_int(&v, valor);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_STRINGS(self)->_priv->sds), aux_str, &v);
+}
+
+private
+gint
+get_oid_int(gpointer self, char *nombre_var, int n_instancia) {
+  GValue *v;
+  char aux_str[50];
+  int n;
+  
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  v=access_get( ACCESSIF(CM_STRINGS(self)->_priv->sds), aux_str );
+  n=g_value_get_int(v);
+  /* clean */
+  g_free(v);
+  return n;
+}
+
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;  /*mseg*/
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+}/*fin class*/
+
+
+%{
+  GObject *(*cmstrings_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

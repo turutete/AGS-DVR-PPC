@@ -1,0 +1,36 @@
+#ifndef BUSZIGOR_H
+	#define BUSZIGOR_H
+	#define PREGUNTA_POLL 0x60
+	#define RESPUESTA_POLL 0xE0
+	#define PREGUNTA_MAESTRO 0x00
+	#define RESPUESTA_MAESTRO 0x80
+	
+	// Nodo de medidas de alterna.
+	#define DIR_ALTERNA 0x32
+	
+	#define OBJA_ECO 0x00
+	#define OBJA_INODO 0x01
+	#define OBJA_ESTADO 0x02
+	#define OBJA_CONTROL 0x03
+	#define OBJA_M_CALRMS1 0x04
+	#define OBJA_M_CALRMS2 0x05
+	#define OBJA_M_CALRMS3 0x06
+	#define OBJA_M_CALEACTIVA 0x07
+	#define OBJA_M_CALEREACTIVA 0x08
+	#define OBJA_M_CALEAPARENTE 0x09
+	#define OBJA_FCON_EEP 0x0A
+	#define OBJA_FBUF_EEP 0x0B
+	#define OBJA_RESUMEN 0x0C
+	#define OBJA_VEFICAZ 0x0D
+	#define OBJA_IEFICAZ 0x0E
+	#define OBJA_FACPOT 0x0F
+	#define OBJA_PAPARENTE 0x13
+	#define OBJA_PACTIVA 0x14
+	#define OBJA_PREACTIVA 0x15
+	#define OBJA_ETRIFASICA 0x16
+	#define OBJA_EFASE1 0x17
+	#define OBJA_EFASE2 0x18
+	#define OBJA_EFASE3 0x19
+	#define OBJA_EREACTIVAA 0x1A
+	#define OBJA_EREACTIVAB 0x1B
+#endif

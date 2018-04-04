@@ -1,0 +1,148 @@
+%{
+/**
+   \page cmwatchdog CmWatchDog
+   \section cmwatchdog_desc DESCRIPCIÓN	
+	"Watchdog".
+   \section cmwatchdog_reqs REQUISITOS
+     \subsection cmwatchdog_deps Dependencias
+     NINGUNA*
+     \subsection cmwatchdog_pres Precarga
+     NINGUNA
+     \subsection cmwatchdog_evs  Eventos
+     NINGUNO
+     \subsection cmwatchdog_cfs Configuración
+        -# wd_filename
+	   - Tipo: G_TYPE_STRING
+	   - Requerido
+	   - Descripción: Nombre del fichero de dispositivo "watchdog".
+	-# refresh_time
+	   - Tipo: G_TYPE_INT
+	   - Requerido
+	   - Descripción: Periodo de refresco del "watchdog" (ms).
+	-# expiration_time
+	   - Tipo: G_TYPE_INT
+	   - Requerido
+	   - Descripción: Tiempo desde el último refresco para reiniciar (s).
+   \section cmwatchdog_feas CARACTERÍSTICAS
+     \subsection cmwatchdog_ifs  Implementa
+	NINGUNA
+     \subsection cmwatchdog_sigs Señales
+	NINGUNA
+     \subsection cmwatchdog_pros Propiedades
+        NINGUNA (XXX)
+   \section cmwatchdog_srcs FUENTES
+      - \ref cm-watchdog.c
+      - \ref cm-watchdog.h
+*/
+%}
+
+%h{
+#include <stdio.h>
+#include <config.h>
+#include <ags-cf.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-watchdog"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+requires 2.0.0
+
+class Cm:WatchDog from G:Object {
+
+private int fd = { -1 }
+  destroy {
+  /* desactivar vigilancia si se destruye el objeto */
+  if(VAR != -1) {
+    ioctl(VAR, 0, getpid());
+    close(VAR);
+  }
+  };
+
+/* XXX ¿pasar a propiedades? */
+private guint refresh_time;
+private int   expiration_time;
+
+private
+gboolean
+refresh(gpointer self) {
+  int error;
+  error=ioctl(CM_WATCHDOG(self)->_priv->fd, CM_WATCHDOG(self)->_priv->expiration_time, getpid());
+  /* XXX ¿comprobar error? */
+
+  /* XXX ¿hacer refresh_time dinámico?  */
+
+  printf("watchdog>>>Refresco de perro\n");fflush(stdout);
+
+  return TRUE;
+}
+
+public
+GObject*
+new(char *cm_name, AgsCf *cf, CfTable cft) {
+  GObject *ret   = G_OBJECT(GET_NEW);
+  CfTable my_cft = config_get_table(CONFIGIF(cf), cft, cm_name);
+
+  int   fd              = -1;
+  guint refresh_time    = config_get_int   (CONFIGIF(cf), my_cft, "refresh_time"   );
+  int   expiration_time = config_get_int   (CONFIGIF(cf), my_cft, "expiration_time");
+  char* wd_filename     = config_get_string(CONFIGIF(cf), my_cft, "wd_filename"    );
+  char* pid_filename    = config_get_string(CONFIGIF(cf), my_cft, "pid_filename"    );
+
+  if(wd_filename) {
+    fd=open(wd_filename, O_RDWR);
+
+    if(fd != -1) {
+      int id=g_timeout_add_full(G_PRIORITY_HIGH_IDLE, refresh_time, self_refresh, (gpointer) ret, NULL);
+    } else {
+      g_error("Error abriendo %s.", wd_filename);
+    }
+
+  } else {
+    g_critical("No se especifió fichero de dispositivo 'watchdog'.");
+  }
+
+  CM_WATCHDOG(ret)->_priv->fd              = fd;
+  CM_WATCHDOG(ret)->_priv->refresh_time    = refresh_time;
+  CM_WATCHDOG(ret)->_priv->expiration_time = expiration_time;
+
+  /* escribir pid para analisis culpable */
+  fd = -1;
+  if(pid_filename) {
+    fd=open(pid_filename, O_WRONLY | O_CREAT);
+    if(fd != -1) {
+      char str[10];
+      sprintf(str,"pid: %d\n",getpid());
+      write(fd,str,10);
+    } else {
+      g_error("Error abriendo %s.", pid_filename);
+    }
+
+  } else {
+    g_critical("No se especificó fichero de log de 'pid'.");
+  }
+
+  self_refresh( (gpointer) ret); /* iniciamos "watchdog" */
+  
+  return ret;
+}
+
+
+}
+
+%{
+  GObject *(*cmwatchdog_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

@@ -1,0 +1,177 @@
+%{
+/**
+   \file cm-zigorfilt.c
+*/
+/**
+   \page cmzigorfilt CmZigorFilt
+   \section cmzigorfilt_desc DESCRIPCIÓN
+   Bloquea la recepcion de mensajes, cuando la carta esta deshabilitada.
+   \section cmzigorfilt_reqs REQUISITOS
+     \subsection cmzigorfilt_deps Dependencias
+        -# rbuffer
+	   -# \ref textbufferif
+	-# sds
+	   -# \ref accessif
+     \subsection cmzigorfilt_pres Precarga
+     NINGUNA
+     \subsection cmzigorfilt_evs  Eventos
+        -# rbuffer
+	   -# \ref changed
+     \subsection cmzigorfilt_cfs Configuración
+        -# nodes_id
+	   - Tipo: CfTable
+	   - Requerida
+	   - Descripción: Tabla de configuración para definir los
+	   bloqueos en el bus Zigor.
+   \section cmzigorfilt_feas CARACTERÍSTICAS
+     \subsection cmzigorfilt_ifs  Implementa
+     NINGUNA
+     \subsection cmzigorfilt_sigs Señales
+     NINGUNA
+   \section cmzigorfilt_srcs FUENTES
+     - \ref cm-zigorfilt.c
+     - \ref cm-zigorfilt.h
+*/
+%}
+
+%h{
+#include <string.h>
+#include <ags-cm.h>
+#include <ags-cf.h>
+#include <textbufferif.h>
+#include <accessif.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-zigorfilt"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+
+%}
+
+%privateheader{
+#include <my-defs-pwc.h>
+
+enum {
+  FC=0,
+  DA,
+  ID,
+  DATA
+};
+
+typedef struct _NodeData NodeData;
+
+struct _NodeData {
+  unsigned char da;
+  char *oid;
+};
+%}
+
+class Cm:ZigorFilt from Ags:Cm {
+
+private gchar*  name = NULL destroywith g_free;
+private AgsCf*  cf;
+private CfTable cft;
+private GObject* robj_textbuffer = NULL unrefwith g_object_unref;
+private GObject* sds = NULL unrefwith g_object_unref;
+private GArray*    nodes    = { g_array_new(FALSE, TRUE, sizeof(NodeData) ) } 
+  destroy { g_array_free(VAR, TRUE); } ; /* XXX leak? */
+
+public
+GObject*
+new (char* cm_name, AgsCf* cf, CfTable cft) {
+  GObject* ret = G_OBJECT(GET_NEW);
+  CfTable  my_cft = config_get_table(CONFIGIF(cf), cft, cm_name);
+
+  /* guardar como privates */
+  CM_ZIGORFILT(ret)->_priv->name = g_strdup(cm_name);
+  CM_ZIGORFILT(ret)->_priv->cf   = cf;
+  CM_ZIGORFILT(ret)->_priv->cft  = cft;
+
+  CM_ZIGORFILT(ret)->_priv->robj_textbuffer = config_get_object(CONFIGIF(cf), my_cft, "rbuffer");
+  CM_ZIGORFILT(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "sds");
+
+  /* leer configuración */
+
+  /* leer nodes */
+  CfTable nodes = config_get_table(CONFIGIF(cf), my_cft, "nodes");
+  if( config_check_table( CONFIGIF(cf), nodes) ) {
+    char* node_da =NULL;
+    char* nodename=NULL;
+    NodeData nodedata;
+    while( nodename=config_getnextkey(CONFIGIF(cf), nodes, nodename) ) {
+      CfTable nodo = config_get_table(CONFIGIF(cf), nodes, nodename);
+      node_da=config_get_string(CONFIGIF(cf), nodo, "da");
+      if(node_da) {
+	nodedata.da=(char) strtol(node_da, NULL, 16);
+	nodedata.oid = config_get_string(CONFIGIF(cf), nodo, "oid");
+	g_array_append_val(CM_ZIGORFILT(ret)->_priv->nodes,  nodedata);
+	free(node_da);
+      }
+    }
+  }
+  /**/
+
+  g_signal_connect(G_OBJECT( CM_ZIGORFILT(ret)->_priv->robj_textbuffer ), "changed", (GCallback) self_changed, (gpointer) ret);
+
+  return ret;
+}
+
+private
+gint
+get_oid_int(gpointer self, char *nombre_var, int n_instancia) {
+  GValue *v;
+  char aux_str[50];
+  int n;
+  
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  v=access_get( ACCESSIF(CM_ZIGORFILT(self)->_priv->sds), aux_str );
+  n=g_value_get_int(v);
+  /* clean */
+  g_free(v);
+  return n;
+}
+
+private
+void
+changed (GObject *textbuffer, gpointer self) {
+  gint frame_len=0;
+  gchar* buffer = textbuffer_get(TEXTBUFFERIF(textbuffer), &frame_len);
+  gint habilitacion = 0;
+  GArray*    nodes=CM_ZIGORFILT(self)->_priv->nodes;
+  gint indice;
+
+  if( !buffer || !frame_len ) {
+    g_critical("Error, buffer de entrada %p vacio o nulo.", buffer);
+    return;
+  }
+
+  NodeData* nodedata=NULL;
+  for(indice = 0; indice < nodes->len; indice++) {
+    nodedata = &g_array_index (nodes, NodeData, indice);
+		habilitacion = self_get_oid_int(self, nodedata->oid, 0);
+		if((habilitacion != VERDADERO) && (buffer[DA] == nodedata->da)) {
+//			printf("cm-zigorfilt.changed -> Mensaje descartado.\n");fflush(0);
+			// Evitar que esta trama sea analizada.
+			g_signal_stop_emission_by_name(CM_ZIGORFILT(self)->_priv->robj_textbuffer, "changed");
+			goto out;
+		}
+	}
+
+  out:
+  if(buffer)
+     g_free(buffer);
+}
+
+}
+
+%{
+  GObject *(*cmzigorfilt_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

@@ -1,0 +1,6 @@
+AGS_MOD_PATH   = os.getenv("AGS_MOD_PATH")    or "%(AGS_MOD_PATH)s"
+AGS_CONFIG_PATH= os.getenv("AGS_CONFIG_PATH") or "%(AGS_CONFIG_PATH)s"
+AGS_MOD_PREFIX = os.getenv("AGS_MOD_PREFIX")  or "%(AGS_MOD_PREFIX)s"
+AGS_LMOD_PREFIX= os.getenv("AGS_LMOD_PREFIX") or "%(AGS_LMOD_PREFIX)s"
+
+----

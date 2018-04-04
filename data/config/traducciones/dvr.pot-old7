@@ -1,0 +1,1088 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-06-27 13:30+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "-"
+msgstr ""
+
+msgid "00:00"
+msgstr ""
+
+msgid "Borrar histórico de eventos"
+msgstr ""
+
+msgid "Borrar histórico de huecos"
+msgstr ""
+
+msgid "Cancelar"
+msgstr ""
+
+msgid "Descargas FTP"
+msgstr ""
+
+msgid ""
+"Español\n"
+"Inglés\n"
+msgstr ""
+
+msgid "Estado"
+msgstr ""
+
+msgid "Eventos"
+msgstr ""
+
+msgid "Fábrica"
+msgstr ""
+
+msgid "Guardar"
+msgstr ""
+
+msgid "Histórico"
+msgstr ""
+
+msgid "Histórico de EVENTOS"
+msgstr ""
+
+msgid "Histórico de HUECOS"
+msgstr ""
+
+msgid "Idioma"
+msgstr ""
+
+msgid "LOGIN"
+msgstr ""
+
+msgid "La acción solicitada requiere confirmación"
+msgstr ""
+
+msgid "Marcha"
+msgstr ""
+
+msgid "OK"
+msgstr ""
+
+msgid "Paro"
+msgstr ""
+
+msgid "Parámetros"
+msgstr ""
+
+msgid "Password:"
+msgstr ""
+
+msgid "Reiniciar"
+msgstr ""
+
+msgid "Reset"
+msgstr ""
+
+msgid "Salir"
+msgstr ""
+
+msgid "Selecciona idioma"
+msgstr ""
+
+msgid "Sinóptico"
+msgstr ""
+
+msgid "label14"
+msgstr ""
+
+msgid "DVR"
+msgstr ""
+
+msgid "Sistema"
+msgstr ""
+
+msgid "Nombre del equipo"
+msgstr ""
+
+msgid "Descripción del equipo"
+msgstr ""
+
+msgid "Localización"
+msgstr ""
+
+msgid "Contacto"
+msgstr ""
+
+msgid "Código del equipo"
+msgstr ""
+
+msgid "Firmware"
+msgstr ""
+
+msgid "Configuración"
+msgstr ""
+
+msgid "Estado módem"
+msgstr ""
+
+msgid "Medidas"
+msgstr ""
+
+msgid "Tensión de red fase R"
+msgstr ""
+
+msgid "Tensión de red fase S"
+msgstr ""
+
+msgid "Tensión de red fase T"
+msgstr ""
+
+msgid "Tensión de Bus"
+msgstr ""
+
+msgid "Tensión de secundario fase R"
+msgstr ""
+
+msgid "Tensión de secundario fase S"
+msgstr ""
+
+msgid "Tensión de secundario fase T"
+msgstr ""
+
+msgid "Corriente de secundario fase R"
+msgstr ""
+
+msgid "Corriente de secundario fase S"
+msgstr ""
+
+msgid "Corriente de secundario fase T"
+msgstr ""
+
+msgid "Potencia de salida fase R"
+msgstr ""
+
+msgid "Potencia de salida fase S"
+msgstr ""
+
+msgid "Potencia de salida fase T"
+msgstr ""
+
+msgid "Estado de Control"
+msgstr ""
+
+msgid "Error de comunicación DSP"
+msgstr ""
+
+msgid "Parametros"
+msgstr ""
+
+msgid "Fecha"
+msgstr ""
+
+msgid "Zona Horaria"
+msgstr ""
+
+msgid "Lenguaje para notificaciones"
+msgstr ""
+
+msgid "Backlight Timeout"
+msgstr ""
+
+msgid "Logout Timeout"
+msgstr ""
+
+msgid "Passwords"
+msgstr ""
+
+msgid "Comunicaciones"
+msgstr ""
+
+msgid "Dirección IP"
+msgstr ""
+
+msgid "Máscara de red"
+msgstr ""
+
+msgid "Gateway"
+msgstr ""
+
+msgid "DNS"
+msgstr ""
+
+msgid "Envio email: Servidor de correo SMTP"
+msgstr ""
+
+msgid "Envio email: Usuario"
+msgstr ""
+
+msgid "Envio email: Password"
+msgstr ""
+
+msgid "Envio email: Dirección de correo (* vs @)"
+msgstr ""
+
+msgid "Envio email: Autenticación (NO/SSL/TLS)"
+msgstr ""
+
+msgid "Envio email: Email Test Envio (* vs @)"
+msgstr ""
+
+msgid "Email 1 para envio de alarmas (* vs @)"
+msgstr ""
+
+msgid "Email 2 para envio de alarmas (* vs @)"
+msgstr ""
+
+msgid "Email 3 para envio de alarmas (* vs @)"
+msgstr ""
+
+msgid "Email 4 para envio de alarmas (* vs @)"
+msgstr ""
+
+msgid "Modo MODBUS"
+msgstr ""
+
+msgid "Modbus RTU: Direccion"
+msgstr ""
+
+msgid "Modbus RTU: Velocidad"
+msgstr ""
+
+msgid "Modbus RTU: Paridad"
+msgstr ""
+
+msgid "Modbus TCP: Puerto"
+msgstr ""
+
+msgid "Modbus TCP: Tiempo inactividad para Reset (s)"
+msgstr ""
+
+msgid "PIN del modem"
+msgstr ""
+
+msgid "Número 1 para envio SMS"
+msgstr ""
+
+msgid "Número 2 para envio SMS"
+msgstr ""
+
+msgid "Número 3 para envio SMS"
+msgstr ""
+
+msgid "Número 4 para envio SMS"
+msgstr ""
+
+msgid "Puerto TCP acceso HTTP"
+msgstr ""
+
+msgid "Puerto TCP aplicación a través de HTTP"
+msgstr ""
+
+msgid "Equipo"
+msgstr ""
+
+msgid "Tensión de red nominal"
+msgstr ""
+
+msgid "Tensión mínima DVR"
+msgstr ""
+
+msgid "Equipos en paralelo"
+msgstr ""
+
+msgid "Factor de conversión para tensiones"
+msgstr ""
+
+msgid "Frecuencia nominal"
+msgstr ""
+
+msgid "Niveles"
+msgstr ""
+
+msgid "Notificaciones"
+msgstr ""
+
+msgid "Nombre"
+msgstr ""
+
+msgid "Valor"
+msgstr ""
+
+msgid "Código"
+msgstr ""
+
+msgid "Evento"
+msgstr ""
+
+msgid "Est."
+msgstr ""
+
+msgid "Nivel"
+msgstr ""
+
+msgid "Elementos"
+msgstr ""
+
+msgid "Reconocer"
+msgstr ""
+
+msgid "Rec."
+msgstr ""
+
+msgid "Res."
+msgstr ""
+
+msgid "Elemento"
+msgstr ""
+
+msgid "Mínimo (%)"
+msgstr ""
+
+msgid "Media (%)"
+msgstr ""
+
+msgid "Duración (ms)"
+msgstr ""
+
+msgid "Fase"
+msgstr ""
+
+msgid "Introduce password"
+msgstr ""
+
+msgid "Comprobando password..."
+msgstr ""
+
+msgid "Comprobando acceso nivel"
+msgstr ""
+
+msgid "Error, introduce de nuevo el password"
+msgstr ""
+
+msgid "Inicio sistema"
+msgstr ""
+
+msgid "Cambio de password"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "ErrorVInst"
+msgstr ""
+
+msgid "Error tensión instantánea"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Error tension instantanea>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "Sobrecarga"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Sobrecarga>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "VBusMax"
+msgstr ""
+
+msgid "Tensión de bus máxima"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Tension de bus maxima>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "VCondMax"
+msgstr ""
+
+msgid "Tensión de condensador máxima"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Tension de condensador maxima>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "VBusMin"
+msgstr ""
+
+msgid "Tensión de bus mínima"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Tension de bus minima>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "FalloVRed"
+msgstr ""
+
+msgid "Fallo tensión de red"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Fallo tension de red>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "LimitIntVSal"
+msgstr ""
+
+msgid "Limitación integrador de tensión de salida"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Limitacion integrador de tension de salida>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "AlarmaDriver"
+msgstr ""
+
+msgid "Alarma driver"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Alarma driver>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "ParadoPorError"
+msgstr ""
+
+msgid "Parado por error"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Parado por error>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "ErrorDriver"
+msgstr ""
+
+msgid "Fallo driver"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Fallo driver>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "ErrorTermo"
+msgstr ""
+
+msgid "Error termostato"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Error termostato>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "Limitando"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Limitando>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "ErrorFusible"
+msgstr ""
+
+msgid "Error fusible"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Error fusible>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "AlarmaPLL"
+msgstr ""
+
+msgid "Alarma PLL"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Alarma PLL>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "Fallo Com.DSP"
+msgstr ""
+
+msgid "Error de comunicación con DSP"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Error de comunicacion con DSP>"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "CambioEstado"
+msgstr ""
+
+msgid "Cambio de estado"
+msgstr ""
+
+#. SMS [GSM 03.38]
+msgid "<Cambio de estado>"
+msgstr ""
+
+#. Ocupar 11 caracteres! [usar espacios]
+msgid "   LEVE    "
+msgstr ""
+
+#. Ocupar 11 caracteres! [usar espacios]
+msgid "PERSISTENTE"
+msgstr ""
+
+#. Ocupar 11 caracteres! [usar espacios]
+msgid "   GRAVE   "
+msgstr ""
+
+#. Ocupar 11 caracteres! [usar espacios]
+msgid "   SEVERA  "
+msgstr ""
+
+msgid "?"
+msgstr ""
+
+msgid "LEVE"
+msgstr ""
+
+#. Solo caracteres alfabeto SMS [GSM 03.38]
+msgid "GRAVE"
+msgstr ""
+
+#. Solo caracteres alfabeto SMS [GSM 03.38]
+msgid "SEVERA"
+msgstr ""
+
+msgid "OFF"
+msgstr ""
+
+msgid "Espera Carga"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Espera Carga_"
+msgstr ""
+
+msgid "Espera ON"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Espera ON_"
+msgstr ""
+
+msgid "ON"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Sobrecarga_"
+msgstr ""
+
+msgid "Fallo tensión instantánea"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Fallo V Inst_"
+msgstr ""
+
+msgid "Fallo de red"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Fallo Red_"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_V Bus Minima_"
+msgstr ""
+
+msgid "Hueco máximo"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Hueco Maximo_"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Alarma Driver_"
+msgstr ""
+
+msgid "Espera OFF"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Espera OFF_"
+msgstr ""
+
+msgid "Error de Precarga"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Error Precarga_"
+msgstr ""
+
+msgid "Error tensión de condensador"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Error VCond_"
+msgstr ""
+
+msgid "Error tensión de bus máxima"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Error VBusMax_"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Error Termo_"
+msgstr ""
+
+msgid "Error driver"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Error Driver_"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Error Fusible_"
+msgstr ""
+
+msgid "Error temperatura"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "_Error Temp_"
+msgstr ""
+
+msgid "Activación"
+msgstr ""
+
+#. Solo caracteres alfabeto SMS [GSM 03.38]
+msgid "Activacion"
+msgstr ""
+
+msgid "Desactivación"
+msgstr ""
+
+#. Solo caracteres alfabeto SMS [GSM 03.38]
+msgid "Desactivacion"
+msgstr ""
+
+#. Solo caracteres alfabeto SMS [GSM 03.38]
+msgid "Reconocida"
+msgstr ""
+
+#. Solo caracteres alfabeto SMS [GSM 03.38]
+msgid "Bloqueada"
+msgstr ""
+
+#. Solo caracteres alfabeto SMS [GSM 03.38]
+msgid "Leve"
+msgstr ""
+
+#. Solo caracteres alfabeto SMS [GSM 03.38]
+msgid "Persistente"
+msgstr ""
+
+msgid "SI"
+msgstr ""
+
+msgid "NO"
+msgstr ""
+
+msgid "Cerrado"
+msgstr ""
+
+msgid "Abierto"
+msgstr ""
+
+msgid "Si"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "Activo"
+msgstr ""
+
+msgid "Inactivo"
+msgstr ""
+
+msgid "Desactivado"
+msgstr ""
+
+msgid "Activado"
+msgstr ""
+
+msgid "Temporal"
+msgstr ""
+
+msgid "Trabajo"
+msgstr ""
+
+msgid "Español"
+msgstr ""
+
+msgid "Inglés"
+msgstr ""
+
+msgid "OCUPADO"
+msgstr ""
+
+msgid "SIN TARJETA SIM"
+msgstr ""
+
+msgid "ESPERA PIN"
+msgstr ""
+
+msgid "ESPERA PUK (BLOQUEADO)"
+msgstr ""
+
+msgid "LIBRE"
+msgstr ""
+
+msgid "ERROR DE COMUNICACION"
+msgstr ""
+
+msgid "CONECTADO"
+msgstr ""
+
+msgid "Ninguna"
+msgstr ""
+
+msgid "Par"
+msgstr ""
+
+msgid "Impar"
+msgstr ""
+
+msgid "Nivel de acceso"
+msgstr ""
+
+msgid "Borrando histórico..."
+msgstr ""
+
+msgid "Histórico borrado."
+msgstr ""
+
+msgid "Error, no se pudo borrar histórico."
+msgstr ""
+
+msgid "Descargas por acceso FTP"
+msgstr ""
+
+msgid "Reseteando alarma..."
+msgstr ""
+
+msgid "Alarma reseteada."
+msgstr ""
+
+msgid "Error, no se pudo resetear alarma."
+msgstr ""
+
+msgid "Ultimo Hueco"
+msgstr ""
+
+msgid "Mínimo"
+msgstr ""
+
+msgid "Duración"
+msgstr ""
+
+msgid "Aceptar"
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Password:           \n"
+"    %s    "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"PROCESANDO...\n"
+"ESPERE          "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"ESTADO CONTROL\n"
+"%s              "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"EVENTOS        >\n"
+"%8s eventos     "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"%s\n"
+"%02d %02d/%02d %s"
+msgstr ""
+
+#. Ocupar 7 caracteres! [usar espacios]
+msgid "Reset? "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"MEDIDAS        >\n"
+"                "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"ENTRADA        >\n"
+"                "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Tension Ent.(%s)\n"
+"%4s %4s %4s"
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"RECTIFICADOR   >\n"
+"                "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Tension Bus\n"
+"%10s V          "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Bypass\n"
+"   %s           "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"SALIDA         >\n"
+"                "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Tension Sal.(%s)\n"
+"%4s %4s %4s"
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Corriente Salida\n"
+"%3s %3s %3s  (A)"
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Potencia Sal. kW\n"
+"%3s %3s %3s"
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"CONFIGURACION  >\n"
+"                "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Tension Nominal\n"
+"%10s V          "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"V minima DVR\n"
+"%10s V          "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Frecuencia Nom.\n"
+"%10s Hz         "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Num. equipos\n"
+"%10s            "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Fecha (aa/mm/dd)\n"
+"%s  "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Direccion IP\n"
+"%03d.%03d.%03d.%03d "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Mascara de red\n"
+"%03d.%03d.%03d.%03d "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Gateway\n"
+"%03d.%03d.%03d.%03d "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Idioma\n"
+"   %s           "
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII [LCD]
+msgid "Castellano"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "Ingles"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "Frances"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "Italiano"
+msgstr ""
+
+#. Maximo 16 caracteres! Solo ASCII
+msgid "Aleman"
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"Firmware\n"
+"%s              "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"Cambiar nivel\n"
+"  de acceso     "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+msgid ""
+"ACTUACIONES    >\n"
+"                "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"MARCHA\n"
+"   %s           "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"PARO\n"
+"   %s           "
+msgstr ""
+
+#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#, c-format
+msgid ""
+"RESET\n"
+"   %s           "
+msgstr ""
+
+msgid "Password de usuario basico."
+msgstr ""
+
+msgid "Password de usuario avanzado."
+msgstr ""
+
+msgid "Password de zms."
+msgstr ""
+
+msgid "Password de administrador."
+msgstr ""
+
+msgid "Estableciendo valor..."
+msgstr ""
+
+msgid "Valor establecido."
+msgstr ""
+
+msgid "Error, no se pudo establecer valor."
+msgstr ""
+
+msgid "Prueba envio email"
+msgstr ""
+
+msgid ""
+"Esta información ha sido elaborada por un sistema automático.\n"
+"Por favor, no responda a este correo.\n"
+msgstr ""
+
+msgid "INFORME DE ALARMAS"
+msgstr ""
+
+msgid "Alarma"
+msgstr ""
+
+msgid "Condición"
+msgstr ""
+
+msgid "Severidad"
+msgstr ""

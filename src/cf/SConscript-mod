@@ -1,0 +1,13 @@
+Import('*')
+
+mod_insdir=(v.has_key('mod_install_dir') and v['mod_install_dir']) or this['mod_install_dir']
+    
+thisEnv.Append(CCFLAGS='-DMODULES')
+
+mod_prefix=(v.has_key('mod_prefix') and v['mod_prefix']) or (this.has_key('mod_prefix') and this['mod_prefix']) or (globals().has_key('mod_prefix') and mod_prefix) or ''
+
+mod=thisEnv.SharedLibrary(v['name'], v['sources_fn'], SHLIBPREFIX=mod_prefix)
+if(ARGUMENTS.get('strip', '0')!='0' and ARGUMENTS.get('debug', '0')=='0'):
+    thisEnv.AddPostAction(mod, strip_action)
+thisEnv.Install(dest_dir + install_dir + mod_insdir, mod) # XXX
+thisEnv.AddPreAction(mod, slibs_action)

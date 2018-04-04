@@ -1,0 +1,1514 @@
+%{
+/**
+ * \file cm-ctrl-pwc.c
+ */
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-ctrl-pwc"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+ 
+%h{
+#include <ags-cm.h>
+#include <ags-cf.h>
+#include <textbufferif.h>
+%}
+
+%privateheader{
+#include <configif.h>
+#include <accessif.h>
+#include <my-defs-pwc.h>
+#include <rectificador.h>  /*tipo_EstadoRectificador*/
+#include <busmagif.h>  /*lee_rec*/
+#include <sys/time.h>  /*temporizadores: gettimeofday...*/
+#include "c1_gc1.h"		// Máquina de estados del gestor de carga.
+#include "gc1_AGS.h"	// Máquina de estados del gestor de carga.
+
+// Incluir para las llamadas a LUA.
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+
+#include <string.h>
+
+#include <stdio.h> /*printf*/
+
+#include "busZigor-pwc.h"
+
+/*Modos de funcionamiento del cargador*/
+//enum MODE {EQUALIZE=0,FLOATING,TEST_BATTERY,TRIMMING};
+/*estados del rectificador*/
+enum {E_ARRANQUE=1,E_MARCHA,E_PARADA,E_INACTIVO,E_DESHABILITADO,E_AUSENTE,E_FALLO};
+
+/* Estados de los desconectadores de distribucion */
+enum ESTADOS_DESC_BD {DESC_CERRADO=1, DESC_ABIERTO};
+/* Estados de las protecciones de distribucion */
+enum ESTADOS_INT {INT_CERRADO=1, INT_ABIERTO, INT_DESHABILITADO, INT_NODETECTABLE};
+
+#define NUM_GRUPOS_CALCULOS 8	// Nº de grupos en que se dividen todos los cálculos para atomizar la tarea de cálculo.
+
+#define TEMP_REF	20	// Temperatura de referencia para la compensación de tensión.
+#define TEMP_REF_MINIMA	0	// Temperatura mínima para la compensación de tensión.
+
+#define LIM_INF_VBAT	4000	// Tensión de referencia mínima (cV).
+#define INC_VREF		10		// Incremento de la referencia de tensión en la rampa del cambio de VRef (cV/muestra).
+
+#define IBAT_CAMBIO_MEDIDA	150	// Corriente de batería (dA) para pasar de IbatZoom a Ibat.
+#define IDIST_CAMBIO_MEDIDA	150 // Corriente de distribución (dA) para pasar de IdistZomm a Idist.
+
+#define FACTOR_CAMBIO_HORA 10	// Factor utilizado para deducir que ha habido un cambio de hora.
+
+#define T_FILTRO_DESCARGA	12	// Número de entradas en poll con condición de descarga, para darla por buena.
+
+#define CONSUMO_GESTORA 2		// Corriente consumida por la gestora en dA.
+
+enum {desconocido = 0, Pb, NiCd};
+%}
+
+
+class Cm:Ctrl:Pwc from Ags:Cm {
+
+/* variables privadas */
+private GObject *sds;
+private GObject *rectificador;
+private guint32 temp;
+/*variables de arquitectura*/
+private gint n_recs;  /*numero de rectificadores presentes*/
+private gint n_bats;  /*numero de baterias presentes*/
+private gint n_bdp_ints;   /*numero de magnetos en bdp presentes*/
+private gint n_bdnp_ints;  /*numero de magnetos en bdnp presentes*/
+/* Gestor de carga. */
+private SFc1_gc1InputDataStruct entradasMaquinasGestor;
+private SFc1_gc1OutputDataStruct salidasMaquinasGestor;
+private const gchar* ficheroTablaBaterias;
+private GObject *wbuffer = NULL unrefwith g_object_unref;	// Buffer de mensajes de salida para el bus Zigor de alterna.
+private gint consignaTensionAuxiliar;		// Consigna de tensión en rampa.
+private gfloat cVrecFloat;	// Consigna de tensión para los rectificadores(cV), salida del PI.
+private gint limSupVbat;	// Límite superior de la consigna de Vbat (cV).
+private gint timeout;	// Periodo de la ejecución del poll.
+private gint32 cargaTest = 0;	// Contador de carga durante el test de bateria.
+private gint calculoVRecsValido = FALSE;	// Indica si el valor de VRecs es valido.
+
+public
+GObject*
+new (char *cm_name, AgsCf *cf, CfTable cft) {
+  GValue *v;
+  gint indice;
+  gint32 capTotal;
+  gint32 contador;
+  gint auxiliar;
+  
+  /* constructor de CmCtrlPwc */
+  GObject *ret = G_OBJECT(GET_NEW);
+  
+  /* obtener tabla cfg modulo */
+  CfTable my_cft= config_get_table(CONFIGIF(cf), cft, cm_name);
+  
+  CM_CTRL_PWC(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "elsds");
+  CM_CTRL_PWC(ret)->_priv->rectificador = config_get_object(CONFIGIF(cf), my_cft, "rectificador");
+  CM_CTRL_PWC(ret)->_priv->ficheroTablaBaterias = config_get_string(CONFIGIF(cf), my_cft, "table_filename");
+  CM_CTRL_PWC(ret)->_priv->wbuffer = config_get_object(CONFIGIF(cf), my_cft, "wbuffer");
+
+  /* polling */
+  CM_CTRL_PWC(ret)->_priv->timeout = config_get_int(CONFIGIF(cf), my_cft, "timeout_ctrl");
+  if(CM_CTRL_PWC(ret)->_priv->timeout)
+    g_timeout_add(CM_CTRL_PWC(ret)->_priv->timeout, self_poll, (gpointer) ret);
+
+  self_inicia_temp(&CM_CTRL_PWC(ret)->_priv->temp);
+  
+  CM_CTRL_PWC(ret)->_priv->n_recs = self_get_oid_int(ret, zigorPwCObjBRNumRecs, 0);
+  ags_debug(2,"num_recs:%d",CM_CTRL_PWC(ret)->_priv->n_recs);
+//  printf("cm-ctrl-pwc.new -> num_recs:%d\n", CM_CTRL_PWC(ret)->_priv->n_recs);
+  CM_CTRL_PWC(ret)->_priv->n_bats = self_get_oid_int(ret, zigorPwCObjBRCNumBats, 0);
+  CM_CTRL_PWC(ret)->_priv->n_bdp_ints = self_get_oid_int(ret, zigorPwCObjBDPNumInts, 0);
+  CM_CTRL_PWC(ret)->_priv->n_bdnp_ints = self_get_oid_int(ret, zigorPwCObjBDNPNumInts, 0);
+  ags_debug(2,"num_bats:%d",CM_CTRL_PWC(ret)->_priv->n_bats);
+//  printf("cm-ctrl-pwc.new -> num_bats:%d\n", CM_CTRL_PWC(ret)->_priv->n_bats);
+//  printf("cm-ctrl-pwc.new -> num_bdps:%d\n", CM_CTRL_PWC(ret)->_priv->n_bdp_ints);
+//  printf("cm-ctrl-pwc.new -> num_bdnps:%d\n", CM_CTRL_PWC(ret)->_priv->n_bdnp_ints);
+
+	capTotal = 0;
+	auxiliar = self_get_oid_int(ret, zigorPwCObjBDPVAperDesc, 0);
+	auxiliar += 10;	// 1V por encima de la tensión de apertura del desconectador de batería.
+	for(indice = 1; indice <= CM_CTRL_PWC(ret)->_priv->n_bats; indice++) {
+		contador = self_get_oid_int(ret, zigorPwCObjBatCapacidadNom, indice);
+		capTotal += contador;
+		// Iniciar el contador de carga.
+		contador = contador * 3600; // Pasar de dAh a dAs.
+		contador *= 10;	// Pasar de dAs a dAds.
+		self_set_oid_int(ret, zigorPwCObjBatContCarga, indice, contador);
+		// Hasta empezar a medir corriente de batería, iniciar a cero para no falsear el contador de carga.
+		self_set_oid_int(ret, zigorPwCObjBatI, indice, 0);
+		// Iniciar la tensión de baterías para que no abra el desconectador de batería.
+		self_set_oid_int(ret, zigorPwCObjBatV, indice, auxiliar);
+		self_set_oid_int(ret, zigorPwCObjBatVMB1, indice, auxiliar >> 2);
+		self_set_oid_int(ret, zigorPwCObjBatVMB2, indice, auxiliar >> 2);
+		self_set_oid_int(ret, zigorPwCObjBatVMB3, indice, auxiliar >> 2);
+		self_set_oid_int(ret, zigorPwCObjBatVMB4, indice, auxiliar >> 2);
+	}
+	indice = TEMP_REF;
+	self_set_oid_int(ret, zigorPwCObjBRCT, 0, indice);
+	self_set_oid_int(ret, zigorPwCObjBRCCapacidadNom, 0, capTotal);
+	self_set_oid_int(ret, zigorPwCObjCFCapacidadBatNom, 0, capTotal);
+	// Iniciar las ordenes.
+	self_set_oid_int(ret, zigorPwCObjCFGCOCarga, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjCFGCOFlot, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjCFGCOTest, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjCFGCOTestMinTiempo, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjCFGCOReplay, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjCFGCOFinTest, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjCFGCOReset, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjBRCMandoDescAbrir, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjBRCMandoDescCerrar, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjBDPMandoDescAbrir, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjBDPMandoDescCerrar, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjBDNPMandoDescAbrir, 0, FALSO);
+	self_set_oid_int(ret, zigorPwCObjBDNPMandoDescCerrar, 0, FALSO);
+	// Iniciar la tensión de rectificadores para que no abra el desconectador de batería.
+	self_set_oid_int(ret, zigorPwCObjCFVRecs, 0, auxiliar);
+	self_set_oid_int(ret, zigorPwCObjBRCV, 0, auxiliar);
+	// Iniciar la máquina de estados del gestor de carga.
+	gc1_initializer();
+	c1_gc1_inicia();
+	// Iniciar la regulación.
+	indice = self_get_oid_int(ret, zigorPwCObjCFGCVReplay, 0);
+	indice *= 10;	// Pasar a cV.
+//	CM_CTRL_PWC(ret)->_priv->cVrecFloat = indice;
+	CM_CTRL_PWC(ret)->_priv->consignaTensionAuxiliar = indice;
+  self_fijaSaturacionPi(ret, (self_get_oid_int(ret, zigorPwCObjCFGCVCarga, 0)) * 10);
+	CM_CTRL_PWC(ret)->_priv->cVrecFloat = CM_CTRL_PWC(ret)->_priv->limSupVbat;	// Iniciar con el PI saturado.
+//	printf("cm-ctrl-pwc.new -> Capacidad total: %d\n", capTotal);fflush(0);
+  return ret;
+}
+
+private
+void
+set_oid_int(gpointer self, char *nombre_var, int n_instancia, int valor) {
+  GValue v= {0,};
+  char aux_str[50];
+  
+  g_value_init(&v, G_TYPE_INT);
+  g_value_set_int(&v, valor);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_CTRL_PWC(self)->_priv->sds), aux_str, &v);
+}
+
+private
+void
+set_oid_float(gpointer self, char *nombre_var, int n_instancia, gfloat valor) {
+  GValue v= {0,};
+  char aux_str[50];
+  
+  g_value_init(&v, G_TYPE_FLOAT);
+  g_value_set_float(&v, valor);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_CTRL_PWC(self)->_priv->sds), aux_str, &v);
+}
+
+private
+void
+set_oid_str(gpointer self, char *nombre_var, int n_instancia, char *str) {
+  GValue v= {0,};
+  char aux_str[50];
+  
+  g_value_init(&v, G_TYPE_STRING);
+  g_value_set_string(&v, str);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_CTRL_PWC(self)->_priv->sds), aux_str, &v);
+  /* clean */
+  g_value_unset(&v);
+}
+
+private
+gint
+get_oid_int(gpointer self, char *nombre_var, int n_instancia) {
+  GValue *v;
+  char aux_str[50];
+  int n;
+  
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  v=access_get( ACCESSIF(CM_CTRL_PWC(self)->_priv->sds), aux_str );
+  n=g_value_get_int(v);
+  /* clean */
+  g_free(v);
+  return n;
+}
+
+private
+char *
+get_oid_str(gpointer self, char *nombre_var, int n_instancia) {
+  GValue *v;
+  char aux_str[50];
+  char *s=NULL;
+  
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  v=access_get( ACCESSIF(CM_CTRL_PWC(self)->_priv->sds), aux_str );
+  if(v) {
+    s=g_value_get_string(v);
+    /* clean */
+    g_free(v);
+  }
+  return s;
+}
+
+/*rutinas varias de control: actualizacion variables...*/
+private
+gboolean
+poll(gpointer self) {
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+  struct timeval t;
+  gint consignaTension;
+  gint consignaCorriente;
+  gint corriente;
+  gint corrienteBat;
+  gint iuti;
+  gint orden = 0;
+  gint aux;
+  gint aux2;
+  gint numRecs;
+  guint32 aux32;
+  gint32 contador;
+  gint indice;
+  gint capacidadNominal;
+  char * modeloBat;
+  char * tipoTest;
+  char * tipoBat;
+  gint tipoBateria;
+  long epoch;
+  long inc_t, epoch_aux;
+  static long epoch_ant, epoch_inc;
+  static int contadorDescarga = 0;
+  static gint tempBatTest;
+  gfloat auxfloat;
+  static gint32 inicioPeriodoTest;	// Marca en segundos, cuando finaliza el periodo de test de bateria.
+  static gint32 inicioBloqueoTest;	// Marca en segundos, cuando finaliza el bloqueo de test de bateria.
+  gint32 periodoTest;
+  gint32 bloqueoTest;
+  static int pendienteInicializar = TRUE;	// Indica que se acaba de arrancar el sistema.
+
+  t1=self_lee_temp(CM_CTRL_PWC(self)->_priv->temp);
+  t_ant=t1;
+
+  corriente = self_calculaIbat(self, t1);
+  corrienteBat = self_get_oid_int(self, zigorPwCObjCFIBat, 0);
+  self_calculos(self);
+  self_maniobraDesconectadores(self);
+  
+  capacidadNominal = self_get_oid_int(self, zigorPwCObjCFCapacidadBatNom, 0);
+  periodoTest = self_get_oid_int(self, zigorPwCObjCFGCPerTest, 0);
+  periodoTest *= 2592000L;	// Paso de meses a segundos.
+//  periodoTest /= 43200L;	// Aceleracion de tiempos.
+  bloqueoTest = self_get_oid_int(self, zigorPwCObjCFGCPerBloqTest, 0);
+  bloqueoTest *= 604800L;	// Paso de semanas a segundos.
+//  bloqueoTest /= 10080; // Aceleracion de tiempos.
+  
+	// Calculo del tiempo transcurrido.
+  gettimeofday(&t,NULL);
+  epoch = t.tv_sec;
+  inc_t = epoch - epoch_ant;
+  /* si incremento fuera de un rango (negativo o bien demasiado alto (la estimacion*valor_margen))
+     entonces hacer corrección para dar siempre un valor epoch continuo sin saltos */
+  if( (inc_t<0) || (inc_t > (CM_CTRL_PWC(self)->_priv->timeout * FACTOR_CAMBIO_HORA)) ) {
+//		printf("cm-ctrl-pwc.poll -> posible retraso/adelanto de hora\n");
+     epoch_aux = epoch_ant + (CM_CTRL_PWC(self)->_priv->timeout);  //se le suma estimacion aprox.
+     epoch_inc += epoch_aux - epoch;
+  }
+  epoch_ant = epoch;
+  epoch += epoch_inc;
+  if(pendienteInicializar) {
+  	// Iniciar los temporizadores del test de bateria.
+  	inicioPeriodoTest = epoch;
+  	inicioBloqueoTest = epoch;
+  	pendienteInicializar = FALSE;
+  	self_set_oid_int(self, zigorPwCObjCFGCBloqTest, 0, VERDADERO);
+  }
+
+  // Máquina de estados del gestor de carga.
+  aux = self_get_oid_int(self, zigorPwCObjCFGCOFlot, 0);
+  if(aux == VERDADERO) {
+  	orden |= O_FLOT;
+	  self_set_oid_int(self, zigorPwCObjCFGCOFlot, 0, FALSO);
+  }
+  aux = self_get_oid_int(self, zigorPwCObjCFGCOCarga, 0);
+  if(aux == VERDADERO) {
+  	orden |= O_CARGA;
+	  self_set_oid_int(self, zigorPwCObjCFGCOCarga, 0, FALSO);
+  }
+  aux = self_get_oid_int(self, zigorPwCObjCFGCOTest, 0);
+  if(aux == VERDADERO) {
+  	orden |= O_TEST;
+	  self_set_oid_int(self, zigorPwCObjCFGCOTest, 0, FALSO);
+  }
+  aux = self_get_oid_int(self, zigorPwCObjCFGCOFinTest, 0);
+  if(aux == VERDADERO) {
+  	orden |= O_FINTEST;
+	  self_set_oid_int(self, zigorPwCObjCFGCOFinTest, 0, FALSO);
+  }
+  aux = self_get_oid_int(self, zigorPwCObjBRCDesc, 0);
+  if(aux == FALSO) {
+ 		// Parar el test (si estuviera en marcha), por apertura del desconectador.
+  	orden |= O_FINTEST;
+  }
+  for(indice = 1; indice <= CM_CTRL_PWC(self)->_priv->n_bats; indice++) {
+  	aux = self_get_oid_int(self, zigorPwCObjBatDisy, indice);
+  	if(aux == FALSO) {
+  		// Parar el test (si estuviera en marcha), por apertura del disyuntor.
+  		orden |= O_FINTEST;
+  		break;
+  	}
+  }
+  aux = self_get_oid_int(self, zigorPwCObjCFGCOReplay, 0);
+  if(aux == VERDADERO) {
+  	orden |= O_REPLAY;
+  	// La orden de replay es en realidad un estado.
+	  //self_set_oid_int(self, zigorPwCObjCFGCOReplay, 0, FALSO);
+  }
+  aux = self_get_oid_int(self, zigorPwCObjBRCFalloCom, 0);
+  if(aux == VERDADERO) {
+  	// Si hay fallo de comunicación con la batería, pasar a Replay.
+  	orden |= O_REPLAY;
+  }
+  aux2 = TRUE;
+  numRecs = self_get_oid_int(self, zigorPwCObjBRNumRecs, 0);
+  for(indice = 1; indice <= numRecs; indice++) {
+  	aux = self_get_oid_int(self, zigorPwCObjRecHab, indice);
+  	if(aux == VERDADERO) {
+  		// El rectificador esta habilitado. Tenerlo en cuenta.
+  		aux = self_get_oid_int(self, zigorPwCObjRecFalloCom, indice);
+  		if(aux == FALSO) {
+  			// No hay fallo de comunicacion con todos los rectificadores.
+  			aux2 = FALSE;
+  			break;
+  		}
+  	}
+  }
+  if(aux2) {
+  	// Si hay fallo de comunicación con todos los rectificadores, pasar a Replay.
+  	orden |= O_REPLAY;
+  	// Poner la temperatura de bateria, a su valor por defecto.
+  	self_set_oid_int(self, zigorPwCObjBRCT, 0, TEMP_REF);
+  }
+  aux = self_get_oid_int(self, zigorPwCObjCFGCOReset, 0);
+  if(aux == VERDADERO) {
+  	orden |= O_RESET;
+	  self_set_oid_int(self, zigorPwCObjCFGCOReset, 0, FALSO);
+	  epoch_ant = 0;
+		// Iniciar la máquina de estados del gestor de carga.
+		c1_gc1_inicia();
+		CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.FT = FT_NULO;
+		CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.ESalida = E_FLOTACION;
+		CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.RTest = 0;
+		CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.FC = FC_NULO;
+		// Resetear el resultado del test.
+		self_set_oid_int(self, zigorPwCObjCFGCResulTest, 0, DESCONOCIDO);
+	  // Resetear el contador de carga.
+	  for(indice = 1; indice <= CM_CTRL_PWC(self)->_priv->n_bats; indice++) {
+			contador = self_get_oid_int(self, zigorPwCObjBatCapacidadNom, indice);
+			contador = contador * 3600; // Pasar de dAh a dAs.
+			contador *= 10;	// Pasar de dAs a dAds.
+			self_set_oid_int(self, zigorPwCObjBatContCarga, indice, contador);
+		}
+		self_set_oid_int(self, zigorPwCObjBRCCapacidadEf, 0, 100);
+	  self_set_oid_int(self, zigorPwCObjCFCapacidadBatEf, 0, 100);
+  }
+  // Comprobar las temporizaciones del test de baterias.
+  aux = self_get_oid_int(self, zigorPwCObjCFGCODesbloqTest, 0);
+  if(aux == VERDADERO) {
+  	inicioBloqueoTest = epoch - bloqueoTest;	// Fuerza el desbloqueo.
+	  self_set_oid_int(self, zigorPwCObjCFGCODesbloqTest, 0, FALSO);
+  }
+  aux = self_get_oid_int(self, zigorPwCObjCFGCHabTestPer, 0);
+  if((aux == VERDADERO) && ((epoch - (inicioPeriodoTest + periodoTest)) >= 0)) {
+  	// Fin del periodo. Forzar un test periodico.
+  	orden |= O_TEST;
+  }
+  if((epoch - (inicioBloqueoTest + bloqueoTest)) < 0) {
+  	// En bloqueo. Desactivar el test periodico.
+  	orden &= ~O_TEST;
+  	self_set_oid_int(self, zigorPwCObjCFGCBloqTest, 0, VERDADERO);
+  }
+  else {
+  	self_set_oid_int(self, zigorPwCObjCFGCBloqTest, 0, FALSO);
+  }
+  // No permitir el test de bateria, si hay alguna deshabilitada.
+  for(indice = 1; indice <= CM_CTRL_PWC(self)->_priv->n_bats; indice++) {
+  	contador = self_get_oid_int(self, zigorPwCObjBatHab, indice);
+  	if(contador == FALSO) {
+  		// Bateria deshabilitada. Impedir el posible test.
+  		orden &= ~O_TEST;
+  		orden |= O_FINTEST;
+  		break;
+  	}
+  }
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.Orden = orden;
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.CBatIniCarga = self_get_oid_int(self, zigorPwCObjCFGCBatIniCarga, 0);
+  aux32 = self_get_oid_int(self, zigorPwCObjCFGCTPerCarga, 0);
+  aux32 *= 86400;		// Paso de días a segundos.
+//  aux32 /= 24;	// Aceleración de tiempos.
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.TPerCarga = aux32;
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.VBatFC = self_get_oid_int(self, zigorPwCObjCFGCVBatFC, 0);
+	aux = self_get_oid_int(self, zigorPwCObjCFGCIBatCola, 0);
+	aux *= capacidadNominal;		// dmA.
+	aux /= 1000;		// dA.
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.IBatCola = aux;
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.IUtiTestMin = self_get_oid_int(self, zigorPwCObjCFGCIUtiTestMin, 0);
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.VBatTestMin = self_get_oid_int(self, zigorPwCObjCFGCVBatMinTest, 0);
+  aux32 = self_get_oid_int(self, zigorPwCObjCFGCTRecupMax, 0);
+  aux32 *= 60;		// Paso de minutos a segundos.
+//  aux32 /= 60;	// Aceleración de tiempos.
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.TRecupMax = aux32;
+  aux = self_get_oid_int(self, zigorPwCObjBRCNumElem, 0);
+  aux *= self_get_oid_int(self, zigorPwCObjCFGCVBatFTest, 0);		// num_elem * cV/el = cV.
+  aux += 5;		// Redondeo.
+  aux /= 10;	// Paso de cV a dV.
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.VBatFTest = aux;
+  aux32 = self_get_oid_int(self, zigorPwCObjCFGCTCLimite, 0);
+  aux32 *= 3600;		// Paso de horas a segundos.
+//  aux32 /= 60;	// Aceleración de tiempos.
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.TCLimite = aux32;
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.CBat = self_get_oid_int(self, zigorPwCObjCFCapacidadBatEf, 0);
+  aux = self_get_oid_int(self, zigorPwCObjBRCV, 0);
+  aux *= 10;	// Paso a cV.
+  aux = self_descompensaTemperatura(self, aux);
+  aux +=5;	// Redondeo.
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.VBat = (aux / 10);
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.IBat = corrienteBat;
+  iuti = self_get_oid_int(self, zigorPwCObjCFIDist, 0);
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.IUti = iuti;
+  if((corrienteBat < 0) && (CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.ESalida != E_TEST) && !(orden & O_REPLAY)) {
+  	// Está en descarga. Aumentar el filtro.
+  	contadorDescarga++;
+  }
+  else {
+  	// No está en descarga. Quitar la condición.
+  	contadorDescarga = 0;
+  }
+  if(contadorDescarga > T_FILTRO_DESCARGA) {
+  	contadorDescarga = T_FILTRO_DESCARGA;
+  }
+//  printf("c1_gc1 -> FC: Contador de descarga = %d\n", contadorDescarga);
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.Descarga = (contadorDescarga >= T_FILTRO_DESCARGA);
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.Ta = self_get_oid_int(self, zigorPwCObjBRCT, 0);
+  CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor.t = epoch;
+  // Evolucionar la maquina de estados del gestor de carga.
+  c1_gc1(&CM_CTRL_PWC(self)->_priv->entradasMaquinasGestor, &CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor);
+  self_set_oid_int(self, zigorPwCObjCFRegimenCarga, 0, CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.ESalida);
+  self_set_oid_int(self, zigorPwCObjCFFinCarga, 0, CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.FC);
+//  self_set_oid_int(self, zigorPwCObjCFGCEstadoBatTest, 0, CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.RTest);
+  if(CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.ESalida == E_RECUP) {
+		modeloBat = self_get_oid_str(self, zigorPwCObjBRCModeloBateria, 0);
+		tipoTest = self_get_oid_str(self, zigorPwCObjCFGCTipoTest, 0);
+  	// Elegir de la tabla de batería, el tiempo teórico, y la corriente de descarga.
+//		printf("cm-ctrl-pwc.calculos -> Ha llamar al LUA\r\n");fflush(0);
+		lua_State * L = luaL_newstate();
+		/* XXX */
+		luaL_openlibs(L);
+// 		luaopen_base(L);
+// 		luaopen_io(L);
+// 		luaopen_string(L);
+// 		luaopen_math(L);
+		if (luaL_loadfile(L, CM_CTRL_PWC(self)->_priv->ficheroTablaBaterias)) {
+			printf("cm-ctrl-pwc.calculos -> error al cargar el programa LUA\r\n");fflush(0);
+		}
+//		printf("cm-ctrl-pwc.calculos -> cargado programa LUA\r\n");fflush(0);
+		lua_pcall(L, 0, 0, 0);
+//		printf("cm-ctrl-pwc.calculos -> Ejecutado global LUA\r\n");fflush(0);
+		lua_getglobal(L, "dameParametrosTest");
+		lua_pushstring(L, modeloBat);
+		lua_pushstring(L, tipoTest);
+		iuti = (iuti << 1) / (3 * CM_CTRL_PWC(self)->_priv->n_bats);		// iuti = iuti / 1.5. La corriente máxima es la de utilización entre 1.5.
+		lua_pushnumber(L, iuti);
+		lua_pcall(L, 3, 2, 0);
+//		printf("cm-ctrl-pwc.calculos -> llamada a función LUA. modeloBat: %s\r\n", modeloBat);fflush(0);
+		indice = lua_tonumber(L, -2);
+		indice *= CM_CTRL_PWC(self)->_priv->n_bats;
+		printf("cm-ctrl-pwc.calculos -> ITest: %d\n", indice);
+  	self_set_oid_int(self, zigorPwCObjCFGCIUtiTestMin, 0, indice + 1);	// Una décima más que la elegida.
+  	self_set_oid_int(self, zigorPwCObjCFGCITest, 0, indice);
+		indice = lua_tonumber(L, -1);
+  	self_set_oid_int(self, zigorPwCObjCFGCTTeoricoTest, 0, indice);
+  	tipoBat = self_get_oid_str(self, zigorPwCObjBRCTipoBateria, 0);
+  	if(!strcmp(tipoBat, "Pb")) {
+  		tipoBateria = Pb;
+  	}
+  	else if(!strcmp(tipoBat, "NiCd")) {
+  		tipoBateria = NiCd;
+  	}
+  	else {
+  		tipoBateria = desconocido;
+  	}
+  	tempBatTest = self_get_oid_int(self, zigorPwCObjBRCT, 0);
+  	CM_CTRL_PWC(self)->_priv->cargaTest = 0;
+  	for(indice = 1; indice <= CM_CTRL_PWC(self)->_priv->n_bats; indice++) {
+	  	CM_CTRL_PWC(self)->_priv->cargaTest += self_get_oid_int(self, zigorPwCObjBatContCarga, indice);
+	  }
+		lua_close(L);
+		/* clean */
+		g_free(modeloBat);
+		g_free(tipoTest);
+		g_free(tipoBat);
+		// Reiniciar el periodo del test.
+		inicioPeriodoTest = epoch;
+  }
+  if(CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.ESalida == E_TEST) {
+		// Resetear el resultado del test.
+		self_set_oid_int(self, zigorPwCObjCFGCResulTest, 0, DESCONOCIDO);
+  	self_set_oid_int(self, zigorPwCObjCFGCTTest, 0, 0);
+		CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.FT = FT_NULO;
+		// Reiniciar el periodo del test.
+		inicioPeriodoTest = epoch;
+		// Reiniciar el bloqueo del test.
+		inicioBloqueoTest = epoch;
+	}
+  if(CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.FT == FT_OK) {
+		CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.FT = FT_NULO;
+  	// Test bueno. Calcular el resultado del test.
+  	for(indice = 1; indice <= CM_CTRL_PWC(self)->_priv->n_bats; indice++) {
+	  	CM_CTRL_PWC(self)->_priv->cargaTest -= self_get_oid_int(self, zigorPwCObjBatContCarga, indice);
+	  }
+  	contador = CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.RTest;
+  	if(tipoBateria == Pb) {
+  		// Hacer la compensacion del test, segun la formula:
+  		// CapReal = CapMedida / (1 + 0.006 * (TempBat - TempRef)).
+  		auxfloat = CM_CTRL_PWC(self)->_priv->cargaTest;
+  		auxfloat /= (1 + 0.006 * (tempBatTest - TEMP_REF));
+  		CM_CTRL_PWC(self)->_priv->cargaTest = (gint32)auxfloat;
+  	}
+//  	printf("cm-ctrl-pwc.poll -> <>TTest: %d\n", contador);fflush(0);
+  	self_set_oid_int(self, zigorPwCObjCFGCTTest, 0, contador / 60);
+  	aux32 = self_get_oid_int(self, zigorPwCObjCFGCTTeoricoTest, 0);
+//  	printf("cm-ctrl-pwc.poll -> <>TTeorico: %d\n", aux32);fflush(0);
+  	if(aux32 > 0) {
+  		aux32 *= 600;	// Paso de minutos a decimas de segundos.
+  		aux32 *= self_get_oid_int(self, zigorPwCObjCFGCITest, 0);	// dAds.
+  		aux32 /= 100;	// Para calcular el resultado en %.
+  		CM_CTRL_PWC(self)->_priv->cargaTest += (aux32 >> 1);	// Redondeo.
+   		CM_CTRL_PWC(self)->_priv->cargaTest /= aux32;
+//	  	printf("cm-ctrl-pwc.poll -> <>Contador: %d\n", contador);fflush(0);
+  	}
+  	contador = CM_CTRL_PWC(self)->_priv->cargaTest;
+	  self_set_oid_int(self, zigorPwCObjCFGCEstadoBatTest, 0, contador);
+  	contador = 100 - contador;
+  	aux = self_get_oid_int(self, zigorPwCObjCFGCPorcenTestOk, 0);
+//  	printf("cm-ctrl-pwc.poll -> <>Porcentaje: %d\n", aux);fflush(0);
+  	aux = ((contador < aux) ? VERDADERO : FALSO);
+//  	printf("cm-ctrl-pwc.poll -> <>Resultado: %d\n", aux);fflush(0);
+  	self_set_oid_int(self, zigorPwCObjCFGCResulTest, 0, aux);
+  }
+  
+  // Selección de la tensión y corriente de carga.
+  capacidadNominal = self_get_oid_int(self, zigorPwCObjBatCapacidadNom, 1);
+  switch(CM_CTRL_PWC(self)->_priv->salidasMaquinasGestor.ESalida) {
+  	case E_CARGA:
+  		consignaTension = self_get_oid_int(self, zigorPwCObjCFGCVCarga, 0);
+			consignaCorriente = self_get_oid_int(self, zigorPwCObjCFGCLimIBat, 0);
+		 	consignaCorriente *= capacidadNominal;
+		 	consignaCorriente += 50;	// Redondeo.
+			consignaCorriente /= 100;		// Paso de % a unidades.
+  		break;
+  	case E_RECUP:
+  		consignaTension = self_get_oid_int(self, zigorPwCObjCFGCVCarga, 0);
+			consignaCorriente = self_get_oid_int(self, zigorPwCObjCFGCLimIBat, 0);
+		 	consignaCorriente *= capacidadNominal;
+		 	consignaCorriente += 50;	// Redondeo.
+			consignaCorriente /= 100;		// Paso de % a unidades.
+  		break;
+  	case E_TEST:
+  		consignaTension = self_get_oid_int(self, zigorPwCObjCFGCVCarga, 0);
+  		consignaCorriente = self_get_oid_int(self, zigorPwCObjCFGCITest, 0);
+  		consignaCorriente = -consignaCorriente;	// En descarga.
+  		break;
+  	case E_REPLAY:
+  		consignaTension = self_get_oid_int(self, zigorPwCObjCFGCVReplay, 0);
+			consignaCorriente = self_get_oid_int(self, zigorPwCObjCFGCLimIBat, 0);
+		 	consignaCorriente *= capacidadNominal;
+		 	consignaCorriente += 50;	// Redondeo.
+			consignaCorriente /= 100;		// Paso de % a unidades.
+  		break;
+  	default:
+  		consignaTension = self_get_oid_int(self, zigorPwCObjCFGCVFlot, 0);
+			consignaCorriente = self_get_oid_int(self, zigorPwCObjCFGCLimIBat, 0);
+		 	consignaCorriente *= capacidadNominal;
+		 	consignaCorriente += 50;	// Redondeo.
+			consignaCorriente /= 100;		// Paso de % a unidades.
+ 		break;
+  }
+//  printf("cm-ctrl-pwc.cpoll -> corriente a regular: %d\n", corriente);fflush(0);
+	consignaTension *= 10;	// Se pasa a centésimas de voltio.
+	// Cambiar la consigna de tensión en rampa.
+	if(consignaTension < CM_CTRL_PWC(self)->_priv->consignaTensionAuxiliar) {
+		// La consigna está bajando.
+		CM_CTRL_PWC(self)->_priv->consignaTensionAuxiliar -= INC_VREF;
+		if(CM_CTRL_PWC(self)->_priv->consignaTensionAuxiliar < consignaTension) {
+			// Ya se ha llegado al final de la rampa.
+			CM_CTRL_PWC(self)->_priv->consignaTensionAuxiliar = consignaTension;
+		}
+	}
+	else if(consignaTension > CM_CTRL_PWC(self)->_priv->consignaTensionAuxiliar) {
+		// La consigna está subiendo.
+		CM_CTRL_PWC(self)->_priv->consignaTensionAuxiliar += INC_VREF;
+		if(CM_CTRL_PWC(self)->_priv->consignaTensionAuxiliar > consignaTension) {
+			// Ya se ha llegado al final de la rampa.
+			CM_CTRL_PWC(self)->_priv->consignaTensionAuxiliar = consignaTension;
+		}
+	}
+  aux = self_compensaTemperatura(self, CM_CTRL_PWC(self)->_priv->consignaTensionAuxiliar);
+  self_fijaSaturacionPi(self, (self_get_oid_int(self, zigorPwCObjCFGCVCarga, 0)) * 10);
+  self_control(self, consignaCorriente, aux, corriente);
+
+  t2=self_lee_temp(CM_CTRL_PWC(self)->_priv->temp);
+  printf("cm-ctrl-pwc.poll -> T:%lu\ttimeout:%d\ttiempo consumido:%d\n", t1, t1-t_ant, t2-t1);fflush(0);
+
+  return TRUE;
+}
+
+/**
+*Compensa la tensión en temperatura.
+*Hace la compensación de temperatura de la tensión.<BR>
+*La compensación es negativa (menor tensión a más temperatura), y se hace sobre
+*una temperatura de referencia de 20ºC.<BR>
+*
+*@param self un gpointer al propio objeto.
+*@param tension un gint con la tensión a compensar en cV.
+*@return un gint con la tensión compensada en cV.
+*/
+private
+gint compensaTemperatura(gpointer self, gint tension)
+{
+	gint aux;
+	gint temperatura;
+	gint constante;
+	gint numElementos;
+	
+	// Lectura de los parámetros.
+	temperatura = self_get_oid_int(self, zigorPwCObjBRCT, 0);
+	constante = self_get_oid_int(self, zigorPwCObjCFGCCTemp, 0);		// dmV/ºC/el.
+	numElementos = self_get_oid_int(self, zigorPwCObjBRCNumElem, 0);
+	constante *= numElementos;		// dmV/ºC.
+	// Cálculo de la compensación.
+	temperatura -= TEMP_REF;		// ºC
+	aux = temperatura * constante;		// dmV.
+	tension *= 100;	// dmV.
+	tension -= aux;
+	tension += 50;	// Redondeo.
+	tension /= 100; // cV.
+	return(tension);
+}
+
+/**
+*Descompensa la tensión en temperatura.
+*Hace la descompensación de temperatura de la tensión.<BR>
+*La compensación es negativa (menor tensión a más temperatura), y se hace sobre
+*una temperatura de referencia de 20ºC.<BR>
+*
+*@param self un gpointer al propio objeto.
+*@param tension un gint con la tensión a descompensar en cV.
+*@return un gint con la tensión descompensada en cV.
+*/
+private
+gint descompensaTemperatura(gpointer self, gint tension)
+{
+	gint aux;
+	gint temperatura;
+	gint constante;
+	gint numElementos;
+	
+	// Lectura de los parámetros.
+	temperatura = self_get_oid_int(self, zigorPwCObjBRCT, 0);
+	constante = self_get_oid_int(self, zigorPwCObjCFGCCTemp, 0);		// dmV/ºC/el.
+	numElementos = self_get_oid_int(self, zigorPwCObjBRCNumElem, 0);
+	constante *= numElementos;		// dmV/ºC.
+	// Cálculo de la compensación.
+	temperatura -= TEMP_REF;		// ºC
+	aux = temperatura * constante;		// dmV.
+	tension *= 100;	// dmV.
+	tension += aux;
+	tension += 50;	// Redondeo.
+	tension /= 100; // cV.
+	return(tension);
+}
+
+/**
+*Fija la saturación positiva del PI de IBat.
+*El valor de saturación positiva del PI de IBat, se pone a un 1% por encima de
+*la tensión máxima compensada en temperatura para el peor caso (en cV).
+*
+*@param tensionMaxima un gint con la máxima referencia de tensión sin compensar (en cV).
+*/
+private
+void fijaSaturacionPi(gpointer self, gint tensionMaxima)
+{
+	gint aux;
+	gint temperatura;
+	gint constante;
+	gint numElementos;
+	
+//	// Lectura de los parámetros.
+//	constante = self_get_oid_int(self, zigorPwCObjCFGCCTemp, 0);		// dmV/ºC/el.
+//	numElementos = self_get_oid_int(self, zigorPwCObjBRCNumElem, 0);
+//	constante *= numElementos;		// dmV/ºC.
+//	// Cálculo de la compensación.
+//	temperatura = TEMP_REF_MINIMA - TEMP_REF;		// ºC
+//	aux = temperatura * constante;		// dmV.
+	tensionMaxima *= 100;	// dmV.
+//	tensionMaxima -= aux;
+	tensionMaxima += 1;		// Sumarle un 1%.
+	tensionMaxima += 50;	// Redondeo.
+	tensionMaxima /= 100; // cV.
+	CM_CTRL_PWC(self)->_priv->limSupVbat = tensionMaxima;
+}
+
+/**
+*Realiza el bucle de control de corriente.
+*Hace la regulación de corriente de batería con un PI, y con la salida
+*de este regulador, y la consigna de tensión de carga, elige la más baja,
+*la limita, y pone la referencia de los rectificadores.
+*
+*@param self un gpointer al propio objeto.
+*@param refLimIbat un gint con la consigna de corriente de batería (dA).
+*@param vref un gint con la consigna de tensión (cV), obtenida del gestor de carga.
+*@param ibat un gint con la corriente de batería a regular (dA).
+**/
+private
+void control(gpointer self, gint refLimIbat, gint vref, gint ibat)
+{
+  gint cVrec;	// Consigna de tensión para los rectificadores (dV).
+  static gint error = 0;	// Error en el regulador.
+  static gfloat errorFloat = 0;	// Error en el regulador.
+  gint k0;	// Factor para el error actual en el PI (* 100000).
+ 	gint k1;	// Factor para el error anterior en el PI (* 100000).
+  static gint limInfVbat = LIM_INF_VBAT;	// Límite inferior de la consigna de Vbat (cV).
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+  gint limConsigna;	// Límite superior de la consigna de tensión.
+
+  t1=self_lee_temp(CM_CTRL_PWC(self)->_priv->temp);
+  t_ant=t1;
+ 
+  // Lectura de variables.
+  k0 = self_get_oid_int(self, zigorPwCObjCFGCRegIBatKp, 0);
+//  k0 /= CM_CTRL_PWC(self)->_priv->n_bats;	// La ganancia se adapta al numero de baterias.
+  k1 = self_get_oid_int(self, zigorPwCObjCFGCRegIBatKi, 0);
+  k1 *= k0;
+	// Regulador PI: y(k) = y(k - 1) + k0 * error(K) + k1 * error(k - 1).
+	// k0 = kp; k1 = kp(T/Ti - 1).
+	CM_CTRL_PWC(self)->_priv->cVrecFloat += ((gfloat)k1 * errorFloat) / 1000000;
+	errorFloat = (gfloat)(refLimIbat - ibat);
+	CM_CTRL_PWC(self)->_priv->cVrecFloat += ((gfloat)k0 * errorFloat) / 100000;
+	cVrec = (gint)(CM_CTRL_PWC(self)->_priv->cVrecFloat);
+	
+	// Limitar el valor de la consigna, para proteger el equipo.
+	if(cVrec > CM_CTRL_PWC(self)->_priv->limSupVbat) {
+		cVrec = CM_CTRL_PWC(self)->_priv->limSupVbat;
+		CM_CTRL_PWC(self)->_priv->cVrecFloat = (gfloat)(CM_CTRL_PWC(self)->_priv->limSupVbat);
+	}
+	if(cVrec < limInfVbat) {
+		cVrec = limInfVbat;
+		CM_CTRL_PWC(self)->_priv->cVrecFloat = (gfloat)limInfVbat;
+	}
+	
+	// Seleccionar la consigna más baja.
+	if(vref < cVrec) {
+		cVrec = vref;
+	}
+
+	// Limitar la consigna de tensión.
+	limConsigna = self_get_oid_int(self, zigorPwCObjCFGCLimVUti, 0);
+	limConsigna *= 10;	// Pasar de dV a cV.
+	if(cVrec > limConsigna) {
+		cVrec = limConsigna;
+	}
+	
+  // Fijar la consigna de tensión.
+  printf("cm-ctrl-pwc.control-> refVbat:%d refVbat':%f\tibat:%d\terror:%d\n", cVrec, CM_CTRL_PWC(self)->_priv->cVrecFloat, ibat, (gint)errorFloat);fflush(0);
+  printf("cm-ctrl-pwc.control-> vref:%d\n", vref);fflush(0);
+  self_set_oid_int(self, zigorPwCObjBRVref, 0, cVrec);
+	
+ 	t2=self_lee_temp(CM_CTRL_PWC(self)->_priv->temp);
+  printf("cm-ctrl-pwc.control -> T:%lu\ttimeout:%d\ttiempo consumido:%d\n", t1, t1-t_ant, t2-t1);fflush(0);
+}
+
+/**
+*Calcula la corriente total de batería y actualiza los contadores de carga.
+*Calcula la corriente total de batería, dejandola en el SDS; y devuelve 
+*la corriente de batería a utlizar en el regulador de corriente de batería.<BR>
+*Se actualizan los contadores de carga de cada batería, y se dejan en el SDS.
+*
+*@param self un gpointer al propio objeto.
+*@param tActual un guint32 con la cuenta de mseg.
+*@return un gint con la corriente de batería a utilizar en el regulador:<BR>
+*Si la corriente total es negativa, la corriente total.<BR>
+*Si la corriente total es positiva, la corriente parcial más alta.
+**/
+private
+gint calculaIbat(gpointer self, guint32 tActual)
+{
+  gint indice;
+  gint Ibrc = 0;
+  gint ibat;
+  gint maxima = 0;
+  gint32 capacidadNominal;
+  gint32 contador;
+  gint32 intervalo;	// Tiempo transcurrido.
+  gint32 auxiliar;
+  gfloat auxfloat;
+  static guint32 tAnterior = 0; // Instante del cálculo anterior, para calcular el incremento de tiempo.
+
+	// Cálculo del intervalo de tiempo transcurrido.
+	intervalo = tActual - tAnterior;
+  /* si incremento fuera de un rango (negativo o bien demasiado alto (la estimacion*valor_margen))
+     entonces hacer correccion para dar siempre un valor continuo sin saltos */
+	if ((intervalo < 0) || (intervalo > CM_CTRL_PWC(self)->_priv->timeout * FACTOR_CAMBIO_HORA)) {
+		intervalo = CM_CTRL_PWC(self)->_priv->timeout;
+	}
+	// Cálculo de la corriente de batería y contador de carga.
+	for(indice = 1; indice <= CM_CTRL_PWC(self)->_priv->n_bats; indice++) {
+		auxiliar = self_get_oid_int(self, zigorPwCObjBatHab, indice);
+		if(auxiliar == FALSO) {
+			continue;
+		}
+		ibat = self_get_oid_int(self, zigorPwCObjBatIZoom, indice);
+		if((ibat > IBAT_CAMBIO_MEDIDA) || (ibat < -IBAT_CAMBIO_MEDIDA)) {
+			// Pasar a la medida de mayor rango.
+		  ibat = self_get_oid_int(self, zigorPwCObjBatI, indice);
+		}
+		self_set_oid_int(self, zigorPwCObjBatIElab, indice, ibat);
+		if(tAnterior != 0) {	// La primera vez, no contar.
+		  contador = self_get_oid_int(self, zigorPwCObjBatContCarga, indice);
+		  auxiliar = intervalo * ibat;	// mseg * dA = dA*mseg.
+		  auxiliar += ((ibat > 0) ? 50 : -50);	// Redondeo.
+		  auxiliar /= 100;		// Paso de milisegundos a decimas de segundo.
+		  contador += auxiliar;
+		  // Limitar el contador de carga entre 0 y la capacidad nominal.
+			capacidadNominal = self_get_oid_int(self, zigorPwCObjBatCapacidadNom, indice);
+			capacidadNominal *= 3600;	// Paso de dAh a dAs.
+			capacidadNominal *= 10;	// Paso de dAs a dAds.
+		  if(contador < 0) {
+		  	contador = 0;
+		  }
+		  if(contador > capacidadNominal) {
+		  	contador = capacidadNominal;
+		  }
+		  self_set_oid_int(self, zigorPwCObjBatContCarga, indice, contador);
+		  // Cálculo de la capacidad efectiva.
+		  auxfloat = contador;
+		  auxfloat *= 100;
+		  auxfloat += (capacidadNominal >> 1);	// Redondeo.
+		  auxfloat /= capacidadNominal;
+		  auxiliar = auxfloat;
+		  //printf("cm-ctrl-pwc.calculaIBat -> capacidadNominal: %d, carga: %d\n", capacidadNominal, auxiliar);fflush(0);
+		  self_set_oid_int(self, zigorPwCObjBatCapacidadEf, indice, auxiliar);
+		  //printf("cm-ctrl-pwc.calculaIBat -> bat %d, contador: %d dAs ibat:%d t:%d\n", indice, contador, ibat, intervalo);fflush(0);
+		}
+  	Ibrc += ibat;
+  	if(ibat > maxima) {
+  		maxima = ibat;
+  	}
+	  //printf("cm-ctrl-pwc.calculaIbat -> Ibat(%d): %d\tIbattotal: %d\n", indice, ibat, Ibrc);fflush(0);
+  }
+  /*actualizar mib BASTIDOR BRC*/
+  self_set_oid_int(self, zigorPwCObjBRCI, 0, Ibrc);
+  /*actualizar mib CUADRO FUERZA*/
+  self_set_oid_int(self, zigorPwCObjCFIBat, 0, Ibrc);
+  // Seleccionar el valor de retorno.
+  if(Ibrc < 0) {
+  	maxima = Ibrc;
+  }
+	tAnterior = tActual;
+//  printf("cm-ctrl-pwc.calculaIbat -> Ibattotal: %d máxima: %d\n", Ibrc, maxima);fflush(0);
+  return(maxima);
+}
+
+private
+void calculos(gpointer self)
+{
+  gint ibat;
+  gint vmb1,vmb2,vmb3,vmb4,vbat;
+  gint tbat;
+  gint idist_pri, idist_nopri, idist;
+  gint vdist_pri;
+  gint vdist_nopri;
+  static gint capTotal = 0;
+  static gint32 cargaTotal = 0;
+  //---
+  static gint Ibrc=0;
+  //---
+  char aux_str[50];
+  tipo_EstadoRectificador emag;
+  gint fallo;
+  gint fallo_vent;
+  gint rec_habilitado;
+  gint bat_habilitada;
+  gint estado;
+  gint fallo_com;
+  static gint falloComAlternaAnterior = VERDADERO;	// Se utiliza para saber si la
+  			// carta de alterna se ha recuperado de un fallo de comunicacion, para pedir el modelo.
+  guint prec;
+  //---
+  static gint n_rec=1;
+  static gint n_bat=1;
+  static gint Vbr=0;
+  static gint Ibr=0;
+  static gint n_recs_marcha=0;
+  static gint nRecsHabilitados = 0;
+  static guint Pbr=0;
+  static guint Pbrnom = 0;
+  static gint vbatTotal=0;
+  static gint tBatTotal = 0;
+  gint n_bdp_int;
+  gint n_bdnp_int;
+  gint estado_int;
+  guint carga;
+  gint capacidad;
+  //---
+  gint indice;
+  char * modeloBat;
+  //---
+  static gint numEntradas = 0;	// Contador para atomizar los cálculos.
+  static char modeloBatAnt[255];	// Tipo de batería anterior.
+  float auxfloat;
+  char peticionInodoAlterna[] = {PREGUNTA_MAESTRO, DIR_ALTERNA, OBJA_INODO};
+  
+  /*Elaboracion ciertas variables*/
+  if(numEntradas == 0) {
+  	//printf("cm-ctrl-pwc.calculos -> Calculo de reserva y continuidad\n");fflush(0);
+	  /*BATERIAS*/
+	  //atomizar el acceso, actualizacion de una bat cada vez
+	  ags_debug(2,"n_bat:%d",n_bat);
+	  
+	  //Vbat por seccion: suma de las vmb
+	  vmb1 = self_get_oid_int(self, zigorPwCObjBatVMB1, n_bat);
+	  vmb2 = self_get_oid_int(self, zigorPwCObjBatVMB2, n_bat);
+	  vmb3 = self_get_oid_int(self, zigorPwCObjBatVMB3, n_bat);
+	  vmb4 = self_get_oid_int(self, zigorPwCObjBatVMB4, n_bat);
+	  vbat = vmb1 + vmb2 + vmb3 + vmb4;
+	  vbatTotal += vbat;
+	  self_set_oid_int(self, zigorPwCObjBatV, n_bat, vbat);
+	
+		fallo_com = self_get_oid_int(self, zigorPwCObjBRCFalloCom, 0);
+		bat_habilitada = self_get_oid_int(self, zigorPwCObjBatHab, n_bat);
+	  if((fallo_com == VERDADERO) || (bat_habilitada == FALSO)) {
+	  	self_set_oid_int(self, zigorPwCObjBatDisy, n_bat, DESCONOCIDO);
+		  self_set_oid_int(self, zigorPwCObjBatT, n_bat, TEMP_REF);
+	  }
+	  else {
+		  //Tbat por seccion: la misma Tbrc
+		  tbat = self_get_oid_int(self, zigorPwCObjBRCT, 0);
+		  self_set_oid_int(self, zigorPwCObjBatT, n_bat, tbat);
+		  // Carga y capacidad.
+		  capacidad = self_get_oid_int(self, zigorPwCObjBatCapacidadNom, n_bat);
+		  carga = self_get_oid_int(self, zigorPwCObjBatContCarga, n_bat);
+		  capTotal += capacidad;
+		  cargaTotal += carga;
+		}
+	  
+	  /*BASTIDOR BRC*/
+	  n_bat++;
+	  if(n_bat>CM_CTRL_PWC(self)->_priv->n_bats) {
+	    n_bat=1;
+			vbatTotal /= CM_CTRL_PWC(self)->_priv->n_bats;
+	  	self_set_oid_int(self, zigorPwCObjBRCV, 0, vbatTotal);
+			vbatTotal = 0;
+
+			self_set_oid_int(self, zigorPwCObjBRCCapacidadNom, 0, capTotal);
+			self_set_oid_int(self, zigorPwCObjCFCapacidadBatNom, 0, capTotal);
+			capTotal *= 3600;	// Paso de dAh a dAs.
+			capTotal *= 10;	// Paso de dAs a dAds.
+			auxfloat = cargaTotal;
+			auxfloat *= 100;
+			auxfloat += (capTotal >> 1);	// Redondeo.
+			auxfloat /= capTotal;
+			cargaTotal = auxfloat;
+			//printf("cm-ctrl-pwc.calculos -> cargaTotal:%d capTotal:%d\n", cargaTotal, capTotal);fflush(0);
+			self_set_oid_int(self, zigorPwCObjBRCCapacidadEf, 0, cargaTotal);
+			self_set_oid_int(self, zigorPwCObjCFCapacidadBatEf, 0, cargaTotal);
+			capTotal = 0;
+			cargaTotal = 0;
+
+			modeloBat = self_get_oid_str(self, zigorPwCObjBRCModeloBateria, 0);
+			if(strcmp(modeloBat, modeloBatAnt)) {
+//				printf("cm-ctrl-pwc.new -> Ha llamar al LUA\r\n");fflush(0);
+				lua_State * L = luaL_newstate();
+				/* XXX */
+				luaL_openlibs(L);
+// 				luaopen_base(L);
+// 				luaopen_io(L);
+// 				luaopen_string(L);
+// 				luaopen_math(L);
+				if (luaL_loadfile(L, CM_CTRL_PWC(self)->_priv->ficheroTablaBaterias)) {
+					printf("cm-ctrl-pwc.new -> error al cargar el programa LUA\r\n");fflush(0);
+				}
+//				printf("cm-ctrl-pwc.new -> cargado programa LUA\r\n");fflush(0);
+				lua_pcall(L, 0, 0, 0);
+//				printf("cm-ctrl-pwc.new -> Ejecutado global LUA\r\n");fflush(0);
+				lua_getglobal(L, "dameCompTemp");
+				lua_pushstring(L, modeloBat);
+				lua_pcall(L, 1, 1, 0);
+//				printf("cm-ctrl-pwc.new -> llamada a función LUA. modeloBat: %s\r\n", modeloBat);fflush(0);
+				indice = lua_tonumber(L, -1);
+				self_set_oid_int(self, zigorPwCObjCFGCTempTest, 0, indice);
+				lua_close(L);
+				strcpy(modeloBatAnt, modeloBat);
+			}
+			/* clean */
+			g_free(modeloBat);
+	  }
+	}
+	else if(numEntradas == 1) {
+  	//printf("cm-ctrl-pwc.calculos -> Resto de calculos\n");fflush(0);
+	  /*BASTIDOR RECTIFICADORES*/
+	  if(n_rec>CM_CTRL_PWC(self)->_priv->n_recs) {
+	    n_rec=1;
+	    /*actualizar mib BASTIDOR RECS*/
+	    self_set_oid_int(self, zigorPwCObjBRI, 0, Ibr);
+	    if(n_recs_marcha!=0)
+	      self_set_oid_int(self, zigorPwCObjBRV, 0, Vbr/n_recs_marcha);
+	    else
+	      self_set_oid_int(self, zigorPwCObjBRV, 0, 0);
+	    self_set_oid_int(self, zigorPwCObjBRPotenciaEf, 0, Pbr);
+	    self_set_oid_int(self, zigorPwCObjBRPotenciaNom, 0, Pbrnom);
+	    if(Pbrnom > 0) {
+		    carga = Pbr * 100;
+		    carga += (Pbrnom >> 1);		// Redondeo.
+		    carga /= Pbrnom;
+		  }
+		  else {
+		  	carga = 0;
+		  }
+	    self_set_oid_int(self, zigorPwCObjBRCarga, 0, carga);
+	    ags_debug(2,"Pbr:%d", Pbr);
+	    /*actualizar mib CUADRO FUERZA. XXX:generalizar para futuro tablas de bastidores y cf*/
+	    //VRecs e IRecs como bastidor recs
+	    self_set_oid_int(self, zigorPwCObjCFIRecs, 0, Ibr);
+	    if(n_recs_marcha!=0) {
+	      self_set_oid_int(self, zigorPwCObjCFVRecs, 0, Vbr/n_recs_marcha);
+	      CM_CTRL_PWC(self)->_priv->calculoVRecsValido = TRUE;
+	    }
+	    else {
+	      self_set_oid_int(self, zigorPwCObjCFVRecs, 0, 0);
+	      CM_CTRL_PWC(self)->_priv->calculoVRecsValido = FALSE;
+	    }
+	    self_set_oid_int(self, zigorPwCObjCFPotenciaEf, 0, Pbr);
+	    self_set_oid_int(self, zigorPwCObjCFPotenciaNom, 0, Pbrnom);
+	    self_set_oid_int(self, zigorPwCObjCFCargaTotal, 0, carga);
+	    /* Actualizar MIB de bastidor de reserva y continuidad.	*/
+	    if(nRecsHabilitados > 0) {
+		    tBatTotal += (nRecsHabilitados >> 1);	// Redondeo.
+		    tBatTotal /= nRecsHabilitados;
+		    self_set_oid_int(self, zigorPwCObjBRCT, 0, tBatTotal);
+		  }
+	    
+	    Ibr = 0;
+	    Vbr = 0;
+	    n_recs_marcha = 0;
+	    Pbr = 0;
+	    Pbrnom = 0;
+	    tBatTotal = 0;
+	    nRecsHabilitados = 0;
+	  }
+	
+	  /*CUADRO FUERZA*/
+	  //Variables de distribucion:
+	  idist_pri = self_get_oid_int(self, zigorPwCObjBDPIElab, 0);
+	  idist_nopri = self_get_oid_int(self, zigorPwCObjBDNPIElab, 0);
+	  idist = idist_pri + idist_nopri;
+	  self_set_oid_int(self, zigorPwCObjCFIDist, 0, idist);
+	  vdist_pri = self_get_oid_int(self, zigorPwCObjBDPV, 0);
+	  vdist_nopri = self_get_oid_int(self, zigorPwCObjBDNPV, 0);
+	  self_set_oid_int(self, zigorPwCObjCFVDistPri, 0, vdist_pri);
+	  self_set_oid_int(self, zigorPwCObjCFVDistNoPri, 0, vdist_nopri);
+	  //Variables de Bateria (VBat):
+	  vbat = self_get_oid_int(self, zigorPwCObjBRCV, 0);
+	  self_set_oid_int(self, zigorPwCObjCFVBat, 0, vbat);
+	  
+	}
+	else if(numEntradas == 2) {
+  	//printf("cm-ctrl-pwc.calculos -> Calculo de distribuciones\n");fflush(0);
+	  /*BASTIDOR DISTRIBUCION*/
+		fallo_com = self_get_oid_int(self, zigorPwCObjBDPFalloCom, 0);
+	  if(fallo_com == VERDADERO) {
+	  	self_set_oid_int(self, zigorPwCObjBDPIElab, 0, 0);
+	  	self_set_oid_int(self, zigorPwCObjBDNPIElab, 0, 0);
+		  for(n_bdp_int=1; n_bdp_int<=CM_CTRL_PWC(self)->_priv->n_bdp_ints; n_bdp_int++) {
+	      self_set_oid_int(self, zigorPwCObjBDPIntEstadoMix, n_bdp_int, INT_NODETECTABLE);
+		  }
+		  for(n_bdnp_int=1; n_bdnp_int<=CM_CTRL_PWC(self)->_priv->n_bdnp_ints; n_bdnp_int++) {
+	      self_set_oid_int(self, zigorPwCObjBDNPIntEstadoMix, n_bdnp_int, INT_NODETECTABLE);
+		  }
+	  }
+	  else {
+		  // Escoger la medida de corriente para la corriente elaborada.
+		  idist = self_get_oid_int(self,zigorPwCObjBDPIZoom, 0);
+		  if(idist > IDIST_CAMBIO_MEDIDA) {
+		  	// Pasar a la medida de mayor rango.
+		  	idist = self_get_oid_int(self, zigorPwCObjBDPI, 0);
+		  }
+			/*idist = self_get_oid_int(self, zigorPwCObjCFIRecs, 0);
+			idist -= self_get_oid_int(self, zigorPwCObjCFIBat, 0);
+			idist -= CONSUMO_GESTORA;
+			if(idist < 0) {
+				idist = 0;
+			}*/
+		  self_set_oid_int(self, zigorPwCObjBDPIElab, 0, idist);
+		  idist = self_get_oid_int(self, zigorPwCObjBDNPIZoom, 0);
+		  if(idist > IDIST_CAMBIO_MEDIDA) {
+		  	// Pasar a la medida de mayor rango.
+		  	idist = self_get_oid_int(self, zigorPwCObjBDNPI, 0);
+		  }
+		  self_set_oid_int(self, zigorPwCObjBDNPIElab, 0, idist);
+		  //Actualizar estado de los magnetos, variable calculada zigorPwCObjIntEstadoMix
+		  for(n_bdp_int=1; n_bdp_int<=CM_CTRL_PWC(self)->_priv->n_bdp_ints; n_bdp_int++) {
+		    if( self_get_oid_int(self, zigorPwCObjBDPIntHab, n_bdp_int)==FALSO )
+		      self_set_oid_int(self, zigorPwCObjBDPIntEstadoMix, n_bdp_int, INT_DESHABILITADO);
+		    else if( self_get_oid_int(self, zigorPwCObjBDPDesc, 0) == DESC_ABIERTO )
+		      self_set_oid_int(self, zigorPwCObjBDPIntEstadoMix, n_bdp_int, INT_NODETECTABLE);
+		    else if( (estado_int = self_get_oid_int(self, zigorPwCObjBDPIntEstado, n_bdp_int)) == INT_CERRADO )
+		      self_set_oid_int(self, zigorPwCObjBDPIntEstadoMix, n_bdp_int, INT_CERRADO);
+		    else if( estado_int == INT_ABIERTO )
+		      self_set_oid_int(self, zigorPwCObjBDPIntEstadoMix, n_bdp_int, INT_ABIERTO);
+		  }
+		  for(n_bdnp_int=1; n_bdnp_int<=CM_CTRL_PWC(self)->_priv->n_bdnp_ints; n_bdnp_int++) {
+		    if( self_get_oid_int(self, zigorPwCObjBDNPIntHab, n_bdnp_int)==FALSO )
+		      self_set_oid_int(self, zigorPwCObjBDNPIntEstadoMix, n_bdnp_int, INT_DESHABILITADO);
+		    else if( self_get_oid_int(self, zigorPwCObjBDNPDesc, 0) == DESC_ABIERTO )
+		      self_set_oid_int(self, zigorPwCObjBDNPIntEstadoMix, n_bdnp_int, INT_NODETECTABLE);
+		    else if( (estado_int = self_get_oid_int(self, zigorPwCObjBDNPIntEstado, n_bdnp_int)) == INT_CERRADO )
+		      self_set_oid_int(self, zigorPwCObjBDNPIntEstadoMix, n_bdnp_int, INT_CERRADO);
+		    else if( estado_int == INT_ABIERTO )
+		      self_set_oid_int(self, zigorPwCObjBDNPIntEstadoMix, n_bdnp_int, INT_ABIERTO);
+		  }
+		}
+	  /*ALTERNA*/
+	  fallo = self_get_oid_int(self, zigorAlternaObjHab, 0);
+		fallo_com = self_get_oid_int(self, zigorAlternaObjFalloCom, 0);
+	  if((fallo_com == VERDADERO) || (fallo == FALSO)) {
+	  	self_set_oid_str(self, zigorAlternaObjModelo, 0, "?");
+	  	self_set_oid_int(self, zigorAlternaObjFrec, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjVtrif, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjItrif, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjVefFaseR, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjVefFaseS, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjVefFaseT, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjVefTriEq, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjIefFaseR, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjIefFaseS, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjIefFaseT, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjIefTriEq, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjFPotFaseR, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjFPotFaseS, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjFPotFaseT, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjFPotTriEq, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotApFaseR, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotApFaseS, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotApFaseT, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotApTriEq, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotAcFaseR, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotAcFaseS, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotAcFaseT, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotAcTriEq, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotReFaseR, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotReFaseS, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotReFaseT, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjPotReTriEq, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneAcFaseR, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneAcFaseS, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneAcFaseT, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneAcTriEq, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneApFaseR, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneApFaseS, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneApFaseT, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneApTriEq, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneReFaseR, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneReFaseS, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneReFaseT, 0, 0);
+	  	self_set_oid_int(self, zigorAlternaObjEneReTriEq, 0, 0);
+	  }
+	  else {
+	  	if(falloComAlternaAnterior == VERDADERO) {
+	  		// Se ha recuperado de un fallo de comunicacion. Pedir el modelo.
+	  		textbuffer_set(TEXTBUFFERIF(CM_CTRL_PWC(self)->_priv->wbuffer), peticionInodoAlterna, 3);
+	  	}
+	  }
+	  falloComAlternaAnterior = fallo_com;
+	}
+	else if((numEntradas >= 3) && (numEntradas < NUM_GRUPOS_CALCULOS)) {
+  	//printf("cm-ctrl-pwc.calculos -> Calculo de rectificadores\n");fflush(0);
+	  /*RECTIFICADORES*/
+	  //atomizar el acceso, actualizacion de un rec cada vez
+	  ags_debug(2,"n_rec:%d",n_rec);
+	  
+	  //for(n_rec=1;n_rec<n_recs;n_rec++) {
+	
+	    emag = busmag_lee_rec(BUSMAGIF(CM_CTRL_PWC(self)->_priv->rectificador), n_rec - 1);
+	    
+	    //Fallo Comunicaciones
+	    if(emag.error_com==1)
+	      fallo_com=VERDADERO;
+	    else
+	      fallo_com=FALSO;
+	    self_set_oid_int(self, zigorPwCObjRecFalloCom, n_rec, fallo_com);
+	
+	    //XXX: si rec deshabilitado o fallo de comunicaciones -> valores a 0
+	    rec_habilitado = self_get_oid_int(self, zigorPwCObjRecHab, n_rec);
+	
+	    if((rec_habilitado==FALSO) || (fallo_com==VERDADERO)) {
+	    //if(fallo_com==VERDADERO) {
+	      if(rec_habilitado==FALSO)
+	        self_set_oid_int(self, zigorPwCObjRecFalloCom, n_rec, DESCONOCIDO);
+	      self_set_oid_str(self, zigorPwCObjRecVersion, n_rec, "?");
+	      self_set_oid_int(self, zigorPwCObjRecTVent, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecTInt, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecVSal, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecIsal, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecPotSal, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecHoras, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecDisySal, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecFallo, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecFalloVent, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecFase, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecDisponible, n_rec, FALSO);
+	      self_set_oid_int(self, zigorPwCObjRecFalloAc, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecVSalAlta, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecSobreTemp, n_rec, 0);
+	      self_set_oid_int(self, zigorPwCObjRecILimit, n_rec, 0);
+	    	self_set_oid_int(self, zigorPwCObjRecCarga, n_rec, 0);
+	    }
+	    else {
+	      self_set_oid_str(self, zigorPwCObjRecVersion, n_rec, emag.version);
+	      self_set_oid_int(self, zigorPwCObjRecTVent, n_rec, emag.tamb);
+	      self_set_oid_int(self, zigorPwCObjRecTInt, n_rec, emag.trad);
+	      self_set_oid_int(self, zigorPwCObjRecVSal, n_rec, emag.vsal);
+	      self_set_oid_int(self, zigorPwCObjRecIsal, n_rec, emag.isal);
+	      //potencia
+	      prec=V_ABS(emag.vsal*emag.isal);
+	      prec = (prec + 50) / 100;	// vsal e isal en décimas. Se pasa a W.
+	      self_set_oid_int(self, zigorPwCObjRecPotSal, n_rec, prec);
+	      //self_set_oid_int(self, zigorPwCObjRecHoras, n_rec, emag.minutes/60);
+	      self_set_oid_int(self, zigorPwCObjRecDisySal, n_rec, emag.mag_sal + 1);
+	
+	      //Fase rectificadores: se decide se hara cableado correlativo
+	      self_set_oid_int(self, zigorPwCObjRecFase, n_rec, (n_rec) % 3);	//r,s,t,r,s,t...
+	
+	    //XXX
+	      //Deteccion fallo general de rectificador que provoca parada de modulo y asi provocar evento
+	      //Ante fallo -> disponible=0 -> Orden de Parada
+	      //Al desaparecer evento -> Orden de Marcha
+		    if((emag.ps_state==PROTECTION) ||
+		      (emag.fault==4)  || (emag.fault==5)  || (emag.fault==6)  ||
+		      (emag.fault==7)  || (emag.fault==8)  || (emag.fault==10) ||
+		      (emag.fault==11) || (emag.fault==12) || (emag.fault==13)) {
+		      
+		      fallo=VERDADERO;
+		    }
+		    else {
+		      fallo=FALSO;  //ojo
+		    }
+//		    estado = self_get_oid_int(self, zigorPwCObjRecParado, n_rec);
+//		    if((emag.estadoEnatel & 0x0002) && (estado != VERDADERO)) {
+		    if((emag.estadoEnatel & 0x0002) && !(emag.estadoEnatel & 0x2000)) {
+		    	fallo = VERDADERO;
+		    }
+		    self_set_oid_int(self, zigorPwCObjRecFallo, n_rec, fallo);
+		    
+		    //Si ad+ de estar habilitado y sin fallo de comunicaciones
+		    //el disyuntor esta cerrado y no hay fallo general => disponible
+		    if( (emag.mag_sal==0) && (fallo==FALSO) ) {
+		      self_set_oid_int(self, zigorPwCObjRecDisponible, n_rec, 1);
+		    }
+		    
+		    //fallo ventilador
+		    if( (emag.fault==1) || (emag.fault==2) )
+		      fallo_vent=VERDADERO;
+		    else
+		      fallo_vent=FALSO;
+		    if(emag.estadoEnatel & 0x0008) {
+		    	fallo_vent = VERDADERO;
+		    }
+		    self_set_oid_int(self, zigorPwCObjRecFalloVent, n_rec, fallo_vent);
+		    
+		    estado = ((emag.estadoEnatel & 0x0001) ? VERDADERO : FALSO);
+	      self_set_oid_int(self, zigorPwCObjRecFalloAc, n_rec, estado);
+		    estado = ((emag.estadoEnatel & 0x0020) ? VERDADERO : FALSO);
+	      self_set_oid_int(self, zigorPwCObjRecVSalAlta, n_rec, estado);
+		    estado = ((emag.estadoEnatel & 0x0004) ? VERDADERO : FALSO);
+	      self_set_oid_int(self, zigorPwCObjRecSobreTemp, n_rec, estado);
+		    estado = ((emag.estadoEnatel & 0x0010) ? VERDADERO : FALSO);
+	      self_set_oid_int(self, zigorPwCObjRecILimit, n_rec, estado);
+		
+				// Calculo de la temperatura de bateria.
+	    	nRecsHabilitados++;
+	    	tBatTotal += emag.tamb;
+	    	
+	    }//else
+	  
+	    //estado
+	    if(rec_habilitado==FALSO)
+	      estado=E_DESHABILITADO;
+	    else if(fallo_com==VERDADERO)
+	      estado=E_AUSENTE;
+	    else if(emag.ps_state==PROTECTION)
+	      estado=E_FALLO;
+	    else if(emag.mag_sal==1)  //abierto
+	      estado=E_INACTIVO;
+	    else if( (emag.ps_state==START_DELAY_RUN) || (emag.ps_state==START_DELAY_END) )
+	      estado=E_ARRANQUE;
+	    else if(emag.ps_state==POWER_UP)
+	      estado=E_PARADA;
+	    else if(emag.ps_state==POWER_RUN)
+	      estado=E_MARCHA;
+	    self_set_oid_int(self, zigorPwCObjRecEstado, n_rec, estado);
+	    
+	  //}//for
+	  if(estado==E_MARCHA) {
+	    Vbr += emag.vsal;
+	    n_recs_marcha++;
+	    //---
+	    Ibr += emag.isal;
+	    Pbr += prec;
+	    carga = self_get_oid_int(self, zigorPwCObjRecPotNom, n_rec);
+	    Pbrnom += carga;
+	    prec *= 100;
+	    prec += (carga >> 1);	// Redondeo.
+	    carga = prec / carga;
+	    self_set_oid_int(self, zigorPwCObjRecCarga, n_rec, carga);
+	    indice = self_get_oid_int(self, zigorPwCObjRecParado, n_rec);
+	    if(indice == FALSO) {
+		    // Incremento del tiempo de trabajo.
+		    emag.milisegundosTrabajo += CM_CTRL_PWC(self)->_priv->timeout * CM_CTRL_PWC(self)->_priv->n_recs;
+		    busmag_escribe_milisegundosTrabajo(BUSMAGIF(CM_CTRL_PWC(self)->_priv->rectificador), n_rec - 1, emag.milisegundosTrabajo);
+		    if(emag.milisegundosTrabajo >= (guint32)3600000) {
+		    	// Incrementar la cuenta de horas de trabajo.
+		    	emag.horasTrabajo++;
+		    	emag.milisegundosTrabajo -= (guint32)3600000;
+			    busmag_escribe_horasTrabajo(BUSMAGIF(CM_CTRL_PWC(self)->_priv->rectificador), n_rec - 1, emag.horasTrabajo);
+			    busmag_escribe_milisegundosTrabajo(BUSMAGIF(CM_CTRL_PWC(self)->_priv->rectificador), n_rec - 1, emag.milisegundosTrabajo);
+		    	self_set_oid_int(self, zigorPwCObjRecHoras, n_rec, emag.horasTrabajo);
+		    }
+		  }
+	  }
+	  if(estado==E_AUSENTE) {
+	  	// Reiniciar la cuenta de tiempo de trabajo.
+	  	emag.milisegundosTrabajo = 0;
+	  	emag.horasTrabajo = 0;
+	  	self_set_oid_int(self, zigorPwCObjRecHoras, n_rec, 0);
+	  }
+	
+	  n_rec++;
+	  if(n_rec>CM_CTRL_PWC(self)->_priv->n_recs) {
+	  	// Ya se han hecho los calculos de todos los rectificadores, pasar la ronda.
+	  	numEntradas = NUM_GRUPOS_CALCULOS - 1;
+	  }
+	}
+	numEntradas++;
+	numEntradas %= NUM_GRUPOS_CALCULOS;
+}
+
+private
+void maniobraDesconectadores(gpointer self)
+{
+	gint vSalida;
+	gint vBateria;
+	gint estadoDisyuntor;
+	gint referencia;
+	gint indice;
+	gint nBaterias;
+	gint nEventos;
+	gint falloRed = FALSE;
+	gchar * oidEvento;
+
+	indice = self_get_oid_int(self, zigorPwCObjCFRegimenCarga, 0);
+	if(indice == E_REPLAY) {
+		// En replay, no enviar órdenes, dejar que las cartas actuen por su cuenta.
+		self_set_oid_int(self, zigorPwCObjBRCMandoDescAbrir, 0, FALSO);
+		self_set_oid_int(self, zigorPwCObjBRCMandoDescCerrar, 0, FALSO);
+		self_set_oid_int(self, zigorPwCObjBDPMandoDescAbrir, 0, FALSO);
+		self_set_oid_int(self, zigorPwCObjBDPMandoDescCerrar, 0, FALSO);
+		self_set_oid_int(self, zigorPwCObjBDNPMandoDescAbrir, 0, FALSO);
+		self_set_oid_int(self, zigorPwCObjBDNPMandoDescCerrar, 0, FALSO);
+	}
+	else {
+		vSalida = self_get_oid_int(self, zigorPwCObjCFVRecs, 0);
+		// Apertura del desconectador del bastidor de reserva y continuidad.
+		referencia = self_get_oid_int(self, zigorPwCObjBRCAperDesc, 0);
+		nBaterias = self_get_oid_int(self, zigorPwCObjBRCNumBats, 0);
+		for(indice = 1; indice <= nBaterias; indice++) {
+			vBateria = self_get_oid_int(self, zigorPwCObjBatV, indice);
+			estadoDisyuntor = self_get_oid_int(self, zigorPwCObjBatDisy, indice);
+			if((estadoDisyuntor == 1) && (vBateria < referencia)) {
+				// Abrir el desconectador.
+				self_set_oid_int(self, zigorPwCObjBRCMandoDescAbrir, 0, VERDADERO);
+				self_set_oid_int(self, zigorPwCObjBRCMandoDescCerrar, 0, FALSO);
+			}
+		}
+		// Cierre del desconectador del bastidor de reserva y continuidad.
+		referencia = self_get_oid_int(self, zigorPwCObjBRCCierDesc, 0);
+		if(vSalida > referencia) {
+			// Cerrar el desconectador.
+			self_set_oid_int(self, zigorPwCObjBRCMandoDescAbrir, 0, FALSO);
+			self_set_oid_int(self, zigorPwCObjBRCMandoDescCerrar, 0, VERDADERO);
+		}
+		if(CM_CTRL_PWC(self)->_priv->calculoVRecsValido) {
+			// Apertura del desconectador de la distribución no prioritaria.
+			referencia = self_get_oid_int(self, zigorPwCObjBDNPVAperDesc, 0);
+			if(vSalida < referencia) {
+				// Abrir el desconectador.
+				self_set_oid_int(self, zigorPwCObjBDNPMandoDescAbrir, 0, VERDADERO);
+				self_set_oid_int(self, zigorPwCObjBDNPMandoDescCerrar, 0, FALSO);
+			}
+			// Cierre del desconectador de la distribución no prioritaria.
+			referencia = self_get_oid_int(self, zigorPwCObjBDNPVCierDesc, 0);
+			nEventos = self_get_oid_int(self, zigorAlarmsPresent, 0);
+			for(indice = nEventos; indice >= 1; indice--) {
+				oidEvento = self_get_oid_str(self, zigorAlarmDescr, indice);
+				if((oidEvento != NULL) && (!strcmp(oidEvento, zigorAlarmaFalloRed))) {
+					falloRed = TRUE;
+					break;
+				}
+				g_free(oidEvento);
+			}
+	//		printf("cm-ctrl-pwc.maniobraDesconectadores -> nEventos: %d, falloRed: %d\n", nEventos, falloRed);fflush(0);
+			if((vSalida > referencia) && !falloRed) {
+				// Cerrar el desconectador.
+				self_set_oid_int(self, zigorPwCObjBDNPMandoDescAbrir, 0, FALSO);
+				self_set_oid_int(self, zigorPwCObjBDNPMandoDescCerrar, 0, VERDADERO);
+			}
+		}
+	}
+}
+
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+}/*fin class*/
+
+%{
+  GObject *(*cmctrlpwc_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

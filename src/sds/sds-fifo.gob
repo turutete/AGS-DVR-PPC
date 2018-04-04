@@ -1,0 +1,239 @@
+requires 2.0.0
+
+%h{
+#include <glib-2.0/glib-object.h>
+#include <ags-sdsx.h>
+#include <ags-cf.h>
+#include "accessif.h"
+#include "createif.h"
+#include <configif.h>
+#include "snmp-gvalue.h"
+#include <ags-valuetypes.h>
+
+#include <net-snmp/net-snmp-config.h>
+#include <net-snmp/net-snmp-includes.h>
+#include <string.h>
+%}
+
+%{
+  /**
+     \file sds-fifo.c
+     \todo
+     - implementar interface accessx.
+     - leer de configuración: SNMP_APP, SNMP_HOST, SNMP_COMMUNITY, ... HECHO.
+     - get() debe retornar un GValue. HECHO.
+  */
+/**
+   \page sdsxsnmp SdsXSnmp
+   \section sdsxsnmp_desc DESCRIPCIÓN
+   Conector que permite mapear las \ref interfaces \ref accessif y \ref accessxif
+   a peticiones SNMP mediante un sdsx-snmp.gob excepto en snmp_set que lo hace mediante una cola FIFO.
+   \section sdsxsnmp_reqs REQUISITOS
+     \subsection sdsxsnmp_deps Dependencias
+     NINGUNO
+     \subsection sdsxsnmp_pres Precarga
+     NINGUNA
+     \subsection sdsxsnmp_evs  Eventos
+     NINGUNO
+     \subsection sdsxsnmp_cfs Configuración
+	NINGUNO
+   \section sdsxsnmp_feas CARACTERÍSTICAS
+     \subsection sdsxsnmp_ifs  Implementa
+        -# \ref accessif
+	-# \ref accessxif
+     \subsection sdsxsnmp_sigs Señales
+     NINGUNA
+     \subsection sdsxsnmp_props Propiedades
+     NINGUNA
+  \section sdsxsnmp_srcs FUENTES
+     - \ref sds-fifo.c
+     - \ref sds-fifo.h
+*/
+  /** \addtogroup sdsmods Módulos SDS
+   */
+  /*@{*/
+
+  /** \defgroup sdsfifo
+   */
+  /*@{*/
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "sds-fifo"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+%privateheader{
+#include <sys/time.h>  /*temporizadores: gettimeofday...*/
+
+%}
+
+class Sds:Fifo from Ags:SdsX (interface :AccessIf)  (interface :AccessxIf) {
+
+//Referencia a la cola
+private FILE * pFIFO;
+//Referencia a la cola de respuesta a los get
+private FILE * pFIFOIn = NULL;
+//Nombre de la cola usada
+private char* nombreFIFO = NULL unrefwith g_free;
+private char* nombreFIFOIn = NULL unrefwith g_free;
+//Referencia a sdsx
+private GObject* sds = NULL unrefwith g_object_unref;
+
+
+private char* name      = NULL unrefwith g_free;
+private guint32		temp;
+
+public GObject *
+  new (char *sdsx_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  int t;
+  CfTable my_cft=config_get_table(CONFIGIF(cf), cft, sdsx_name);
+  SDS_FIFO(ret)->_priv->nombreFIFO = config_get_string(CONFIGIF(cf), my_cft, "fifo");
+  SDS_FIFO(ret)->_priv->nombreFIFOIn = config_get_string(CONFIGIF(cf), my_cft, "fifoIn");
+  SDS_FIFO(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "sds");
+  SDS_FIFO(ret)->_priv->name = g_strdup(sdsx_name);
+//  printf("sds_fifo.new -> A abrir la fifo %s\n", SDS_FIFO(ret)->_priv->nombreFIFO);
+  SDS_FIFO(ret)->_priv->pFIFO = fopen(SDS_FIFO(ret)->_priv->nombreFIFO, "w");
+//  SDS_FIFO(ret)->_priv->pFIFO = fopen("/var/fifoaux", "w");
+//  printf("sds_fifo.new -> A abrir la fifo %s\n", SDS_FIFO(ret)->_priv->nombreFIFOIn);
+//  SDS_FIFO(ret)->_priv->pFIFOIn = fopen(SDS_FIFO(ret)->_priv->nombreFIFOIn, "r");
+//  fscanf( SDS_FIFO(ret)->_priv->pFIFOIn, "%d", &t);
+//  printf("sds_fifo.new -> Fifos creadas\n");
+  self_inicia_temp(&SDS_FIFO(ret)->_priv->temp);
+  return G_OBJECT (ret);
+}
+
+private
+  GValue*
+  snmpget(self, char *k) {
+	  GValue*    v;
+	  //printf("sdsfifo.snmpget() P1. OID: %s \n",k);
+	  v = access_get(ACCESSIF(SDS_FIFO(self)->_priv->sds), k);
+	  //printf("sdsfifo.snmpget() P2. \n");
+	  return v;
+}
+
+private
+  GValue*
+  snmpget_(self, char *k) {
+	  GValue*    v;
+	  int valorNumerico = 0;
+	  char aux[500];
+//	  guint32 t1;
+
+//	  printf("sds-fifo.snmpget -> Entrando. Oid: %s\n", k);
+
+	  fflush( SDS_FIFO(self)->_priv->pFIFO );
+//	  sprintf( aux, "print(\"Paso por snmpget %s:\" .. retorno)\n", k);
+//	  fprintf( SDS_FIFO(self)->_priv->pFIFO, "%s", aux);
+	  sprintf( aux, \
+	    "if not fichero then fichero = io.open(\"%s\", \"w\") end\n\
+	    fichero:write(access.get(sdscoreglib, \"%s\") .. \"\\n\")\n\
+	    fichero:flush()\n\
+	    ", SDS_FIFO(self)->_priv->nombreFIFOIn, k );
+
+//	  printf("%s\n", aux);
+	  fprintf( SDS_FIFO(self)->_priv->pFIFO, "%s", aux);
+	  fflush( SDS_FIFO(self)->_priv->pFIFO);
+	  if(SDS_FIFO(self)->_priv->pFIFOIn == NULL) {
+	    SDS_FIFO(self)->_priv->pFIFOIn = fopen(SDS_FIFO(self)->_priv->nombreFIFOIn, "r");
+	  }
+	  // Retardo para que no se llenen los buffer.
+//	  t1 = self_lee_temp(&SDS_FIFO(self)->_priv->temp);
+//	  while((self_lee_temp(&SDS_FIFO(self)->_priv->temp) - t1) < 2);
+	  v = g_new0(GValue, 1);
+	  fscanf( SDS_FIFO(self)->_priv->pFIFOIn, "%d", &valorNumerico);
+	  g_value_init(v, G_TYPE_INT);
+	  g_value_set_int(v, valorNumerico);
+//	  printf("sds-fifo.snmpget -> oid: %s, valor: %d\n", k, valorNumerico);
+	  return v;
+}
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+
+private
+  gchar*
+  snmpgetnextkey(self, char *k) {
+	  gchar* s=NULL;
+	  s = accessx_getnextkey(ACCESSIF(SDS_FIFO(self)->_priv->sds), k);
+	  return s;
+}
+
+private int
+  snmpset(self, char *k, GValue *v) {
+	  int res=0;
+	  if ( G_VALUE_TYPE(v) == G_TYPE_INT ){
+		  fprintf( SDS_FIFO(self)->_priv->pFIFO, "access.set(sdscoreglib, \"%s\", %d)\n", k , g_value_get_int(v) );
+		  //printf("A fifo I: access.set(sdscoreglib, %s, %d)\n", k , g_value_get_int(v));
+	  }else if ( G_VALUE_TYPE(v) == G_TYPE_STRING ){
+		  fprintf( SDS_FIFO(self)->_priv->pFIFO, "access.set(sdscoreglib, \"%s\", \"%s\")\n", k , g_value_get_string(v) );
+		  //printf("A fifo S: access.set(sdscoreglib, %s, %s)\n", k , g_value_get_string(v));
+	  }
+	  fflush( SDS_FIFO(self)->_priv->pFIFO);
+	  return res;
+}
+ 
+/* Interfaces */ 
+ interface :AccessIf private GValue *get(AccessIf *self (check null type), char *k)
+   {
+     GValue *v;
+
+     ags_debug(2,"en snmp::get");
+     v=self_snmpget(SDS_FIFO(self), k);
+     return v;
+   }
+ interface :AccessIf private int set(AccessIf *self (check null type), char *k, GValue *v)
+   {
+     int res;
+
+     ags_debug(2,"en snmp::set");
+     res=self_snmpset(SDS_FIFO(self), k, v);
+     return res;
+   }
+ interface :AccessxIf private gchar* getnextkey(AccessxIf *self (check null type), char *k)
+   {
+     gchar* s;
+
+     ags_debug(2,"en snmp::getnextkey");
+     s=self_snmpgetnextkey(SDS_FIFO(self), k);
+     ags_debug(1, "nextkey=|%s|", s);
+
+     return s;     
+   }
+}
+
+%{
+  GObject* (*sdsfifo_new(void))(char *sds_name, AgsCf *cf, CfTable cft)
+    {
+      return self_new;
+    }
+  /*@}*/
+  /*@}*/
+
+%}

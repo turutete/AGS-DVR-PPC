@@ -1,0 +1,115 @@
+ZIGOR-STATUS-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	MODULE-IDENTITY,
+	OBJECT-TYPE,
+	Integer32
+		FROM SNMPv2-SMI
+	TEXTUAL-CONVENTION
+		FROM SNMPv2-TC
+	PositiveInteger,
+	ZDateAndTime
+		FROM ZIGOR-TC
+	zigorMgmt,
+	zigorExperiment
+		FROM ZIGOR-SMI;
+
+zigorStatusMIB    MODULE-IDENTITY
+	LAST-UPDATED	"200702281200Z"
+	ORGANIZATION	"Corporazion Zigor, S.A."
+	CONTACT-INFO
+		"	Corporacion Zigor, S.A.
+			Depto. I+D
+
+		Postal:	C/ Zuazobidea, s/n (P.I Jundiz)
+			C.P 01015 Vitoria-Gasteiz , Alava
+			(Spain)
+
+		Tel:	+34 (945) 214 600
+
+		E-mail:	software@zigor.com"
+	DESCRIPTION
+		"MIB de estado de nodos"
+	::= { zigorExperiment 7 }
+
+ZigorNodeStatus ::= TEXTUAL-CONVENTION
+	STATUS	 current
+	DESCRIPTION
+		"Tipo para representar el estado de nodo."
+	SYNTAX	INTEGER {
+		good(1),
+		bad(2)
+	}
+
+zigorStatus OBJECT IDENTIFIER ::= { zigorStatusMIB 1 }
+
+zigorStatusPresent OBJECT-TYPE
+	SYNTAX     Integer32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The present number of node status."
+	::= { zigorStatus 1 }
+
+zigorStatusTable OBJECT-TYPE
+	SYNTAX     SEQUENCE OF ZigorStatusEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+               "A list of status table entries.
+               The number of rows in the table at any given time is
+               reflected by the value of zigorStatusPresent."
+	::= { zigorStatus 2 }
+
+zigorStatusEntry OBJECT-TYPE
+	SYNTAX     ZigorStatusEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"An entry containing information applicable to a
+               particular node status."
+	INDEX { zigorStatusId }
+	::= { zigorStatusTable 1 }
+
+ZigorStatusEntry ::= SEQUENCE {
+	zigorStatusId		PositiveInteger,
+	zigorStatusNodeId	Integer32,
+	zigorStatusValue	ZigorNodeStatus,
+	zigorStatusTime		ZDateAndTime
+}
+
+
+zigorStatusId OBJECT-TYPE
+	SYNTAX		PositiveInteger
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION
+		"A unique identifier for a node status.  This
+		value must remain constant."
+	::= { zigorStatusEntry 1 }
+
+zigorStatusNodeId OBJECT-TYPE
+	SYNTAX		Integer32
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Node identifier."
+	::= { zigorStatusEntry 2 }
+
+zigorStatusValue OBJECT-TYPE
+	SYNTAX		ZigorNodeStatus
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Status of the node."
+	::= { zigorStatusEntry 3 }
+
+zigorStatusTime OBJECT-TYPE
+	SYNTAX		ZDateAndTime
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Time of the status change."
+	::= { zigorStatusEntry 4 }
+
+END

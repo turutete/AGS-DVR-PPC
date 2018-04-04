@@ -1,0 +1,341 @@
+%{
+/**
+   \file cm-mibinit.c
+   \todo
+   - hacer función oid2gstring(). ¿Quizás en librería auxiliar junto con otras?
+   - Guardar límites longitud de cadenas (GParamSpec no contempla).
+   - Implementar soporte para INTEGER enumerados mediante GEnumClass y GParamSpecEnum.
+ */
+/**
+   \page cmmibinit CmMibInit
+   \section cmmibinit_desc DESCRIPCIÓN
+   Inicializa las variables del sds a partir de una MIB. 
+   Permite especificar valores iniciales y tamaño de las tablas (filas).
+   \section cmmibinit_reqs REQUISITOS
+     \subsection cmmibinit_deps Dependencias
+       -# sds
+        -# \ref accessif
+	-# \ref limitsif
+	-# \ref createif
+	-# \ref trapif
+     \subsection cmmibinit_pres Precarga
+       -# \ref gwsnmp
+     \subsection cmmibinit_evs  Eventos
+     NINGUNO
+     \subsection cmmibinit_cfs Configuración
+        -# root_node
+	   - Tipo: G_TYPE_STRING
+	   - Requerida
+	   - Descripción: Clave del nodo raíz de la MIB a partir del cual
+	   inicializar el sds.
+	-# values
+	   - Tipo: CfTable
+	   - Opcional
+	   - Descripción: Tabla de configuración que permite establecer
+	   valores iniciales a las variables del sds. 
+	   - Formato: clave1 = valor1, ... (clave es G_TYPE_STRING, valor
+	   es variable).
+	-# tables
+	   - Tipo: CfTable
+	   - Opcional
+	   - Descripción: Tabla de configuración para establecer el 
+	   tamaño (número de filas) de las tablas definidas en la MIB.
+	   - Formato: clave1 = tamaño1, ... (clave es G_TYPE_STRING, 
+	   tamaño es G_TYPE_INT).
+   \section cmmibinit_feas CARACTERÍSTICAS
+     \subsection cmmibinit_ifs  Implementa
+     NINGUNA
+     \subsection cmmibinit_sigs Señales
+     NINGUNA
+   \section cmmibinit_srcs FUENTES
+     - \ref cm-mibinit.c
+     - \ref cm-mibinit.h
+*/
+  
+  /**
+   * \addtogroup cmmods Módulos CM
+   */
+  
+  /** 
+   * \defgroup cmmibinit_g CmMibInit
+   * \subpage CmMibInit
+   * \ingroup cmmods
+   */
+  
+  /*@{*/
+  
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-mibinit"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+%h{
+#include <glib-2.0/glib.h>
+#include <glib-2.0/glib-object.h>
+#include <net-snmp/net-snmp-config.h>
+#ifdef HAVE_SIGNAL_H
+#include <signal.h>
+#endif /* HAVE_SIGNAL_H */
+#include <net-snmp/net-snmp-includes.h>
+#include <net-snmp/agent/net-snmp-agent-includes.h>
+
+#include <ags-sdscore.h>
+#include <ags-cm.h>
+#include <ags-cf.h>
+#include <accessif.h>
+#include <limitsif.h>
+#include <createif.h> 
+#include <configif.h>
+#include <trapif.h>
+#include <ags-valuetypes.h>
+#include <ags-paramspecs.h>
+%}
+
+class Cm:MibInit from Ags:Cm {
+
+public
+GObject*
+new (char *cm_name, AgsCf *cf, CfTable cft) {
+  /**
+   * Constructor de CmMibInit.
+   * Manual: \subpage cmmibinit
+   */
+  GObject *ret = G_OBJECT(GET_NEW);
+  CfTable *my_cft= config_get_table(CONFIGIF(cf), cft, cm_name);
+  GValue *v;
+
+  if(!( (v = config_get(CONFIGIF(cf), my_cft, "sds")) || (v = config_get(CONFIGIF(cf), NULL, "sds")))) { /* ref count++ */
+    exit(-2); /* error, no sds */
+  }
+  AgsSdsCore *sds = g_value_get_object(v);
+  free(v);
+
+  char *k = NULL;
+  int n;
+  GValue *v2;
+
+  CfTable *tables = config_get_table(CONFIGIF(cf), my_cft, "tables");
+  ags_debug(1,"tables");
+  while((k=config_getnextkey(CONFIGIF(cf), tables, k))) {
+    n=config_get_int(CONFIGIF(cf), tables, k);
+    ags_debug(5,"%s = %d", k, n);
+    g_hash_table_insert(CM_MIBINIT(ret)->_priv->tbl_len, k, (gpointer)n); /* guardamos directamente el número */
+  }
+
+  gchar *root_node=config_get_string(CONFIGIF(cf), my_cft, "root_node");
+  self_cminit(CM_MIBINIT(ret), sds, root_node);
+  free(root_node);
+  
+  CfTable *values = config_get_table(CONFIGIF(cf), my_cft, "values");
+  k = NULL;
+  ags_debug(1,"values");
+  while((k=config_getnextkey(CONFIGIF(cf), values, k))) {
+    v2 = config_get(CONFIGIF(cf), values, k);
+    char *s=g_strdup_value_contents(v2);
+    int res=access_set(ACCESSIF(sds), k, v2);
+    ags_debug(5,"%s res=%d %s ",k, res, s);
+    free(s);
+    g_value_unset(v2);
+    free(v2);
+  }
+
+  g_object_unref(sds); /* ref count-- */
+  
+  return G_OBJECT (ret);
+}
+
+private GHashTable *tbl_len = { g_hash_table_new(g_str_hash, g_str_equal) };
+
+private
+void
+add_trap(self, AgsSdsCore *sds, struct tree *t, GString *gs_oid)
+  {
+    struct varbind_list *member;
+    oid member_oid[MAX_OID_LEN];
+    size_t member_oid_len=MAX_OID_LEN;
+    GString* gs_member_oid;
+    int member_oid_base_len;
+    int i;
+    
+    ags_debug(3, "TRAP: %s=%s", t->label, gs_oid->str);
+    /* Añadir trap  */
+    trap_add(TRAPIF(sds), gs_oid->str);
+
+    gs_member_oid=g_string_sized_new(128);
+    for(member=t->varbinds; member!=NULL; member=member->next) {
+      //	  get_module_node(member->vblabel, "ANY", member_oid, &member_oid_len);
+      get_node(member->vblabel, member_oid, &member_oid_len);
+      g_string_truncate(gs_member_oid, 0);
+      for(i=0;i<member_oid_len;i++) {
+	g_string_append_printf(gs_member_oid, ".%ld", *(member_oid+i));
+      }
+      member_oid_base_len=strlen(gs_member_oid->str);
+      g_string_truncate(gs_member_oid, member_oid_base_len);
+      ags_debug(3, "MEMBER: %s=%s", member->vblabel, gs_member_oid->str);
+      /* Añadir member */
+      trap_member(TRAPIF(sds), gs_oid->str, gs_member_oid->str);
+    }
+
+    g_string_free(gs_member_oid, TRUE);
+  }
+
+private
+void 
+test_dump_mib(self, AgsSdsCore *sds, struct tree *t)
+{
+  static int spc=0;
+  static int n=0;
+  int i;
+  oid node_oid[MAX_OID_LEN];
+  size_t node_oid_len=MAX_OID_LEN;
+  GString *gs_oid;
+  int oid_base_len;
+  GParamSpec *limit=NULL;
+ 
+  ags_debug(1,"%s", t->label);
+
+  get_node(t->label, node_oid, &node_oid_len);
+
+  /* XXX hacer función oid2gstring() */
+  gs_oid=g_string_sized_new(128);
+  g_string_truncate(gs_oid, 0);
+  for(i=0;i<node_oid_len;i++) {
+    g_string_append_printf(gs_oid, ".%ld", *(node_oid+i));
+  }
+  oid_base_len=strlen(gs_oid->str);
+
+  i=n;
+  gboolean can_convert=TRUE;
+  do {
+    ags_debug(5,"%s", gs_oid->str);
+    
+    /* XXX comprobar si tabla */
+    g_string_truncate(gs_oid, oid_base_len);
+
+    /* Si es TRAP, añadimos y continuamos */
+    if(t->type==TYPE_NOTIFTYPE) {
+      self_add_trap(self, sds, t, gs_oid);
+      continue;
+    } 
+
+    g_string_append_printf(gs_oid, ".%d", i);
+
+    switch(t->type) {
+    case 0:
+      break;
+    case TYPE_OCTETSTR:
+      ags_debug(6,"Octet String");
+      limit=g_param_spec_string(t->label, t->label, t->label,
+				"",
+				G_PARAM_WRITABLE | G_PARAM_READABLE);
+      /* XXX checkeo rango (tamaño mín y max de cadena) */
+      break;
+    case TYPE_OBJID:
+      limit=ags_param_spec_objid(t->label, t->label, t->label,
+				 "",
+				 G_PARAM_WRITABLE | G_PARAM_READABLE);
+      /* XXX checkeo rango (tamaño mín y max de cadena) */
+      break;
+    case TYPE_INTEGER:
+    case TYPE_INTEGER32:
+      ags_debug(6,"Integer");
+      if(t->ranges) {
+	limit=g_param_spec_int(t->label, t->label, t->label,         /* nombre, blurb, desc */
+			       t->ranges->low, t->ranges->high,      /* max, min */
+			       t->ranges->low,                       /* default */
+			       G_PARAM_WRITABLE | G_PARAM_READABLE); /* XXX en función de access ? */
+//       } else if(t->enums) {
+	/* XXX crear GEnumClass */
+	/* XXX crear GParamSpecEnum */
+	/* */
+      } else {
+	limit=g_param_spec_int(t->label, t->label, t->label,         /* nombre, blurb, desc */
+			       G_MININT, G_MAXINT,                   /* max, min */
+			       0,                                    /* default */
+			       G_PARAM_WRITABLE | G_PARAM_READABLE); /* XXX en función de access ? */
+      }
+      break;
+    case TYPE_COUNTER:
+      limit=ags_param_spec_counter32(t->label, t->label, t->label,         /* nombre, blurb, desc */
+				     G_MININT, G_MAXINT,                   /* max, min */
+				     0,                                    /* default */
+				     G_PARAM_WRITABLE | G_PARAM_READABLE); /* XXX en función de access ? */
+      break;
+    case TYPE_GAUGE:
+      limit=ags_param_spec_gauge32(t->label, t->label, t->label,         /* nombre, blurb, desc */
+				   G_MININT, G_MAXINT,                   /* max, min */
+				   0,                                    /* default */
+				   G_PARAM_WRITABLE | G_PARAM_READABLE); /* XXX en función de access ? */
+      break;
+    case TYPE_TIMETICKS:
+      limit=ags_param_spec_timeticks(t->label, t->label, t->label,         /* nombre, blurb, desc */
+				     G_MININT, G_MAXINT,                   /* max, min */
+				     0,                                    /* default */
+				     G_PARAM_WRITABLE | G_PARAM_READABLE); /* XXX en función de access ? */
+      break;
+    default:
+      can_convert=FALSE;
+      break;
+    }
+
+    if(can_convert) {
+      limits_add(LIMITSIF(sds), limit);
+      create_add(CREATEIF(sds), gs_oid->str, t->label);
+    }
+
+  } while(--i>0);
+  
+
+  if(t->child_list) {
+    spc++;
+    /* XXX pasar tamaño si tabla */
+    /* XXX se crean objetos ".0" de mas */
+    n=(int)g_hash_table_lookup(CM_MIBINIT(self)->_priv->tbl_len, gs_oid->str);
+    ags_debug(1,"LEIDO |%s|=N: %d", gs_oid->str,  n);
+    if( n>=0 ) /* Se puede especificar negativo en "tables" para omitir */
+      self_test_dump_mib(self, sds, t->child_list);
+    n=0;
+    /* XXX fin tabla */
+    spc--;
+  }
+  if(t->next_peer) {
+    self_test_dump_mib(self, sds, t->next_peer);
+  }
+  
+  g_string_free(gs_oid, TRUE);
+}
+
+public
+int
+cminit(self, AgsSdsCore *s, char *root_node)
+{
+  struct tree* head=get_tree_head();
+  clear_tree_flags(head);
+  struct tree *t=find_best_tree_node(root_node, head, NULL);
+  if(!t || !t->child_list) {
+    g_critical("No se encuentra nodo %s.", root_node);
+    return -1; /* error */
+  }
+  self_test_dump_mib(self, s, t->child_list);
+
+  return 0;
+}
+
+}
+
+%{
+  GObject *(*cmmibinit_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}
+
+%{
+  /*@}*/
+%}

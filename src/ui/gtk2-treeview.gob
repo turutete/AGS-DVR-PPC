@@ -1,0 +1,491 @@
+%{
+/**
+   \page gtk2treeview Gtk2TreeView
+   \section gtk2treeview_desc DESCRIPCIÓN
+      Vista de árbol.
+   \section gtk2treeview_reqs REQUISITOS
+     \subsection gtk2treeview_deps Dependencias
+        -# container_obj
+	-# model_obj*
+     \subsection gtk2treeview_pres Precarga
+        -# \ref xml2tslibxml2
+     \subsection gtk2treeview_evs  Eventos
+        -# model_obj
+	   -# "row-inserted"
+     \subsection gtk2treeview_cfs Configuración
+        -# container_name
+	   - Tipo: G_TYPE_STRING
+	   - Requerido
+	   - Descripción: Nombre del "widget" contenedor en el que empaquetar la vista.
+	-# visible_column
+	   - Tipo: G_TYPE_STRING
+	   - Opcional
+	   - Descripción: Nombre de la columna para filtrar la vista. Si el valor en esta columna
+	   es verdadero, se muestra la fila, sino, se oculta. Por defecto se muestran todas las filas.
+	-# visible_rules
+	   - Tipo: CfTable
+	   - Opcional
+	   - Descripción: XXX
+	-# columns
+	   - Tipo: CfTable
+	   - Requerido
+	   - Descripción: Tabla de configuración para definir las columnas de la vista.
+	   - Formato: XXX
+	-# root_rules
+	   - Tipo: CfTable
+	   - Opcional
+	   - Descripción: XXX
+	   - Formato: XXX
+     \subsection gtk2treeview_reqpros Propiedades
+        NINGUNA*
+   \section gtk2treeview_feas CARACTERÍSTICAS
+     \subsection gtk2treeview_ifs  Implementa
+        NINGUNA*
+     \subsection gtk2treeview_sigs Señales
+        -# changed_rowsig*
+     \subsection gtk2treeview_props Propiedades
+        -# visible_column*
+*/
+%}
+
+%h{
+#include <gtk/gtk.h>
+#include <ags-cf.h>
+// #include <ags-sdsx.h>
+#include <gtk2-treestore.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "gtk2-treeview"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+requires 2.0.0
+
+class Gtk2:TreeView from Gtk:Tree:View {
+
+private GtkTreeStore *treestore;    /* Modelo sin filtrar */
+private GtkTreeModelFilter *filter; /* Modelo filtrado    */
+private AgsCf *cf;
+private CfTable my_cft;
+private gint visible_column=-1;
+  property INT visible_column
+  (nick = "Visible column",
+   blurb = "Boolean column for filtering.")
+  set { self->_priv->visible_column = g_value_get_int (VAL); }
+  get { g_value_set_int (VAL, self->_priv->visible_column); } ;
+private gint sort_column=-1;
+  property INT sort_column
+  (nick = "Sort column",
+   blurb = "Column for sorting.")
+  set { self->_priv->sort_column = g_value_get_int (VAL); }
+  get { g_value_set_int (VAL, self->_priv->sort_column); } ;
+private gint sort_order=GTK_SORT_ASCENDING;
+  property INT sort_order
+  (nick = "Sort order",
+   blurb = "Sorting order.")
+  set { self->_priv->sort_order = g_value_get_int (VAL); }
+  get { g_value_set_int (VAL, self->_priv->sort_order); } ;
+
+  /* señales */
+  signal last NONE (BOXED_GTK_TYPE_TREE_ITER) void changed_rowsig(self, GtkTreeIter* iter);
+
+  /* XXX */
+private
+void
+view_selection_func(GtkTreeSelection *selection, gpointer self)
+  {
+    GtkTreeIter     iter;
+    GtkTreeModel   *mfilter;
+    GtkTreeModel   *msort;
+    GtkTreeView    *master;
+    GtkTreeView    *view;
+
+    ags_debug(2, "changing...");
+
+    master=gtk_tree_selection_get_tree_view(selection);
+    // view=GTK_TREE_VIEW(self);
+    msort=gtk_tree_view_get_model(master);
+    mfilter=gtk_tree_model_sort_get_model(GTK_TREE_MODEL_SORT(msort));
+    if(gtk_tree_selection_get_selected (selection, &msort, &iter)) {
+      GtkTreeIter filter_child_iter;
+      GtkTreeIter child_iter;
+      gtk_tree_model_sort_convert_iter_to_child_iter(GTK_TREE_MODEL_SORT(msort), &filter_child_iter, &iter);
+      gtk_tree_model_filter_convert_iter_to_child_iter(GTK_TREE_MODEL_FILTER(mfilter), &child_iter, &filter_child_iter);
+      GtkTreePath *child_path=gtk_tree_model_get_path(GTK_TREE_MODEL(GTK2_TREEVIEW(self)->_priv->treestore), &child_iter);
+      self_change_root(self, child_path);
+      gtk_tree_path_free(child_path);
+    }
+
+    ags_debug(2, "changed!");    
+
+    return;
+  }
+
+private 
+void
+changed_row(GtkTreeSelection *selection, gpointer self)
+  {
+    GtkTreeView*  view;
+    GtkTreeModel *sort;
+    GtkTreeModel *filter;
+    GtkTreeIter   iter;
+
+    view=gtk_tree_selection_get_tree_view(selection);
+    // view=GTK_TREE_VIEW(self);
+    sort=gtk_tree_view_get_model(view);
+    filter=gtk_tree_model_sort_get_model(GTK_TREE_MODEL_SORT(sort));
+    if(gtk_tree_selection_get_selected(selection, &sort, &iter)) {
+      GtkTreeIter filter_child_iter;
+      GtkTreeIter child_iter;
+      gtk_tree_model_sort_convert_iter_to_child_iter(GTK_TREE_MODEL_SORT(sort), &filter_child_iter, &iter);
+      gtk_tree_model_filter_convert_iter_to_child_iter(GTK_TREE_MODEL_FILTER(filter), &child_iter, &filter_child_iter);
+      self_changed_rowsig(self, &child_iter);
+    }
+
+  }
+
+public
+void
+change_root(self, GtkTreePath *path) {
+  // g_object_unref( G_OBJECT( gtk_tree_view_get_model(GTK_TREE_VIEW(self)) ) );
+  g_object_unref( G_OBJECT(GTK2_TREEVIEW(self)->_priv->filter) );
+
+  GtkTreeModelFilter *tmf =self_new_filter(self, path);
+  GtkTreeModelSort   *tms =self_new_sort(self, GTK_TREE_MODEL(tmf) );
+  gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(tms), self->_priv->sort_column, self->_priv->sort_order);
+
+  /* conectar modelo a la vista */
+  gtk_tree_view_set_model (GTK_TREE_VIEW(self), GTK_TREE_MODEL(tms));
+  gtk_tree_view_expand_all(GTK_TREE_VIEW(self));
+
+  /* seleccionar primera fila de la nueva vista */
+  GtkTreeIter       iter;
+  GtkTreeSelection* selection=gtk_tree_view_get_selection(GTK_TREE_VIEW(self));
+
+  gtk_tree_model_get_iter_first(GTK_TREE_MODEL(tms), &iter);
+  gtk_tree_selection_select_iter(selection , &iter);
+
+  /* autoajuste de los anchos de columna */
+  gtk_tree_view_columns_autosize(GTK_TREE_VIEW(self));
+}
+
+private
+GtkTreeModelFilter*
+new_filter(self, GtkTreePath *path) {
+  GtkTreeModelFilter *tmf;
+  GtkTreeStore *tree_store=GTK2_TREEVIEW(self)->_priv->treestore;
+
+  tmf=gtk_tree_model_filter_new(GTK_TREE_MODEL(tree_store), path); /* XXX path configurable */
+
+//   gint visible_column=GTK2_TREEVIEW(self)->_priv->visible_column;
+  gint visible_column;
+  g_object_get(G_OBJECT(self), GTK2_TREEVIEW_GET_PROP_VISIBLE_COLUMN (&visible_column), NULL);
+  if(visible_column>=0) {
+    gtk_tree_model_filter_set_visible_column(tmf, visible_column);
+  }
+
+  GTK2_TREEVIEW(self)->_priv->filter=tmf;
+
+  return tmf;
+}
+
+private
+GtkTreeModelSort*
+new_sort(self, GtkTreeModel* model) {
+  GtkTreeModelSort *tms;
+
+  tms=GTK_TREE_MODEL_SORT(gtk_tree_model_sort_new_with_model(model));
+
+  return tms;
+}
+
+public 
+void
+cell_edited_callback (GtkCellRendererText *cell, gchar *path_string, gchar *new_text,gpointer self) 
+  {
+    GtkTreeModelFilter *filter=GTK_TREE_MODEL_FILTER(gtk_tree_view_get_model(GTK_TREE_VIEW(self)));
+    GtkTreeModel *model=gtk_tree_model_filter_get_model(filter);
+
+    GtkTreeIter iter;
+    GtkTreeIter child_iter;
+
+    gtk_tree_model_get_iter_from_string(GTK_TREE_MODEL(filter), &iter, path_string);
+    gtk_tree_model_filter_convert_iter_to_child_iter(filter, &child_iter, &iter);
+
+    gint cn=GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(cell), "column_num"));
+
+    gtk_tree_store_set(GTK_TREE_STORE(model), &child_iter, cn, new_text, -1);
+  }
+
+public
+void
+cell_toggled_callback (GtkCellRendererToggle *cell, gchar *path_string, gpointer self)
+  {
+    GtkTreeModel *sort  =gtk_tree_view_get_model(GTK_TREE_VIEW(self));
+    GtkTreeModel *filter=gtk_tree_model_sort_get_model(GTK_TREE_MODEL_SORT(sort));
+    GtkTreeModel *model =gtk_tree_model_filter_get_model(GTK_TREE_MODEL_FILTER(filter));
+
+    GtkTreeIter iter;
+    GtkTreeIter filter_child_iter;
+    GtkTreeIter child_iter;
+
+    gtk_tree_model_get_iter_from_string(sort, &iter, path_string);
+    gtk_tree_model_sort_convert_iter_to_child_iter(GTK_TREE_MODEL_SORT(sort), &filter_child_iter, &iter);
+    gtk_tree_model_filter_convert_iter_to_child_iter(GTK_TREE_MODEL_FILTER(filter), &child_iter, &filter_child_iter);
+
+    gint cn=GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(cell), "column_num"));
+    gboolean status;
+    
+    gtk_tree_model_get(model, &child_iter, cn, &status, -1);
+    gtk_tree_store_set(GTK_TREE_STORE(model), &child_iter, cn, !status, -1);
+  }
+
+private
+void
+add_renderer(self, AgsCf *cf, CfTable cell, GtkTreeViewColumn *col, GtkTreeModelFilter *tmf)
+  {
+    GtkCellRenderer *renderer;
+    char *col_name;
+    GtkTreeStore *tree_store=GTK2_TREEVIEW(self)->_priv->treestore;
+    
+    col_name=config_get_string(CONFIGIF(cf), cell, "name");
+    gint cn=treestore_get_column_number(TREESTOREIF(tree_store), col_name);
+    ags_debug(6, "name=%s cn=%d", col_name, cn);
+    if(col_name)
+      free(col_name);
+    
+    GType type=gtk_tree_model_get_column_type(GTK_TREE_MODEL(tmf), cn);
+    
+    gchar *properties[] = { "text", "active", "pixbuf", "markup" };
+    gint property=-1;
+    
+    if(type==G_TYPE_BOOLEAN) {
+      renderer = gtk_cell_renderer_toggle_new();
+      g_signal_connect(renderer, "toggled", (GCallback) self_cell_toggled_callback, self); 
+      property = 1; /* active */
+    } else if(type==GDK_TYPE_PIXBUF) { 
+      renderer = gtk_cell_renderer_pixbuf_new();
+      property = 2;
+    } else if (type==G_TYPE_STRING || type==G_TYPE_INT) {
+      renderer = gtk_cell_renderer_text_new();
+      g_signal_connect(renderer, "edited", (GCallback) self_cell_edited_callback, self);
+      if(config_get_boolean(CONFIGIF(cf), cell, "markup")) {
+	property = 3; /* markup */
+      } else {
+	property = 0; /* text */
+      }
+    } else {
+      return;
+    }
+    
+    g_object_set_data(G_OBJECT(renderer), "column_num", GUINT_TO_POINTER(cn));
+    gtk_tree_view_column_pack_start(col, renderer, FALSE);
+    
+    if(property>=0)
+      gtk_tree_view_column_add_attribute(col, renderer, properties[property], cn);
+    
+    /* cargar properties de renderer  */
+    CfTable props_cft=config_get_table(CONFIGIF(cf), cell, "properties");
+    set_object_props(G_OBJECT(renderer), CONFIGIF(cf), props_cft);
+
+  }
+
+private
+void
+visible(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer self)
+  {
+    gboolean visible;
+    /* XXX limpiar columna? */
+
+    /* ineficiente, pero solo se hace esto cuando se añade una fila al store */
+    if(GTK2_TREEVIEW(self)->_priv->visible_column != -1) {
+      CfTable rules=config_get_table(CONFIGIF(GTK2_TREEVIEW(self)->_priv->cf), GTK2_TREEVIEW(self)->_priv->my_cft, "visible_rules");
+      GArray *array=treestore_select(TREESTOREIF(model), CONFIGIF(GTK2_TREEVIEW(self)->_priv->cf), rules);
+      gint i;
+      for(i=0;i<array->len;i++) {
+	gtk_tree_model_get(model, &g_array_index(array, GtkTreeIter, i), GTK2_TREEVIEW(self)->_priv->visible_column, &visible, -1);
+	if(!visible)
+	  gtk_tree_store_set(GTK_TREE_STORE(model), &g_array_index(array, GtkTreeIter, i), GTK2_TREEVIEW(self)->_priv->visible_column, TRUE, -1);
+      }
+      ags_debug(1, "visible i=%d", i);
+      g_array_free(array, TRUE);
+    }
+}
+
+public 
+GObject *
+new (char *tv_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  GObject *mod_obj;
+  GValue *v;
+  GtkTreeModelFilter *tmf;
+  GtkTreeModelSort   *tms;
+  GtkWidget *mainwin;
+  GtkTreeStore *tree_store;
+  char *container_name;
+  Gtk2TreeView *master;
+
+  /* tree_store, mainwin de configuración. */
+  GTK2_TREEVIEW(ret)->_priv->my_cft=config_get_table(CONFIGIF(cf), cft, tv_name);
+  GTK2_TREEVIEW(ret)->_priv->cf=cf;
+  master=GTK2_TREEVIEW(config_get_object(CONFIGIF(cf), GTK2_TREEVIEW(ret)->_priv->my_cft, "master"));
+
+  /* mod_obj=model_obj */
+  mod_obj=config_get_object(CONFIGIF(cf), GTK2_TREEVIEW(ret)->_priv->my_cft, "model_obj");
+  tree_store=GTK_TREE_STORE(mod_obj);
+  GTK2_TREEVIEW(ret)->_priv->treestore=tree_store;
+
+  /* mod_obj=container */
+  mod_obj=config_get_object(CONFIGIF(cf), GTK2_TREEVIEW(ret)->_priv->my_cft, "container_obj");
+
+  container_name=config_get_string(CONFIGIF(cf), GTK2_TREEVIEW(ret)->_priv->my_cft, "container_name");
+  ags_debug(1,"container_name = %s", container_name);
+  mainwin=g_object_get_data(mod_obj, container_name);
+  free(container_name);
+
+  /* visible column */
+  gchar *visible_column=config_get_string(CONFIGIF(cf), GTK2_TREEVIEW(ret)->_priv->my_cft, "visible_column");
+  if(visible_column) {
+    GTK2_TREEVIEW(ret)->_priv->visible_column=treestore_get_column_number(TREESTOREIF(tree_store), visible_column);
+    free(visible_column);
+  }
+  self_visible(GTK_TREE_MODEL(tree_store), NULL, NULL, ret); /* no hacen falta los parámetros, no los usa */
+
+  /* sort column */
+  gchar *sort_column=config_get_string(CONFIGIF(cf), GTK2_TREEVIEW(ret)->_priv->my_cft, "sort_column");
+  if(sort_column) {
+    GTK2_TREEVIEW(ret)->_priv->sort_column=treestore_get_column_number(TREESTOREIF(tree_store), sort_column);
+    free(sort_column);
+  }
+
+  /* sort order*/
+  GTK2_TREEVIEW(ret)->_priv->sort_order=config_get_int(CONFIGIF(cf), GTK2_TREEVIEW(ret)->_priv->my_cft, "sort_order");
+
+  /* root rules */
+  GtkTreePath* root_path=NULL;
+  CfTable root_rules=config_get_table(CONFIGIF(cf), GTK2_TREEVIEW(ret)->_priv->my_cft, "root_rules");
+
+  /* i18n */
+  GString *gs=g_string_new("");
+  gint k=1;
+  CfTable first;
+  for(g_string_printf(gs, "%d", k)
+      ;config_check_table(CONFIGIF(cf), first=config_get_table(CONFIGIF(cf), root_rules, gs->str))
+      ;g_string_printf(gs, "%d", ++k)) {
+    gchar *s = config_get_string(CONFIGIF(cf), first, "name");
+    printf("i18n(root_rules->name) %s=%s\n",s,gettext(s)); fflush(NULL);
+    config_set_string(CONFIGIF(cf), first, "name", gettext(s));
+  }
+  /* i18n */
+
+  if(config_check_table(CONFIGIF(cf), root_rules)) {
+    GArray *array=treestore_select(TREESTOREIF(tree_store), CONFIGIF(cf), root_rules);
+    if(array && array->len) {
+      GtkTreeIter* root_iter=&g_array_index(array, GtkTreeIter, 0);
+      root_path=gtk_tree_model_get_path(GTK_TREE_MODEL(tree_store), root_iter);
+    } else {
+      g_critical("No se encontró 'root' especificado.");
+    }
+    if(array)
+      g_array_free(array, TRUE);
+  }
+  /**/
+
+  tmf=self_new_filter(GTK2_TREEVIEW(ret), root_path);
+  tms=self_new_sort  (GTK2_TREEVIEW(ret), GTK_TREE_MODEL(tmf) );
+
+  gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(tms), GTK2_TREEVIEW(ret)->_priv->sort_column, GTK2_TREEVIEW(ret)->_priv->sort_order);
+
+  if(root_path)
+    gtk_tree_path_free(root_path);
+
+  /**/
+
+  GtkTreeSelection *selection;
+  char *col_title;
+  
+  /* leer columnas de configuración */
+  CfTable columns;
+  CfTable column;
+  GtkTreeViewColumn *col;
+  CfTable cells;
+  CfTable cell;
+  gint i,j;
+  
+  columns=config_get_table(CONFIGIF(cf), GTK2_TREEVIEW(ret)->_priv->my_cft, "columns");  
+
+  /* cargar properties de treeview */
+  CfTable props_cft=config_get_table(CONFIGIF(cf), columns, "properties");
+  set_object_props(G_OBJECT(ret), CONFIGIF(cf), props_cft);
+
+  i=1;
+  GString *gs_i=g_string_new("");
+  GString *gs_j=g_string_new("");
+  for(g_string_printf(gs_i, "%d", i)
+      ;config_check_table(CONFIGIF(cf), column=config_get_table(CONFIGIF(cf), columns, gs_i->str))
+      ;g_string_printf(gs_i, "%d", ++i)) {
+    col = gtk_tree_view_column_new();
+
+    /* cargar properties de column */
+    props_cft=config_get_table(CONFIGIF(cf), column, "properties");
+    /* i18n */
+    gchar *s=config_get_string(CONFIGIF(cf), props_cft, "title");
+    printf("i18n(properties->title) %s=%s\n",s,gettext(s)); fflush(NULL);
+    config_set_string(CONFIGIF(cf), props_cft, "title", gettext(s));
+    /* i18n */
+    set_object_props(G_OBJECT(col), CONFIGIF(cf), props_cft);
+
+    /* insertar columna en la vista */
+    gtk_tree_view_insert_column(GTK_TREE_VIEW(ret), col, -1);
+
+    /* bucle "cells" (renderers) */
+    cells=config_get_table(CONFIGIF(cf), column, "cells");
+    j=1;
+    for(g_string_printf(gs_j, "%d", j)
+        ;config_check_table(CONFIGIF(cf), cell=config_get_table(CONFIGIF(cf), cells, gs_j->str))
+        ;g_string_printf(gs_j, "%d", ++j)) {
+      ags_debug(2, "add_renderer gs_j=%s", gs_j->str);
+      self_add_renderer(GTK2_TREEVIEW(ret), cf, cell, col, tmf);
+    }
+  }
+
+  if(master) {
+    selection=gtk_tree_view_get_selection(GTK_TREE_VIEW(master));
+    gtk_tree_selection_set_mode(selection, GTK_SELECTION_BROWSE);
+    ags_debug(2, "Master: %p selection: %p", master, selection);
+    g_signal_connect(selection, "changed", (GCallback) self_view_selection_func, ret);
+  }
+
+  /* conectar modelo a la vista */
+  gtk_tree_view_set_model (GTK_TREE_VIEW (ret), GTK_TREE_MODEL(tms));
+  gtk_tree_view_expand_all(GTK_TREE_VIEW(ret));
+  
+  /* añadir vista al layout */
+  gtk_container_add (GTK_CONTAINER (mainwin), GTK_WIDGET(ret));
+
+  /* para lanzar señal changed_row */
+  selection=gtk_tree_view_get_selection(GTK_TREE_VIEW(ret));
+  g_signal_connect(selection, "changed", (GCallback) self_changed_row, ret);
+
+  /* para actualizar visibilidad */
+  g_signal_connect_after(G_OBJECT(tree_store), "row-inserted", (GCallback) self_visible, ret);
+
+  gtk_widget_show_all(GTK_WIDGET(ret));
+
+  return G_OBJECT(ret);
+}
+
+}
+
+%{
+  GObject *(*gtk2treeview_new())(char*, AgsCf*, CfTable)
+    {
+      return gtk2_treeview_new;
+    }
+%}

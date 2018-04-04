@@ -1,0 +1,248 @@
+%{
+/**
+   \page gtk2line Gtk2Line
+   \section gtk2line_desc DESCRIPCIÓN
+      Permite dibujar lineas sobre un GtkLayout.
+   \section gtk2line_reqs REQUISITOS
+     \subsection gtk2line_deps Dependencias
+        -# container_obj
+     \subsection gtk2line_pres Precarga
+        NINGUNO*
+     \subsection gtk2line_evs  Eventos
+        -# container_obj->"container_name"
+	   -# expose_event
+     \subsection gtk2line_cfs Configuración
+        -# container_name
+	   - Tipo: G_TYPE_STRING
+	   - Requerida
+	   - Descripción: Nombre del "widget" GtkLayout sobre el que dibujar las lineas.
+	-# lines
+	   - Tipo: CfTable
+	   - Requerida
+	   - Descripción: Tabla especificando las lineas a dibujar en el GtkLayout.
+	   - Formato: XXX
+	-# top
+	   - Tipo: G_TYPE_BOOLEAN
+	   - Opcional (falso por defecto)
+	   - Descripción: Si verdadero, las líneas se dibujan encima de los "widgets" contenidos
+	   en el "layout", sino, se dibujan primero las líneas y encima de estas los "widgets".
+     \subsection gtk2line_reqpros Propiedades
+        NINGUNA
+   \section gtk2line_feas CARACTERÍSTICAS
+     \subsection gtk2line_ifs  Implementa
+        NINGUNA
+     \subsection gtk2line_sigs Señales
+        NINGUNA
+     \subsection gtk2line_props Propiedades
+        -# color
+	   - Tipo: G_TYPE_STRING
+	   - Descripción: Una cadena especificando el color de las lineas. Puede ser de cualquier forma aceptada por
+	   XParseColor (ver /usr/lib/X11/rgb.txt).
+	-# width
+	   - Tipo: G_TYPE_INT
+	   - Descripción: Ancho de línea.
+	-# style
+	   - Tipo: G_TYPE_INT
+	   - Descripción: Estilo de línea (ver GdkLineStyle).
+	-# join
+	   - Tipo: G_TYPE_INT
+	   - Descripción: Tipo de junta entre segmentos (ver GdkJoinStyle).
+	-# cap
+	   - Tipo: G_TYPE_INT
+	   - Descripción: Tipo de extremo de línea (ver GdkCapStyle).
+*/
+%}
+
+requires 2.0.0
+
+%h{
+#include <gtk/gtk.h>
+#include <ags-cf.h>
+%}
+
+%privateheader{
+  typedef struct _LineData LineData;
+
+  struct _LineData {
+    GArray       *points;
+  };
+%}
+
+class Gtk2:Line from G:Object {
+
+private GtkLayout*   layout = NULL;
+private GdkGC*       gc = NULL;
+private GdkGCValues* gc_vals = NULL;
+private GHashTable *lines_hashtable  = { g_hash_table_new(g_str_hash, g_str_equal) };
+
+/* props: color, ancho, estilo de linea, unión y extremo */
+property STRING color
+(nick = "Color de línea.",
+ blurb = "Color de línea.",
+ default_value = 0)
+  set {
+  GdkGCValues* gc_vals=self->_priv->gc_vals;
+  const gchar* c = g_value_get_string(VAL);
+  gdk_color_parse(c, &(gc_vals->foreground) );
+  GdkColormap* colormap=gdk_colormap_get_system();
+  gdk_colormap_alloc_color(colormap, &(gc_vals->foreground), FALSE, TRUE);
+  gtk_widget_queue_draw( GTK_WIDGET(self->_priv->layout) ); }
+  get { /* XXX */ };
+property INT width
+(nick = "Ancho de línea.",
+ blurb = "Ancho de línea.",
+ default_value = 2)
+  set { self->_priv->gc_vals->line_width = g_value_get_int (VAL); 
+  gtk_widget_queue_draw( GTK_WIDGET(self->_priv->layout) ); }
+  get { g_value_set_int (VAL, self->_priv->gc_vals->line_width); };
+property ENUM style
+(nick = "Estilo de línea.",
+ blurb = "Estilo de línea.",
+ enum_type = Gdk:Line:Style,
+ default_value = GDK_LINE_SOLID)
+  set { self->_priv->gc_vals->line_style = g_value_get_enum (VAL); 
+  gtk_widget_queue_draw( GTK_WIDGET(self->_priv->layout) ); }
+  get { g_value_set_enum (VAL, self->_priv->gc_vals->line_style); };
+property ENUM join
+(nick = "Estilo de unión.",
+ blurb = "Estilo de unión.",
+ enum_type = Gdk:Join:Style,
+ default_value = GDK_JOIN_MITER)
+  set { self->_priv->gc_vals->join_style = g_value_get_enum (VAL); 
+  gtk_widget_queue_draw( GTK_WIDGET(self->_priv->layout) ); }
+  get { g_value_set_enum (VAL, self->_priv->gc_vals->join_style); };
+property ENUM cap
+(nick = "Estilo de extremo.",
+ blurb = "Estilo de extremo.",
+ enum_type = Gdk:Cap:Style,
+ default_value = GDK_CAP_NOT_LAST)
+  set { self->_priv->gc_vals->join_style = g_value_get_enum (VAL);
+  gtk_widget_queue_draw( GTK_WIDGET(self->_priv->layout) ); }
+  get { g_value_set_enum (VAL, self->_priv->gc_vals->join_style); };
+
+private void expose_event(gpointer key, gpointer value, gpointer self) 
+  {
+    LineData*  line_data = (LineData*) value;
+    GArray*    points=line_data->points;
+
+    GtkWidget* widget=GTK_WIDGET(GTK2_LINE(self)->_priv->layout);
+
+    if(!GTK2_LINE(self)->_priv->gc) {
+      GTK2_LINE(self)->_priv->gc = gdk_gc_new(GTK_LAYOUT(widget)->bin_window);
+    }
+
+    GdkGC *gc=GTK2_LINE(self)->_priv->gc;
+
+    gdk_gc_copy(gc, widget->style->fg_gc[GTK_WIDGET_STATE (widget)]);
+    
+    gdk_gc_set_values(gc, GTK2_LINE(self)->_priv->gc_vals,
+		      GDK_GC_FOREGROUND | GDK_GC_LINE_WIDTH |   GDK_GC_LINE_STYLE | GDK_GC_CAP_STYLE | GDK_GC_JOIN_STYLE);
+    
+    gdk_draw_lines(GTK_LAYOUT (widget)->bin_window, 
+ 		   gc,
+		   (GdkPoint*)points->data, points->len);
+  }
+
+private 
+gboolean
+expose_event_callback(GtkWidget *widget, GdkEventExpose *event, gpointer self)
+  {    
+    g_hash_table_foreach(GTK2_LINE(self)->_priv->lines_hashtable, self_expose_event, self);
+
+    return FALSE;
+  }
+
+public
+GObject*
+new (char *wr_name, AgsCf *cf, CfTable cft) 
+  {
+    GObject *ret = G_OBJECT(GET_NEW);
+    CfTable my_cft;
+    GObject*   container_obj;
+    char* container_name;
+
+    my_cft=config_get_table(CONFIGIF(cf), cft, wr_name);
+    container_obj=config_get_object(CONFIGIF(cf), my_cft, "container_obj");
+    container_name=config_get_string(CONFIGIF(cf), my_cft, "container_name");
+    GtkLayout* layout=g_object_get_data(container_obj, container_name);
+    /* clean */
+    free(container_name);
+
+    GTK2_LINE(ret)->_priv->layout = layout;
+
+    /* gc_vals */
+    GTK2_LINE(ret)->_priv->gc_vals = g_new0(GdkGCValues, 1);
+    /* valores iniciales color, ancho, y estilo de linea, junta y extremo */
+    GdkColor color={0, 0,0,0};
+    /* XXX valores por defecto */
+    self_set_line_attr(GTK2_LINE(ret)->_priv->gc_vals, &color, 2, 0,0,0); 
+
+    gboolean top=config_get_boolean(CONFIGIF(cf), my_cft, "top");
+    if(top) {
+      g_signal_connect_after (G_OBJECT (layout), "expose_event",
+			      G_CALLBACK (self_expose_event_callback), ret);
+    } else {
+      g_signal_connect (G_OBJECT (layout), "expose_event",
+			G_CALLBACK (self_expose_event_callback), ret);
+    }
+    
+    char *line_name;
+    CfTable lines, line;
+    GdkPoint point;
+    
+    lines=config_get_table(CONFIGIF(cf), my_cft, "lines");
+    if(!config_check_table(CONFIGIF(cf), lines))
+      g_error("No se encontraron 'lines' en configuración de Gtk2Line");
+
+    for(line_name=NULL;line_name=config_getnextkey(CONFIGIF(cf), lines, line_name);) {
+      line = config_get_table(CONFIGIF(cf), lines, line_name);
+      if(config_check_table(CONFIGIF(cf), line)) {
+	GArray* points = g_array_new (FALSE, FALSE, sizeof(GdkPoint) ); /* GArray para guardar los puntos de la linea */
+
+	/* bucle para recorrer claves numéricas ("1", "2", ...) */
+	int i=1;
+	GString *gs_i=g_string_new("");
+	CfTable point_cft;
+	for(g_string_printf(gs_i, "%d", i)
+	      ;config_check_table(CONFIGIF(cf), point_cft=config_get_table(CONFIGIF(cf), line, gs_i->str))
+	      ;g_string_printf(gs_i, "%d", ++i)) {
+	  point.x=config_get_int(CONFIGIF(cf), point_cft, "x");
+	  point.y=config_get_int(CONFIGIF(cf), point_cft, "y");
+	  points=g_array_append_val(points, point);
+	}
+
+	LineData* line_data = g_new(LineData, 1);
+	/* puntos */
+	line_data->points=points;
+
+	g_hash_table_insert(GTK2_LINE(ret)->_priv->lines_hashtable, (gpointer) g_strdup(line_name), (gpointer) line_data);
+      }
+    }
+
+    return ret;
+  }
+
+private
+void
+set_line_attr(GdkGCValues *gc_vals, GdkColor* color, gint line_width, GdkLineStyle line_style, GdkCapStyle cap_style, GdkJoinStyle join_style)
+  {
+    if(gc_vals) {
+      if(color) {	
+	memcpy(&(gc_vals->foreground), color, sizeof(GdkColor));
+	GdkColormap* colormap=gdk_colormap_get_system();
+	gdk_colormap_alloc_color(colormap, &(gc_vals->foreground), FALSE, TRUE);
+      }
+      gc_vals->line_width=line_width;
+      gc_vals->line_style=line_style;
+      gc_vals->cap_style=cap_style;
+      gc_vals->join_style=join_style;
+    }
+  }
+}
+
+%{
+  GObject *(*gtk2line_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

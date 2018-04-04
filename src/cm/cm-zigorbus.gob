@@ -1,0 +1,447 @@
+%{
+/**
+   \file cm-zigorbus.c
+ */
+/**
+   \page cmzigorbus CmZigorBus
+   \section cmzigorbus_desc DESCRIPCIÓN
+   Lee y escribe tramas en el bus.
+   Configuración de escritura (publicación):
+      -# árbitro sin control periódico (control periódico externo).
+         -# queue=false (Se escriben directamente las tramas que llegan. Requiere control periódico externo).
+	 -# timeout=0 (Las tramas se publican en cuanto llegan).
+	 -# da=DA propio (no necesario)
+	 -# da_gestora=DA gestora (para evitar problema con eco)
+      -# árbitro con control periódico
+         -# queue=true (publicamos desde la cola con periodicidad "timeout")
+	 -# timeout=periodo de publicación en el bus
+	 -# da=DA propio (no necesario)
+	 -# da_gestora=DA gestora (para evitar problema con eco)
+      -# NO árbitro
+         -# queue=true (debemos esperar a trama PREGUNTA_POLL)
+	 -# timeout=0 (no publicamos periodicamente, solo ante PREGUNTA_POLL)
+	 -# da=DA propio (requerido)
+	 -# da_gestora=DA de la gestora
+   \section cmzigorbus_reqs REQUISITOS
+     \subsection cmzigorbus_deps Dependencias
+        -# rbuffer
+	   -# \ref textbufferif
+        -# wbuffer
+	   -# \ref textbufferif
+     \subsection cmzigorbus_pres Precarga
+     NINGUNA
+     \subsection cmzigorbus_evs  Eventos
+        -# wbuffer
+	   -# \ref changed
+     \subsection cmzigorbus_cfs Configuración
+        -# bus_filename
+	   - Tipo: G_TYPE_STRING
+	   - Requerida
+	   - Descripción: Fichero de bus.
+	-# queue
+	   - Tipo: G_TYPE_BOOLEAN
+	   - Opcional (por defecto FALSE)
+	   - Descripción: Si verdadero, se usa cola de escritura al bus, sino, escritura directa.
+	-# da_gestora
+	   - Tipo: G_TYPE_STRING
+	   - Requerida si no somos árbitro.
+	   - Descripción: DA de la gestora para sustituir en lectura de tramas PREGUNTA_POLL.
+	-# da
+	   - Tipo: G_TYPE_STRING
+	   - Requerida si no somos árbitro.
+	   - Descripción: DA propio para saber cuando nos dan acceso al bus.
+        -# timeout
+	   - Tipo: G_TYPE_INT
+	   - Opcional (Por defecto no se publica periódicamente).
+	   - Descripción: Tiempo entre publicaciones (ms).
+   \section cmzigorbus_feas CARACTERÍSTICAS
+     \subsection cmzigorbus_ifs  Implementa
+     NINGUNA
+     \subsection cmzigorbus_sigs Señales
+        -# frameoutsig : Indica que se ha escrito trama al bus. Útil para implementar productor/consumidor.
+   \section cmzigorbus_srcs FUENTES
+     - \ref cm-zigorbus.c
+     - \ref cm-zigorbus.h
+*/
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-zigorbus"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+
+%h{
+#include <ags-cm.h>
+#include <ags-cf.h>
+#include <textbufferif.h>
+%}
+
+%privateheader{
+
+#include <sys/time.h>  /*temporizadores: gettimeofday...*/
+#include <stdio.h>
+
+#define BUFFER_MAX 1
+#define QUEUE_MAX 20
+
+enum {
+  INIT=0,
+  START,
+  FC,
+  DA,
+  ID,
+  DATA,
+  CHK
+};
+
+typedef struct _Trama Trama;
+
+struct _Trama {
+  unsigned int  len; /* 'data' que queda por leer en esta trama */
+  unsigned int  pos; /* byte de 'data' a leer */
+  unsigned char cks; /* 'checksum' */
+
+  unsigned char fc;
+  unsigned char da;
+  unsigned char id;
+  unsigned char data[8];
+};
+
+static void
+remove_list(gpointer data, gpointer user_data) {
+  g_free(data);
+}
+ 
+%}
+
+class Cm:ZigorBus from Ags:Cm {
+
+private unsigned char state = INIT;
+private Trama trama;
+private GObject* rbuffer = NULL unrefwith g_object_unref;
+private GObject* wbuffer = NULL unrefwith g_object_unref;
+private unsigned char my_da=0;
+private GQueue* queue = { g_queue_new(); } destroy {  g_queue_foreach(VAR, remove_list, NULL); g_queue_free(VAR); };
+private GIOChannel* io = NULL destroy { g_io_channel_shutdown(VAR, TRUE, NULL); };
+private gboolean queueflag;
+private unsigned char da_gestora=0;
+private guint timeout=0;
+
+private guint32		temp;
+
+signal last BOOLEAN (POINTER) gboolean frameoutsig(self, char* buffer) ;
+
+public
+GObject*
+new(char* cm_name, AgsCf* cf, CfTable cft) {
+  GObject* ret = G_OBJECT(GET_NEW);
+  CfTable  my_cft = config_get_table(CONFIGIF(cf), cft, cm_name);
+
+  GError* error=NULL;
+
+  const gchar* filename=config_get_string(CONFIGIF(cf), my_cft, "bus_filename");
+  if(filename) {
+    CM_ZIGORBUS(ret)->_priv->io = g_io_channel_new_file(filename, "r+", &error);
+    free(filename);
+  } else {
+    g_error("Error, no se especificó bus_filename.");
+  }
+
+  CM_ZIGORBUS(ret)->_priv->rbuffer=config_get_object(CONFIGIF(cf), my_cft, "rbuffer");
+  CM_ZIGORBUS(ret)->_priv->wbuffer=config_get_object(CONFIGIF(cf), my_cft, "wbuffer");
+
+  CM_ZIGORBUS(ret)->_priv->queueflag=config_get_boolean(CONFIGIF(cf), my_cft, "queue");
+  CM_ZIGORBUS(ret)->_priv->timeout=config_get_int(CONFIGIF(cf), my_cft, "timeout");
+
+  GValue* v;
+  v = config_get(CONFIGIF(cf), my_cft, "da_gestora");
+  if(v) {
+    const gchar*  s = g_value_get_string(v);
+    CM_ZIGORBUS(ret)->_priv->da_gestora=s[0];
+    g_value_unset(v);
+    g_free(v);
+  } else {
+    g_critical("No se especificó DA gestora.");
+  }
+  v = config_get(CONFIGIF(cf), my_cft, "da");
+  if(v) {
+    const gchar*  s = g_value_get_string(v);
+    CM_ZIGORBUS(ret)->_priv->my_da=s[0];
+    g_value_unset(v);
+    g_free(v);
+  } else {
+    g_critical("No se especificó DA.");
+  }
+
+  if(CM_ZIGORBUS(ret)->_priv->io) {
+    g_clear_error(&error);
+    g_io_channel_set_encoding(CM_ZIGORBUS(ret)->_priv->io, NULL, &error);
+    g_io_channel_seek_position(CM_ZIGORBUS(ret)->_priv->io, 0, G_SEEK_CUR, &error);  /*XXX:mayor seguridad para hacer unbuffered*/
+    g_io_channel_set_buffered(CM_ZIGORBUS(ret)->_priv->io, FALSE);
+    ags_debug(1,"bus buffered=%d", g_io_channel_get_buffered(CM_ZIGORBUS(ret)->_priv->io));
+    /*XXX: salir si buffered*/
+    if( g_io_channel_get_buffered(CM_ZIGORBUS(ret)->_priv->io) ) exit(-1);
+
+    ags_debug(1, "IO buffer size=%d", g_io_channel_get_buffer_size(CM_ZIGORBUS(ret)->_priv->io) );
+    /*g_io_add_watch(CM_ZIGORBUS(ret)->_priv->io, G_IO_IN, self_io_in, (gpointer) ret);*/
+    /*XXX:dar mayor prioridad a la atencion al bus*/
+    g_io_add_watch_full(CM_ZIGORBUS(ret)->_priv->io, G_PRIORITY_HIGH, G_IO_IN, self_io_in, (gpointer) ret, NULL);
+
+    /* Conectar con buffer de escritura */
+    g_signal_connect(G_OBJECT(CM_ZIGORBUS(ret)->_priv->wbuffer), "changed", (GCallback) self_changed, (gpointer) ret);
+    /* Publicación periódica en el bus si se especificó "timeout" */
+    if(CM_ZIGORBUS(ret)->_priv->timeout) {
+      g_timeout_add(CM_ZIGORBUS(ret)->_priv->timeout, self_io_out, (gpointer) ret);
+    }
+  } else {
+    g_critical("No se pudo abrir BUS Zigor.");
+  }
+
+  self_inicia_temp(&CM_ZIGORBUS(ret)->_priv->temp);
+
+  return ret;
+}
+
+private
+void
+changed (GObject* textbuffer, gpointer self)
+  {
+    gchar* buffer = textbuffer_get(TEXTBUFFERIF(textbuffer), NULL);
+
+    /* siempre se usa cola, la diferencia está en si se acumulan objetos o se vacía inmediatamente */
+    
+    /* Encolamos la trama */
+    g_queue_push_tail(CM_ZIGORBUS(self)->_priv->queue, (gpointer) buffer);
+
+    /* Si cola llena, descartamos trama mas vieja ("head") */
+    if( g_queue_get_length(CM_ZIGORBUS(self)->_priv->queue) > QUEUE_MAX ) {
+      char* drop=g_queue_pop_head(CM_ZIGORBUS(self)->_priv->queue);
+      g_free(drop);
+      printf("cm-zigorbus.changed -> OJO BORRANDO TRAMAS DE LA COLA.");
+      printf("cm-zigorbus.changed -> elementos en cola TRAS BORRAR: %d\n", g_queue_get_length(CM_ZIGORBUS(self)->_priv->queue));
+    }
+
+    /* ¿Escritura inmediata? */
+    if(!CM_ZIGORBUS(self)->_priv->queueflag) {
+      self_io_out(self);
+    }
+  }
+
+private 
+gboolean
+io_out(gpointer self)
+  {
+//printf("..........1\n");fflush(stdout);
+//printf("..........1\n");fflush(stdout);
+    char* buffer=g_queue_pop_head(CM_ZIGORBUS(self)->_priv->queue);
+//printf("..........2\n");fflush(stdout);
+    
+    if(buffer) {
+//printf("..........3\n");fflush(stdout);
+      unsigned char start='\xAA';
+      unsigned char stop='\x55';
+      unsigned char cks;
+      gsize bytes_written;
+      GError* error=NULL;
+
+      /* meter 'start' (0xAA)*/
+//printf("..........4\n");fflush(stdout);
+      g_io_channel_write_chars(CM_ZIGORBUS(self)->_priv->io, &start, 1, &bytes_written, &error); /* XXX "leak"? */
+//printf("..........5\n");fflush(stdout);
+      /* XXX comprobar error */
+      g_clear_error(&error);
+      cks=start;
+
+      /* meter 'buffer' */
+      int i;
+      for(i=0;i<3+(buffer[0] & 0x0F);i++) { /* tamaño DATA = (buffer[0] & 0x0F) */
+	g_io_channel_write_chars(CM_ZIGORBUS(self)->_priv->io, &buffer[i], 1, &bytes_written, &error);
+	/* XXX comprobar error */
+	g_clear_error(&error);
+	cks+=buffer[i];
+      }      
+
+      /* meter 'checksum' */
+      g_io_channel_write_chars(CM_ZIGORBUS(self)->_priv->io, &cks, 1, &bytes_written, &error);
+      /* XXX comprobar error */
+      g_clear_error(&error);
+
+      /* meter 'stop' (0x55) */
+      g_io_channel_write_chars(CM_ZIGORBUS(self)->_priv->io, &stop, 1, &bytes_written, &error);
+      /* XXX comprobar error */
+      g_clear_error(&error);
+
+      /* emitir señal */
+      self_frameoutsig(CM_ZIGORBUS(self), buffer);
+
+      g_free(buffer);
+    }
+
+    return TRUE; /* para seguir siendo llamados cada "timeout" */
+  }
+
+private
+gboolean
+io_in(GIOChannel *io, GIOCondition condition, gpointer self) 
+  {
+    gchar buffer[BUFFER_MAX];
+    gchar c;
+    gsize bytes_read;
+    GError* error=NULL;
+    GIOStatus status;
+    int i;
+    //---
+    guint32 t1,t2;
+    static guint32 t_ant1, t_ant2;
+
+  t1=self_lee_temp(CM_ZIGORBUS(self)->_priv->temp);
+  //printf("timeout io_in:%d\n",t1-t_ant1);
+  //printf("----------\n");fflush(stdout);
+  t_ant1=t1;
+
+    status=g_io_channel_read_chars(io, buffer, BUFFER_MAX, &bytes_read, &error);
+    /* comprobar error */
+    if(error != NULL) {
+      g_error("Error leyendo bus: %s", error->message);
+      g_error_free(error);
+    }
+
+    if(status==G_IO_STATUS_NORMAL) {
+      for(i=0;i<bytes_read;i++) {
+	c=buffer[i];
+ 	ags_debug(3, "state=%d c=%#x cks=%#x", CM_ZIGORBUS(self)->_priv->state, c, CM_ZIGORBUS(self)->_priv->trama.cks);
+  //printf("state:%d, c:%x\n----------\n", CM_ZIGORBUS(self)->_priv->state, c);fflush(stdout);
+	/* Máquina de estados implementada mediante "switch" */
+	switch(CM_ZIGORBUS(self)->_priv->state) {
+	case INIT:
+	init:
+	  if(c=='\xAA') {
+	    CM_ZIGORBUS(self)->_priv->trama.cks=c;
+	    CM_ZIGORBUS(self)->_priv->state=START;
+	  }
+	  break;
+	case START:
+	  CM_ZIGORBUS(self)->_priv->trama.fc=c;
+	  if( (c & 0x0F) > 8) {
+	    g_critical("Error, DATA > 8 en trama.");
+	    CM_ZIGORBUS(self)->_priv->state=INIT;
+	  } else {
+	    CM_ZIGORBUS(self)->_priv->trama.len= (c & 0x0F); /* tamaño de 'data' */	  
+	    CM_ZIGORBUS(self)->_priv->trama.pos=0;           /* primer byte de 'data' a leer */
+	    CM_ZIGORBUS(self)->_priv->trama.cks+=c;
+	    CM_ZIGORBUS(self)->_priv->state=FC;
+	  }
+	  break;
+	case FC:
+	  CM_ZIGORBUS(self)->_priv->trama.da=c;
+	  CM_ZIGORBUS(self)->_priv->trama.cks+=c;
+	  CM_ZIGORBUS(self)->_priv->state=DA;
+	  break;	
+	case DA:
+	  CM_ZIGORBUS(self)->_priv->trama.id=c;
+	  CM_ZIGORBUS(self)->_priv->trama.cks+=c;
+	  CM_ZIGORBUS(self)->_priv->state=ID;
+	  break;
+	case ID:
+	check:
+	  if(!CM_ZIGORBUS(self)->_priv->trama.len) {
+	    /* comprueba checksum */
+	    if(CM_ZIGORBUS(self)->_priv->trama.cks==(unsigned char)c) { /* el "cast" es imprescindible */
+	      CM_ZIGORBUS(self)->_priv->state=CHK;
+	    } else {
+	      /* ERROR checksum */
+	      g_critical("ERROR en checksum de trama.");
+	      CM_ZIGORBUS(self)->_priv->state=INIT;	      
+	    }
+	  } else 
+	    goto data; /* leer data */
+	  break;
+	case DATA:
+	data:
+	  if(CM_ZIGORBUS(self)->_priv->trama.len) {
+	    CM_ZIGORBUS(self)->_priv->trama.data[CM_ZIGORBUS(self)->_priv->trama.pos++]=c;
+	    CM_ZIGORBUS(self)->_priv->trama.len--;
+	    CM_ZIGORBUS(self)->_priv->trama.cks+=c;
+	    CM_ZIGORBUS(self)->_priv->state=DATA;
+	  } else
+	    goto check; /* comprobar checksum */
+	  break;
+	case CHK:
+	  if(c=='\x55') {
+	    /* Trama OK! */	    
+	    /* Comprobar si es trama PREGUNTA_POLL */
+	    if( (CM_ZIGORBUS(self)->_priv->trama.fc & 0xF0) == 0x60 ) {
+	      /* Si DA nuestro, escribir 1 objeto de nuestra cola al bus (configurable) */
+	      if(CM_ZIGORBUS(self)->_priv->trama.da == CM_ZIGORBUS(self)->_priv->my_da ) {
+		/* Escribir un objeto de la cola al bus */
+
+  t1=self_lee_temp(CM_ZIGORBUS(self)->_priv->temp);
+  //printf("timeout trama_ok:%d\n",t1-t_ant2);
+  //printf("----------\n");fflush(stdout);
+  t_ant2=t1;
+
+		self_io_out(self);
+	      } 
+	      /* Sustituimos DA de arbitrage por DA de direccionamiento (gestora) */
+	      if(CM_ZIGORBUS(self)->_priv->da_gestora) {
+		CM_ZIGORBUS(self)->_priv->trama.da=CM_ZIGORBUS(self)->_priv->da_gestora;
+	      }
+	    }
+	    
+	    /* meterla en buffer */
+	    textbuffer_set(TEXTBUFFERIF(CM_ZIGORBUS(self)->_priv->rbuffer), &CM_ZIGORBUS(self)->_priv->trama.fc, 3 + CM_ZIGORBUS(self)->_priv->trama.pos);
+	    ags_debug(2, "fc=%#x da=%#x id=%#x", 
+		      CM_ZIGORBUS(self)->_priv->trama.fc,
+		      CM_ZIGORBUS(self)->_priv->trama.da,
+		      CM_ZIGORBUS(self)->_priv->trama.id);
+	    CM_ZIGORBUS(self)->_priv->state=INIT;
+	  } else {
+	    /* ERROR en el carácter de fin de trama, reiniciamos máquina de estados */
+	    g_critical("ERROR en el carácter de fin de  trama.");
+	    CM_ZIGORBUS(self)->_priv->state=INIT;
+	  }
+	  break;
+	default:
+	  break;
+	} 
+      }
+    }
+
+    return TRUE;
+  }
+
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+}/*fin class*/
+
+%{
+  GObject *(*cmzigorbus_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

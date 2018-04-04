@@ -1,0 +1,493 @@
+requires 2.0.0
+
+%{
+  /**
+     \file gw-snmp.c
+     Clase GW para crear agente SNMP.
+     \todo 
+     - a) Implementar como objeto. HECHO.
+     - b) Implementar como módulo de objeto. HECHO.
+     - Leer configuración.
+     - Un set múltiple debe hacer "o todos o ninguno".
+  */
+/**
+   \page gwsnmp GwSnmp
+   \section gwsnmp_desc DESCRIPCIÓN
+   SubAgente SNMP implementado con la librería Net-SNMP.
+   Se conecta al agente SNMP "master" (snmpd) mediante protocolo AgentX.
+
+   Realiza los siguientes mapeos entre el protocolo SNMP y las \ref Interfaces
+   (Ver \ref gwsnmp_deps):
+      -# GET, SET -> \ref accessif
+      -# GETNEXT  -> \ref accessxif
+   \section gwsnmp_reqs REQUISITOS
+     \subsection gwsnmp_deps Dependencias
+       -# sds
+        -# \ref accessif
+	-# \ref accessxif
+     \subsection gwsnmp_pres Precarga
+     NINGUNO
+     \subsection gwsnmp_evs  Eventos
+        -# sds
+	 -# \ref trapsig
+     \subsection gwsnmp_cfs Configuración
+        -# root_node
+	   - Tipo: G_TYPE_STRING
+	   - Requerida
+	   - Descripción: 
+	   Clave del nodo raíz a partir del cual se desean recibir
+	   las peticiones SNMP.
+	-# use_serialize
+	   - Tipo: G_TYPE_BOOLEAN,
+	   - Opcional (FALSE por defecto).
+	   - Descripción:
+	   Indica como se procesarán las peticiones SNMP múltiples
+	   (las que tengan >1 "bind"). Si TRUE, se usa un "helper"
+	   de la librería Net-SNMP, sino, se usa un bucle.
+	-# max_checks
+	   - Tipo: G_TYPE_INT
+	   - Opcional (\ref SNMP_MAX_CHECKS por defecto).
+	   - Descripción:
+	   Número de peticiones SNMP a atender consecutivamente
+	   (sin iterar en el "mainloop").
+	-# master
+	   - Tipo: G_TYPE_BOOLEAN,
+	   - Opcional (FALSE por defecto).
+	   - Descripción:
+	   TRUE para actuar de "master" SNMP en lugar de Sub Agente.
+	   NO IMPLEMENTADO!
+	-# socket
+	   - Tipo: G_TYPE_STRING
+	   - Opcional ("unix:/var/agentx/master" por defecto).
+	   - Descripción:
+	   Socket para conectarse al "master".
+   \section gwsnmp_feas CARACTERÍSTICAS
+     \subsection gwsnmp_ifs  Implementa
+     NINGUNA*
+     \subsection gwsnmp_sigs Señales
+     NINGUNA*
+   \section gwsnmp_srcs FUENTES
+      - \ref gw-snmp.c
+      - \ref gw-snmp.h
+*/
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "gw-snmp"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level,format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+%h{
+#include <signal.h>
+#include <glib-2.0/glib.h>
+#include <glib-2.0/glib-object.h>
+#include <net-snmp/net-snmp-config.h>
+#include <net-snmp/net-snmp-includes.h>
+#include <net-snmp/agent/net-snmp-agent-includes.h>
+
+#include <ags-sdscore.h>
+#include <ags-gw.h>
+#include <ags-cf.h>
+#include <snmp-gvalue.h>
+#include <accessif.h>
+#include <accessxif.h>
+#include <configif.h>
+
+/* #define USE_SERIALIZE_HELPER 1 */
+/**
+   Número de peticiones SNMP a atender
+   consecutivamente (sin iterar en el "mainloop"). 
+*/
+#define SNMP_MAX_CHECKS 100 
+
+%}
+
+%{
+  /* XXX */
+static AgsSdsX *sds; /* XXX "unref" ante destrucción del objeto */
+static int n_pfd;
+static GPollFD *pfd; /* XXX */
+extern netsnmp_session *main_session;   /* from snmp_agent.c */
+%}
+
+class Gw:Snmp from Ags:Gw {
+
+public GObject *
+new (char *gw_name, AgsCf *cf, CfTable *cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  CfTable my_cft=config_get_table(CONFIGIF(cf), cft, gw_name);
+
+  GW_SNMP(ret)->_priv->name=g_strdup(gw_name);
+
+  /* Leemos configuración */
+  GValue *v;
+  if(!((v = config_get(CONFIGIF(cf), my_cft, "sds")) || (v = config_get(CONFIGIF(cf), NULL, "sds")) ) ) { /* ref count++ */
+    exit(-2); /* error, no sds */
+  }
+  sds=g_value_get_object(v);
+  free(v);
+
+  GW_SNMP(ret)->_priv->root_node=config_get_string(CONFIGIF(cf), my_cft, "root_node");
+  GW_SNMP(ret)->_priv->use_serialize=config_get_boolean(CONFIGIF(cf), my_cft, "use_serialize");
+  GW_SNMP(ret)->_priv->max_checks=config_get_int(CONFIGIF(cf), my_cft, "max_checks");
+  GW_SNMP(ret)->_priv->master=config_get_boolean(CONFIGIF(cf), my_cft, "master");
+
+  char *socket=config_get_string(CONFIGIF(cf), my_cft, "socket");
+  if(socket) {
+    GW_SNMP(ret)->_priv->socket=socket;
+  }
+
+  signal(SIGPIPE, SIG_IGN);
+
+  self_init_gw(GW_SNMP(ret));
+  return G_OBJECT (ret);
+}
+
+override (G:Object) void
+dispose(GObject *obj) {
+  GwSnmp *self = GW_SNMP(obj);
+
+  ags_debug(2, "dispose gwsnmp...\n");
+  g_object_unref(G_OBJECT(sds));
+  PARENT_HANDLER(obj);
+}
+
+override (G:Object) void
+finalize(GObject *obj) {
+  GwSnmp *self = GW_SNMP(obj);
+
+  ags_debug(2, "finalize gwsnmp...\n");
+  /* XXX */
+  PARENT_HANDLER(obj);
+}
+
+private char* name = NULL destroy { snmp_shutdown(VAR); g_free(name); };
+private char* root_node = NULL destroywith g_free;
+private gboolean use_serialize;
+private int max_checks;
+private gboolean master;
+private char* socket = { g_strdup("unix:/var/agentx/master") } destroywith g_free;
+
+private
+int
+gw_handler(netsnmp_mib_handler *handler,
+	   netsnmp_handler_registration *reginfo,
+	   netsnmp_agent_request_info *reqinfo,
+	   netsnmp_request_info *requests)
+  {
+    int i;
+    GString *gs;
+    struct snmp_gvalue *snmp_gv;
+    GValue *v=NULL;
+    netsnmp_request_info *request;
+    int res=SNMP_ERR_NOERROR;
+    
+    gs=g_string_sized_new(128);
+    ags_debug(1," llamado ");
+    
+    request=requests;
+#ifndef USE_SERIALIZE_HANDLER
+    for(;request;request=request->next) 
+#endif
+      {
+	long *c=request->requestvb->name; 
+	long len=request->requestvb->name_length;
+	oid this_oid[MAX_OID_LEN];
+	size_t this_oid_len=MAX_OID_LEN;
+	oid next_oid[MAX_OID_LEN];
+	size_t next_oid_len=MAX_OID_LEN;
+	char *aux;
+	
+	g_string_truncate(gs, 0);
+	
+	for(i=0;i<len;i++) {
+	  g_string_append_printf(gs, ".%d", (int)*(c+i));
+	}
+	ags_debug(2,"OID=%s %d", gs->str, (int)c[len-1]);
+	switch (reqinfo->mode) {
+	case MODE_GETNEXT:
+	  ags_debug(2,"GETNEXT");
+	  /* obtenemos clave del siguiente objeto */
+	  read_objid(gs->str, this_oid, &this_oid_len); /* clave (cadena) "to" oid int[] */
+	  aux=accessx_getnextkey(ACCESSXIF(sds), gs->str);
+	  g_string_assign(gs, aux);
+	  g_free(aux);
+	  /* modificamos oid */
+	  read_objid(gs->str, next_oid, &next_oid_len); /* clave (cadena) "to" oid int[] */
+	  snmp_set_var_objid(request->requestvb, next_oid, next_oid_len);	
+	  /* error si no next */
+	  if(snmp_oid_compare(this_oid, this_oid_len, next_oid, next_oid_len) == 0) {
+	    netsnmp_request_set_error(request, SNMP_ERR_NOSUCHNAME);
+	    break;
+	  }
+	case MODE_GET:
+	  ags_debug(2,"GET");
+	  v=access_get(ACCESSIF(sds), gs->str);
+	  if(v) {
+	    aux=g_strdup_value_contents(v);
+	    snmp_gvalue_marshall(&snmp_gv, v); /* XXX comprobar error */
+	    snmp_set_var_typed_value(request->requestvb,
+				     snmp_gv->type,
+				     (u_char *) snmp_gv->data,
+				     snmp_gv->len);
+	    g_value_unset(v);
+	    free(v);
+	    free(snmp_gv);
+	    ags_debug(2,"%s", aux);
+	    free(aux);
+	    request->processed++; 
+	  } else {
+	    netsnmp_request_set_error(request, SNMP_ERR_NOSUCHNAME);
+	    ags_debug(1, "get no encontrado! %s\n", gs->str);
+	  }
+	  break;
+	case MODE_SET_RESERVE1:
+	case MODE_SET_RESERVE2:
+	  ags_debug(2,"SET");
+	  break;
+	case MODE_SET_ACTION:
+	  ags_debug(2,"ACTION");
+	  snmp_gvalue_demarshall(request->requestvb, &v);
+	  int err=access_set(ACCESSIF(sds), gs->str, v);
+	  if(!err) {
+	    aux=g_strdup_value_contents(v);
+	    ags_debug(2,"%s %s",gs->str, aux);
+	    free(aux);
+	  } else {
+	    netsnmp_request_set_error(request, SNMP_ERR_WRONGTYPE);
+	    g_warning("set no encontrado! %s %s\n", gs->str, aux=g_strdup_value_contents(v));
+	    if(aux)
+	      free(aux);
+	  }
+	  /* clean */
+	  if(v) {
+	    g_value_unset(v);
+	    free(v);
+	  }
+	  break;
+	case MODE_SET_UNDO:  /* XXX debería poderse hacer undo puesto que un set snmp es "o todos o ninguno" */
+	  ags_debug(2,"UNDO");
+	  break;
+	case MODE_SET_COMMIT:
+	case MODE_SET_FREE:    
+	  ags_debug(2,"COMMIT");
+	  break;
+	default:
+	  ags_debug(2,"default?");
+	  break;
+	}
+      }
+    
+    /*   reqinfo->asp->requests=requests->next; */
+    /*   reqinfo->asp->vbcount--; */
+    /*   netsnmp_bulk_to_next_fix_requests(requests); */
+    g_string_free(gs, TRUE);
+    /*   printf("next=%p\n", request->next);  */
+    return res;
+  }
+
+private
+void
+init_gw_snmp(self)
+  {
+    static oid my_oid[MAX_OID_LEN];
+    static size_t my_oid_len=MAX_OID_LEN;
+    netsnmp_handler_registration *handler_registration;
+
+    read_objid(GW_SNMP(self)->_priv->root_node, my_oid, &my_oid_len);
+
+    handler_registration=
+      netsnmp_create_handler_registration(GW_SNMP(self)->_priv->name,
+					  self_gw_handler, 
+ 					  my_oid, my_oid_len,
+					  HANDLER_CAN_RWRITE);
+    
+    netsnmp_register_handler(handler_registration);
+#ifdef USE_SERIALIZE_HANDLER
+    netsnmp_inject_handler_before(handler_registration,netsnmp_get_serialize_handler(),NULL); 
+#endif
+  }
+
+private 
+int
+agent_prepare(GSource *source, gint *timeout_)
+  {
+    ags_debug(5,"prepare");
+    *timeout_=-1;
+    return FALSE;
+  }
+private
+int
+agent_check(GSource *source)
+  {
+    int i;
+//     int n_pfd=GW_SNMP(self)->_priv->n_pfd;
+//     GPollFD *pfd=GW_SNMP(self)->_priv->pfd;
+
+    ags_debug(5,"check %d fds", n_pfd);
+    for(i=0;i<n_pfd;i++) {
+      ags_debug(6,"check %d=%d", i, pfd[i].revents);fflush(NULL);
+      if(pfd[i].revents && G_IO_IN) {
+	return TRUE;
+      }
+    }
+    
+    return FALSE;
+  }
+private
+int
+agent_dispatch(GSource *source, GSourceFunc callback, gpointer user_data)
+  {
+    int i;
+    int max=GW_SNMP(user_data)->_priv->max_checks || SNMP_MAX_CHECKS;
+    /* XXX snmp_read() bloquea ? */
+    /*   snmp_read(&fdset); */
+    ags_debug(5,"despachando!");
+    for(i=0;agent_check_and_process(0) && i<max;i++);
+    
+    return TRUE;
+  }
+
+private
+int
+trap_handler(AgsSdsCore *sds, long uptime, char* t, GPtrArray* members, GPtrArray* values)
+  {
+    netsnmp_variable_list *notification_vars = NULL;
+    struct snmp_gvalue* snmp_gv;
+    oid    OID[MAX_OID_LEN];
+    size_t OID_len = MAX_OID_LEN;
+    oid    objid_sysuptime[] = { 1, 3, 6, 1, 2, 1, 1, 3, 0 };
+    oid    objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
+    gchar  **parts;
+
+    ags_debug(2, "TRAP!!: %ld %s", uptime, t);
+    /* TRAP SNMPv2 */
+
+    /* sysUpTime.0 = uptime */
+    snmp_varlist_add_variable(&notification_vars, objid_sysuptime, sizeof(objid_sysuptime)/sizeof(oid), 
+			      ASN_TIMETICKS, (char*) &uptime, sizeof(long));
+    /* snmpTrapOID.0 = TRAP */
+    read_objid(t, OID, &OID_len);
+    snmp_varlist_add_variable(&notification_vars, objid_snmptrap, sizeof(objid_snmptrap)/sizeof(oid), 
+			      ASN_OBJECT_ID, (char*) OID, OID_len * sizeof(oid) );
+
+    /* MEMBERS */
+    int i;
+    for(i=0;i<members->len;i++) {
+      char* m=(char*) g_ptr_array_index(members, i);
+      ags_debug(2, "Member: %s", m);
+
+      /* Pasamos de ".1.2.3" a { 1, 2, 3 }. (XXX ¿poner como función?) */
+      parts = g_strsplit(&m[1], ".", -1);     /* &m[1] para saltarnos el primer punto "." */
+      for(OID_len=0;parts[OID_len];OID_len++)
+ 	OID[OID_len]=atoi(parts[OID_len]);
+
+      snmp_gvalue_marshall(&snmp_gv, (GValue*) g_ptr_array_index(values, i) );
+      snmp_varlist_add_variable(&notification_vars, OID, OID_len,
+				snmp_gv->type, snmp_gv->data, snmp_gv->len);
+
+      g_strfreev(parts);
+      free(snmp_gv);
+    }
+    
+    send_v2trap(notification_vars);
+
+    /* clean */
+    snmp_free_varbind(notification_vars);
+
+    return 0;
+  }
+  
+private
+void
+init_gw (self) {
+  fd_set fdset;
+  int fd;
+  int fds = 0, block = 1;
+  struct timeval timeout;
+  GSource *agent_source;
+  //     static GSourceFuncs agent_source_funcs = {
+  //       prepare : self_agent_prepare,
+  //       check : self_agent_check,
+  //       dispatch : self_agent_dispatch,
+  //     };
+  static GSourceFuncs agent_source_funcs;
+  agent_source_funcs.prepare=self_agent_prepare;
+  agent_source_funcs.check=self_agent_check;
+  agent_source_funcs.dispatch=self_agent_dispatch;
+  
+  snmp_enable_stderrlog();
+  if(!GW_SNMP(self)->_priv->master) {
+    netsnmp_ds_set_boolean(NETSNMP_DS_APPLICATION_ID, 
+			   NETSNMP_DS_AGENT_ROLE, 1);
+  }
+  netsnmp_ds_set_string(NETSNMP_DS_APPLICATION_ID,
+			NETSNMP_DS_AGENT_X_SOCKET, GW_SNMP(self)->_priv->socket);
+
+  /* XXX para evitar que trate de escribir configuración al "shutdown" */
+  netsnmp_ds_set_boolean(NETSNMP_DS_LIBRARY_ID,
+			 NETSNMP_DS_LIB_DONT_PERSIST_STATE, 1);
+  /**/
+  init_agent(GW_SNMP(self)->_priv->name); /* XXX ? */
+  if(GW_SNMP(self)->_priv->master) {
+    init_vacm_vars();
+    init_usmUser();
+  }
+  init_snmp(GW_SNMP(self)->_priv->name); /* XXX ? */
+  if(GW_SNMP(self)->_priv->master) {
+    init_master_agent();
+  }
+
+  /* XXX trick */
+  if(!main_session) {
+    g_error("No se pudo crear sesión SNMP. ¿Está el \"master\" corriendo?\n");
+  }
+
+  self_init_gw_snmp(self);
+  
+  FD_ZERO(&fdset);
+  snmp_select_info(&fds, &fdset, &timeout, &block);
+  
+  agent_source = g_source_new(&agent_source_funcs, sizeof(GSource));
+  
+  n_pfd=fds;
+  pfd=calloc(n_pfd, sizeof(GPollFD)); /* XXX leak */
+  int i=0;
+  for(fd=0;fd<FD_SETSIZE;fd++) {
+    if(FD_ISSET(fd, &fdset)) {
+      ags_debug(6,"añadiendo fd=%d", fd);
+      pfd[i].fd=fd;
+      pfd[i].events = G_IO_IN | G_IO_PRI | G_IO_HUP | G_IO_ERR;
+      g_source_add_poll(agent_source, &pfd[i]);
+      i++;
+    }
+  }
+  
+  g_source_set_callback(agent_source, 
+			(GSourceFunc) NULL, (gpointer) self, 
+			(GDestroyNotify) NULL);
+  g_source_attach(agent_source, NULL);
+  
+  /* Recibir traps del sds */
+  g_signal_connect(G_OBJECT(sds), "trapsig", (GCallback) self_trap_handler, NULL);
+}
+  
+public
+void
+gw_snmp_quit(self)
+  {
+    snmp_shutdown(GW_SNMP(self)->_priv->name);
+  }
+}
+
+%{
+  GObject *(*gwsnmp_new())(char *gw_name, AgsCf *cf, CfTable *cft)
+    {
+      return gw_snmp_new;
+    }
+%}

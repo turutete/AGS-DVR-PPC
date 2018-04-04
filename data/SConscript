@@ -1,0 +1,11 @@
+Import('*')
+
+# llama a los SConscript de cada directorio data
+defines = {}
+if all_data:
+	for k, v in all_data.iteritems():
+		defines['AGS_'+k.upper()+'_PATH']=Dir(install_dir + '/' + v['config_install_dir']).abspath
+	for k, v in all_data.iteritems():
+		SConscript( k +'/SConscript', exports={'this':v} )
+
+Return('defines')

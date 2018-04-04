@@ -1,0 +1,416 @@
+%{
+/**
+   \file cm-zigormng.c
+*/
+/**
+   \page cmzigormng CmZigorMng
+   \section cmzigormng_desc DESCRIPCIÓN
+   Módulo gestor (MaNaGer) de bus Zigor. Realiza las siguientes funciones:
+      -# Publicación de objetos periódica.
+      -# Arbitrage del bus.
+      -# Comprobación de fallo de nodo.
+
+   Algoritmo de comprobación de fallo de nodo:
+      -# Se incrementan en \ref INCR unidades los contadores de todos los nodos cada ''timeout'' ms.
+      -# Se decrementa  en \ref DECR unidades el contador de un nodo cada vez que se recibe trama de este.
+      -# Un nodo entra en fallo si su contador supera \ref THRESHOLD.
+      -# Un nodo sale  de fallo si su contador desciende por debajo de \ref THRESHOLD.
+      -# Un contador puede incrementarse hasta el valor \ref MAX_COUNT+\ref INCR-1 como máximo.
+      -# Un contador puede decrementarse hasta 0 como mínimo.
+   \section cmzigormng_reqs REQUISITOS
+     \subsection cmzigormng_deps Dependencias
+        -# zigorobj
+	   -# \ref busif
+        -# rbuffer
+	   -# \ref textbufferif
+     \subsection cmzigormng_pres Precarga
+     NINGUNA
+     \subsection cmzigormng_evs  Eventos
+        -# rbuffer
+	   -# \ref changed
+	-# zigorbus
+	   -# \ref frameoutsig
+     \subsection cmzigormng_cfs Configuración
+        -# timeout
+	   - Tipo: G_TYPE_INT
+	   - Requerida.
+	   - Descripción: Tiempo entre publicaciones (ms).
+	-# objects_id
+	   - Tipo: CfTable
+	   - Requerida.
+	   - Descripción: Tabla de identificadores de objeto a publicar/arbitrar.
+	-# nodes
+	   - Tipo: CfTable
+	   - Requerida.
+	   - Descripción: Tabla de nodos a auditar.
+   \section cmzigormng_feas CARACTERÍSTICAS
+     \subsection cmzigormng_ifs  Implementa
+     NINGUNA
+     \subsection cmzigormng_sigs Señales
+        -# failsig
+	-# goodsig
+   \section cmzigormng_srcs FUENTES
+     - \ref cm-zigormng.c
+     - \ref cm-zigormng.h
+*/
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-zigormng"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+
+%h{
+#include <ags-cf.h>
+#include <busif.h>
+%}
+
+%privateheader{
+#include <sys/time.h>  /*temporizadores: gettimeofday...*/
+#include <textbufferif.h>
+#include <accessif.h>
+/* XXX configurable */
+#define THRESHOLD 300
+#define INCR 1
+#define DECR 20
+#define MAX_COUNT 1000
+
+#define QUEUE_MAX 10 /**< Numero de tramas a mantener en cola como máximo */
+
+enum {
+  FC=0,
+  DA,
+  ID,
+  DATA
+};
+
+typedef struct _ObjId    ObjId;
+typedef struct _NodeData NodeData;
+typedef struct _NodeConfig NodeConfig;
+
+struct _ObjId {
+  char* daid;
+  char* poll_da;
+};
+
+struct _NodeData {
+  unsigned char da;
+  unsigned int  count;
+  unsigned char fail;
+  char* oid;
+};
+
+struct _NodeConfig {
+  gchar* buffer;
+  GValueArray * m;
+  GValueArray * v;
+};
+%}
+
+class Cm:ZigorMng from G:Object (interface :BusIf) {
+
+signal last NONE (UCHAR) void failsig(self, unsigned char da) ;
+signal last NONE (UCHAR) void goodsig(self, unsigned char da) ;
+
+private guint      timeout;
+
+private GQueue* queue = { g_queue_new(); };
+
+private GObject*   zigorobj = NULL unrefwith g_object_unref;
+private GObject*   rbuffer  = NULL unrefwith g_object_unref;
+private GObject*   zigorbus = NULL unrefwith g_object_unref;
+private GPtrArray* obj_ids  = { g_ptr_array_new() } 
+  destroy { g_ptr_array_free(VAR, TRUE); };
+private int        index    = 0;
+private GArray*    nodes    = { g_array_new(FALSE, TRUE, sizeof(NodeData) ) } 
+  destroy { g_array_free(VAR, TRUE); } ; /* XXX leak? */
+private int        queued   = 0;
+private GObject*   sds = NULL unrefwith g_object_unref;
+
+private guint32		temp;
+
+interface :BusIf private int write2(BusIf* self, gchar* obj_name, gchar* poll_da, GValueArray * m, GValueArray * v){
+	NodeConfig nodeConfig;
+	NodeConfig * pnc;
+	char * pbuf;
+	char buffer [7] = {obj_name[0],obj_name[1],obj_name[2],obj_name[3],poll_da[0],poll_da[1],0};
+	pbuf = g_memdup(buffer, 7);
+	nodeConfig.buffer = pbuf;
+	nodeConfig.m = m;
+	nodeConfig.v = v;
+	pnc = g_memdup(&nodeConfig, sizeof(NodeConfig));
+	g_queue_push_tail(CM_ZIGORMNG(self)->_priv->queue, (gpointer) pnc);
+	
+}
+
+private
+gboolean
+frameout(GObject* zigorbus, char* frame, gpointer self)
+  {
+    /* Decrementamos contador de tramas encoladas */
+    if( CM_ZIGORMNG(self)->_priv->queued > 0 )
+      CM_ZIGORMNG(self)->_priv->queued--;
+  }
+
+private
+gboolean
+manager(gpointer self) {
+  GPtrArray* obj_ids=CM_ZIGORMNG(self)->_priv->obj_ids;
+  GArray*    nodes  =CM_ZIGORMNG(self)->_priv->nodes;
+  GValue * v;
+  int indice;
+  
+  NodeConfig* nodeConfig=g_queue_pop_head(CM_ZIGORMNG(self)->_priv->queue);
+  if(nodeConfig) {
+	  char da_id [5] = {nodeConfig->buffer[0],nodeConfig->buffer[1],nodeConfig->buffer[2],nodeConfig->buffer[3],0};
+	  char da [3] = {nodeConfig->buffer[4],nodeConfig->buffer[5],0};
+	  for(indice = 0; indice < nodeConfig->m->n_values; indice++) {
+	    v = g_value_array_get_nth(nodeConfig->v, indice);
+	    if ( G_VALUE_TYPE(v) == G_TYPE_INT ){
+	      self_set_oid_int_1(self, g_value_get_string(g_value_array_get_nth(nodeConfig->m, indice)), g_value_get_int(v));
+	    }else if ( G_VALUE_TYPE(v) == G_TYPE_STRING ){
+	      self_set_oid_str(self, g_value_get_string(g_value_array_get_nth(nodeConfig->m, indice)), 0, g_value_get_string(v));
+	    }
+	  }
+	  bus_write(BUSIF(CM_ZIGORMNG(self)->_priv->zigorobj), da_id, da);
+	  CM_ZIGORMNG(self)->_priv->queued++;
+	  g_free(nodeConfig->buffer);//PARA EVITAR EL MEMORY LEAK
+	  g_free(nodeConfig);
+  }else{
+	   /* publicación periódica y arbitrage */
+	  if( obj_ids->len 
+		 && (CM_ZIGORMNG(self)->_priv->queued < QUEUE_MAX) ) {
+	    ObjId* objid = g_ptr_array_index (obj_ids, CM_ZIGORMNG(self)->_priv->index++);
+	    
+	    bus_write(BUSIF(CM_ZIGORMNG(self)->_priv->zigorobj), objid->daid, objid->poll_da);
+	
+	    /* Incrementamos contador de tramas encoladas */
+	    CM_ZIGORMNG(self)->_priv->queued++;
+	    
+	    if(CM_ZIGORMNG(self)->_priv->index >= obj_ids->len)
+		 CM_ZIGORMNG(self)->_priv->index=0;
+	   }
+  }
+  
+
+	 
+
+  /* comprobación de nodos */
+  int i;
+  NodeData* nodedata=NULL;
+  for(i=0;i<nodes->len;i++) {
+    /* incrementamos contadores */
+    nodedata=&g_array_index (nodes, NodeData, i);
+    if( nodedata->count < MAX_COUNT) {
+      nodedata->count+=INCR; /* XXX Algoritmo para incrementar */
+    }
+    /* comprobamos contadores */
+    if( !(nodedata->fail) && (nodedata->count > THRESHOLD) ) {
+      /* si fallo, emitimos señal */
+      nodedata->fail=1; /* true(1) */
+      g_critical("FALLO EN NODO DA=%02X\n", nodedata->da);
+      self_failsig(self, nodedata->da);
+
+      if(nodedata->oid)
+         self_set_oid_int(self, nodedata->oid, 0, (int)nodedata->fail);
+    }
+  }
+
+  return TRUE;
+}
+
+private
+gboolean
+changed (GObject *textbuffer, gpointer self) {
+  GArray*    nodes=CM_ZIGORMNG(self)->_priv->nodes;
+  gint frame_len=0;
+  gchar* buffer = textbuffer_get(TEXTBUFFERIF(textbuffer), &frame_len);
+
+  if( !buffer || !frame_len ) {
+    g_critical("Error, buffer de entrada %p vacio o nulo.", buffer);
+    return;
+  }
+
+  /* Comprobación nodo activo (decrementar contadores) */
+  unsigned char da=(unsigned char) buffer[DA];
+  
+  /*evitar mleak*/
+  g_free(buffer);
+  
+  /* buscamos contador de este DA */
+  int i;
+  NodeData* nodedata=NULL;
+  for(i=0;i<nodes->len;i++) {
+    nodedata=&g_array_index (nodes, NodeData, i);
+    if(nodedata->da==da) {
+      /* decrementamos contadores */
+      if(nodedata->count < DECR) { /* XXX algoritmo de decremento */
+	nodedata->count=0;
+      } else {
+	nodedata->count-=DECR;
+      }
+      /* Comprobamos si fin de fallo */
+      if(nodedata->fail && (nodedata->count < THRESHOLD) ) {
+	nodedata->fail=0; /* false(0) */
+	self_goodsig(self, nodedata->da);
+
+	if(nodedata->oid)
+	   self_set_oid_int(self, nodedata->oid, 0, (int)nodedata->fail?1:2);
+      }
+    }
+  }
+}
+
+/* XXX jur */
+private
+gboolean
+inicio(gpointer self) {
+   //printf("inicio\n"); fflush(NULL);
+   g_timeout_add(CM_ZIGORMNG(self)->_priv->timeout, self_manager, (gpointer) self);
+   g_signal_connect(G_OBJECT( CM_ZIGORMNG(self)->_priv->rbuffer ), "changed",     (GCallback) self_changed,  (gpointer) self);
+   g_signal_connect(G_OBJECT( CM_ZIGORMNG(self)->_priv->zigorbus), "frameoutsig", (GCallback) self_frameout, (gpointer) self);
+   return FALSE;
+}
+
+public
+GObject*
+new (char* cm_name, AgsCf* cf, CfTable cft) {
+  GObject* ret = G_OBJECT(GET_NEW);
+  CfTable  my_cft = config_get_table(CONFIGIF(cf), cft, cm_name);
+
+  CM_ZIGORMNG(ret)->_priv->zigorobj=config_get_object(CONFIGIF(cf), my_cft, "zigorobj");
+  CM_ZIGORMNG(ret)->_priv->rbuffer =config_get_object(CONFIGIF(cf), my_cft, "rbuffer");
+  CM_ZIGORMNG(ret)->_priv->zigorbus=config_get_object(CONFIGIF(cf), my_cft, "zigorbus");
+  CM_ZIGORMNG(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "sds");
+
+  guint    timeout=config_get_int(CONFIGIF(cf), my_cft, "timeout");
+  CM_ZIGORMNG(ret)->_priv->timeout=timeout;
+
+  /* leer objects_id */
+  CfTable obj_ids = config_get_table(CONFIGIF(cf), my_cft, "objects_id");
+  if( config_check_table( CONFIGIF(cf), obj_ids) ) {
+    CfTable obj_id;
+    ObjId*  objid;
+    int i=1;
+    GString *gs_i=g_string_new("");
+    for(g_string_printf(gs_i, "%d", i);
+	  config_check_table( CONFIGIF(cf), (obj_id=config_get_table(CONFIGIF(cf), obj_ids, gs_i->str)) );
+	  g_string_printf(gs_i, "%d", ++i)) {
+      objid=g_new0(ObjId, 1);
+      objid->daid   =config_get_string(CONFIGIF(cf), obj_id, "daid");
+      objid->poll_da=config_get_string(CONFIGIF(cf), obj_id, "poll_da");
+      g_ptr_array_add(CM_ZIGORMNG(ret)->_priv->obj_ids, objid);
+    }
+  }
+
+  /* leer nodes */
+  CfTable nodes = config_get_table(CONFIGIF(cf), my_cft, "nodes");
+  if( config_check_table( CONFIGIF(cf), nodes) ) {
+    char* node_da =NULL;
+    char* nodename=NULL;
+    NodeData nodedata;
+    while( nodename=config_getnextkey(CONFIGIF(cf), nodes, nodename) ) {
+      CfTable nodo = config_get_table(CONFIGIF(cf), nodes, nodename);
+      node_da=config_get_string(CONFIGIF(cf), nodo, "da");
+      if(node_da) {
+	nodedata.da=(char) strtol(node_da, NULL, 16);
+	nodedata.count=0;
+	nodedata.fail=FALSE;
+	nodedata.oid = config_get_string(CONFIGIF(cf), nodo, "oid");
+	g_array_append_val(CM_ZIGORMNG(ret)->_priv->nodes,  nodedata);
+	free(node_da);
+      }
+    }
+  }
+
+  if(timeout) {
+    g_timeout_add(10000, self_inicio, (gpointer) ret); /* XXX jur: retardo para no publicar parametros nulos al comienzo en bus zigor dsp
+    g_timeout_add(timeout, self_manager, (gpointer) ret);
+    g_signal_connect(G_OBJECT( CM_ZIGORMNG(ret)->_priv->rbuffer ), "changed",     (GCallback) self_changed,  (gpointer) ret);
+    g_signal_connect(G_OBJECT( CM_ZIGORMNG(ret)->_priv->zigorbus), "frameoutsig", (GCallback) self_frameout, (gpointer) ret);
+    */
+  }
+  
+  self_inicia_temp(&CM_ZIGORMNG(ret)->_priv->temp);
+  
+  return ret;
+}
+
+private
+void
+set_oid_int(gpointer self, char *nombre_var, int n_instancia, int valor) {
+  GValue v= {0,};
+  char aux_str[50];
+
+  if(!nombre_var)
+    return;
+
+  g_value_init(&v, G_TYPE_INT);
+  g_value_set_int(&v, valor);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_ZIGORMNG(self)->_priv->sds), aux_str, &v);
+}
+
+
+private
+void
+set_oid_int_1(gpointer self, char *nombre_var, int valor) {
+  GValue v= {0,};
+
+  if(!nombre_var)
+    return;
+
+  g_value_init(&v, G_TYPE_INT);
+  g_value_set_int(&v, valor);
+  access_set(ACCESSIF(CM_ZIGORMNG(self)->_priv->sds), nombre_var, &v);
+}
+
+private
+void
+set_oid_str(gpointer self, gchar *nombre_var, int n_instancia, gchar *str) {
+  GValue v= {0,};
+  char aux_str[50];
+  
+  g_value_init(&v, G_TYPE_STRING);
+  g_value_set_string(&v, str);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_ZIGORMNG(self)->_priv->sds), aux_str, &v);
+  /* clean */
+  g_value_unset(&v);
+}
+
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+}
+
+
+%{
+  GObject *(*cmzigormng_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

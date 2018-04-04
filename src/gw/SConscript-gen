@@ -1,0 +1,6 @@
+Import('*')
+
+for k, v in this['modules'].iteritems():
+    if v.has_key('gobs_fn'):
+        for gob in v['gobs_fn']:
+            env.Gob(gob)

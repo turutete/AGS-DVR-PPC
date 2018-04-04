@@ -1,0 +1,769 @@
+ZIGOR-DVR-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	MODULE-IDENTITY,
+	OBJECT-TYPE,
+	OBJECT-IDENTITY,
+	Integer32
+		FROM SNMPv2-SMI
+	TEXTUAL-CONVENTION,
+	TruthValue
+		FROM SNMPv2-TC
+	PositiveInteger,
+	ZDateAndTime
+		FROM ZIGOR-TC
+	zigorExperiment
+		FROM ZIGOR-SMI;
+
+zigorDvrMIB    MODULE-IDENTITY
+	LAST-UPDATED	"201210171200Z"
+	ORGANIZATION	"Corporacion Zigor, S.A."
+	CONTACT-INFO
+		"	Corporacion Zigor, S.A.
+			Depto. I+D
+
+		Postal:	C/ Portal de Gamarra, 28
+			C.P 01002 Vitoria-Gasteiz , Alava
+			(Spain)
+
+		Tel:	+34 (945) 214 600
+
+		E-mail:	zigor@zigor.com"
+	DESCRIPTION
+		"MIB de DVR"
+	::= { zigorExperiment 10 }
+
+
+EstadoControl ::= TEXTUAL-CONVENTION
+	STATUS	current
+	DESCRIPTION
+		"Tipo para representar el estado del control."
+	SYNTAX	INTEGER {
+                estadoOff(1),
+                esperaCarga(2),
+                esperaOn(3),
+                estadoOn(4),
+                onSaturado(5),
+                onErrorVinst(6),
+                onErrorRed(7),
+                onVBusMin(8),
+                onHuecoMax(9),
+		esperaOff(11),
+                errorCarga(21),
+                errorVCond(22),
+                errorVBusMax(23),
+                errorTermo(24),
+                errorDriver(25),
+                errorFusible(26),
+                errorTemperatura(27)
+	}
+
+Fase::= TEXTUAL-CONVENTION
+	STATUS	current
+	DESCRIPTION
+		"Tipo para representar la fase del objeto hueco."
+	SYNTAX	INTEGER {
+	        r(1),
+	        s(2),
+	        t(3)
+	}
+
+EstadoModem ::= TEXTUAL-CONVENTION
+	STATUS	current
+	DESCRIPTION
+		"Type to represent the status of the modem"
+	SYNTAX	INTEGER {
+		busy(1),
+		withoutSIM(2),
+		waitingPin(3),
+		waitingPuk(4),
+		ready(5),
+		error(6),
+		ppp(7)
+	}
+
+
+zigorDvrObjects		OBJECT IDENTIFIER ::= { zigorDvrMIB 1 }
+
+--
+-- Variables de estado
+--
+zigorDvrObjEstado		OBJECT IDENTIFIER ::= { zigorDvrObjects 1 }
+
+zigorDvrObjVRedR OBJECT-TYPE
+	SYNTAX		INTEGER (0..1000000)
+	UNITS		"0.1V"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Tension de red fase R"	
+	::= { zigorDvrObjEstado 1 }
+	
+zigorDvrObjVRedS OBJECT-TYPE
+	SYNTAX		INTEGER (0..1000000)
+	UNITS		"0.1V"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Tension de red fase S"	
+	::= { zigorDvrObjEstado 2 }
+
+zigorDvrObjVRedT OBJECT-TYPE
+	SYNTAX		INTEGER  (0..1000000)
+	UNITS		"0.1V "
+        MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Tension de red fase T"	
+	::= { zigorDvrObjEstado 3 }
+
+zigorDvrObjVSecundarioR OBJECT-TYPE
+	SYNTAX		INTEGER (0..1000000)
+	UNITS		"0.1V"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Tension de secundario fase R"	
+	::= { zigorDvrObjEstado 4 }
+
+zigorDvrObjVSecundarioS OBJECT-TYPE
+	SYNTAX		INTEGER (0..1000000)
+	UNITS		"0.1V"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Tension de secundario fase S"	
+	::= { zigorDvrObjEstado 5 }
+
+zigorDvrObjVSecundarioT OBJECT-TYPE
+	SYNTAX		INTEGER (0..1000000)
+	UNITS		"0.1V"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Tension de secundario fase T"	
+	::= { zigorDvrObjEstado 6 }
+
+zigorDvrObjISecundarioR OBJECT-TYPE
+	SYNTAX		INTEGER (0..10000)
+	UNITS		"0.1A"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Corriente de secundario fase R"	
+	::= { zigorDvrObjEstado 7 }
+
+zigorDvrObjISecundarioS OBJECT-TYPE
+	SYNTAX		INTEGER (0..10000)
+	UNITS		"0.1A"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Corriente de secundario fase S"	
+	::= { zigorDvrObjEstado 8 }
+
+zigorDvrObjISecundarioT OBJECT-TYPE
+	SYNTAX		INTEGER (0..10000)
+	UNITS		"0.1A"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Corriente de secundario fase T"	
+	::= { zigorDvrObjEstado 9 }
+
+zigorDvrObjPSalidaR OBJECT-TYPE
+	SYNTAX		INTEGER (0..1000000)
+	UNITS		"0.1kW"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Potencia de salida fase R"	
+	::= { zigorDvrObjEstado 10 }
+
+zigorDvrObjPSalidaS OBJECT-TYPE
+	SYNTAX		INTEGER (0..1000000)
+	UNITS		"0.1kW"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Potencia de salida fase S"	
+	::= { zigorDvrObjEstado 11 }
+
+zigorDvrObjPSalidaT OBJECT-TYPE
+	SYNTAX		INTEGER (0..1000000)
+	UNITS		"0.1kW"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Potencia de salida fase T"	
+	::= { zigorDvrObjEstado 12 }
+
+zigorDvrObjEstadoControl OBJECT-TYPE
+	SYNTAX		EstadoControl
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Estado de Control"	
+	::= { zigorDvrObjEstado 13 }
+
+zigorDvrObjAlarmaDriver OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Alarma Driver"	
+	::= { zigorDvrObjEstado 14 }
+
+zigorDvrObjParado OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Parado"	
+	::= { zigorDvrObjEstado 15 }
+
+zigorDvrObjErrorVInst OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Error VInst"	
+	::= { zigorDvrObjEstado 16 }		
+
+zigorDvrObjSaturado OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Saturado"	
+	::= { zigorDvrObjEstado 17 }		
+
+zigorDvrObjPwmOndOn OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Pwm Ond On"	
+	::= { zigorDvrObjEstado 18 }		
+
+zigorDvrObjBypassOn OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Bypass On"	
+	::= { zigorDvrObjEstado 19 }
+	
+zigorDvrObjErrorDriver OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Error driver"	
+	::= { zigorDvrObjEstado 20}
+	
+zigorDvrObjPwmRecOn OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Pwm Rec On"	
+	::= { zigorDvrObjEstado 21}
+	
+zigorDvrObjDeteccionEnable OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Deteccion Enable"	
+	::= { zigorDvrObjEstado 22}	
+
+zigorDvrObjAlarmaVBusMax OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Alarma VBus Max"	
+	::= { zigorDvrObjEstado 23}		
+
+zigorDvrObjAlarmaVCondMax OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Alarma VCond Max"	
+	::= { zigorDvrObjEstado 24}	
+	
+zigorDvrObjAlarmaVBusMin OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Alarma VBus Min"	
+	::= { zigorDvrObjEstado 25}		
+	
+zigorDvrObjAlarmaVRed OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Alarma VRed"	
+	::= { zigorDvrObjEstado 26}	
+	
+zigorDvrObjErrorTermo OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Error Termo"	
+	::= { zigorDvrObjEstado 27}
+	
+zigorDvrObjErrorPLL OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Error PLL"	
+	::= { zigorDvrObjEstado 28}	
+	
+zigorDvrObjAlarmaPLL OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Alarma PLL"	
+	::= { zigorDvrObjEstado 29}
+	
+zigorDvrObjParadoError OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Parado Error"	
+	::= { zigorDvrObjEstado 30}
+
+zigorDvrObjOrdenMarcha OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Orden de Marcha"	
+	::= { zigorDvrObjEstado 31 }
+
+zigorDvrObjOrdenParo OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Orden de Paro"	
+	::= { zigorDvrObjEstado 32}
+
+zigorDvrObjOrdenReset OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Orden de Reset"	
+	::= { zigorDvrObjEstado 33}
+
+zigorDvrObjLimitando OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Limitando"	
+	::= { zigorDvrObjEstado 34}	
+
+zigorDvrObjEComDSP OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Error de comunicacion DSP"
+	::= { zigorDvrObjEstado 35}
+
+zigorDvrObjVBus OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Tension de Bus"
+	::= { zigorDvrObjEstado 36}
+
+zigorDvrObjLimitIntVSal OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Hueco Maximo"	
+	::= { zigorDvrObjEstado 37}
+	
+zigorDvrObjGapMinimo OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Minimo de IntLimitVSal"
+	::= { zigorDvrObjEstado 38}
+	
+zigorDvrObjGapIntegral OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Integral de (1-IntLimitVSal)"
+	::= { zigorDvrObjEstado 39}
+	
+zigorDvrObjGapTiempo OBJECT-TYPE
+	SYNTAX		INTEGER
+	UNITS		"milisegundos"
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Duracion del hueco"
+	::= { zigorDvrObjEstado 40}
+	
+zigorDvrObjGapFase OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Fase del hueco"
+	::= { zigorDvrObjEstado 41}
+
+zigorDvrObjErrorFusible OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Error fusible"
+	::= { zigorDvrObjEstado 42}
+
+zigorDvrObjRegHueco OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Registro hueco"
+	::= { zigorDvrObjEstado 43}
+
+zigorDvrObjResetDriver OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Reset driver"
+	::= { zigorDvrObjEstado 44}
+
+zigorDvrObjVRedNom OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Tension de Red Nominal"
+	::= { zigorDvrObjEstado 45}
+	
+zigorDvrObjModemStatus OBJECT-TYPE
+	SYNTAX		EstadoModem
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Status of the modem"
+	::= { zigorDvrObjEstado 46 }
+
+--
+-- Parametros Sistema
+--
+zigorDvrObjParams		OBJECT IDENTIFIER ::= { zigorDvrObjects 2 }
+
+zigorDvrParamVRedNom OBJECT-TYPE
+	SYNTAX		INTEGER (0..1000000)
+	UNITS		"0.1V"
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Tension de Red Nominal"
+	::= { zigorDvrObjParams 1 }
+
+zigorDvrParamVMinDVR OBJECT-TYPE
+	SYNTAX		INTEGER (0..10000)
+	UNITS		"0.1V"
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Tension VMinDVR"	
+	::= { zigorDvrObjParams 2 }	
+
+zigorDvrParamNumEquipos OBJECT-TYPE
+	SYNTAX		INTEGER (0..10000)
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Numero de equipos en paralelo."	
+	::= { zigorDvrObjParams 3 }	
+
+zigorDvrParamFactor OBJECT-TYPE
+	SYNTAX		INTEGER (0..1000000)
+	UNITS		"0.001"
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Factor de conversion para tensiones y variable VRedNom."	
+	::= { zigorDvrObjParams 4 }	
+
+zigorDvrParamFrecNom OBJECT-TYPE
+	SYNTAX		INTEGER (0..10000)
+	UNITS		"0.1Hz"
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Nominal Frequency."
+	::= { zigorDvrObjParams 5 }
+
+--
+-- Alarmas
+--
+zigorDvrAlarms		OBJECT IDENTIFIER ::= { zigorDvrMIB 2 }
+
+zigorAlarmaErrorVInst OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"ErrorVInst"
+	::= { zigorDvrAlarms 1 }
+
+zigorAlarmaSaturado OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"Saturado"
+	::= { zigorDvrAlarms 2 }
+	
+zigorAlarmaVBusMax OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"VBusMax"
+	::= { zigorDvrAlarms 3}		
+		
+zigorAlarmaVCondMax OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"VCondMax"
+	::= { zigorDvrAlarms 4}		
+
+zigorAlarmaVBusMin OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"VBusMin"
+	::= { zigorDvrAlarms 5}
+	
+zigorAlarmaVRed OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"VRed"
+	::= { zigorDvrAlarms 6}	
+	
+zigorAlarmaLimitIntVSal OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"LimitIntVSal"
+	::= { zigorDvrAlarms 7}
+
+zigorAlarmaDriver OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"AlarmaDriver"
+	::= { zigorDvrAlarms 8}	
+
+zigorAlarmaParadoError OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"ParadoError"
+	::= { zigorDvrAlarms 9}
+
+zigorAlarmaErrorDriver OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"ErrorDriver"
+	::= { zigorDvrAlarms 10}	
+
+zigorAlarmaErrorTermo OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"ErrorTermo"
+	::= { zigorDvrAlarms 11}
+
+zigorAlarmaLimitando OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"Limitando"
+	::= { zigorDvrAlarms 12}
+
+zigorAlarmaErrorFusible OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"ErrorFusible"
+	::= { zigorDvrAlarms 13}
+
+zigorAlarmaPLL OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"AlarmaPLL"
+	::= { zigorDvrAlarms 14}
+
+zigorAlarmaErrorComDSP OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"Alarma Error Comunicacion DSP"
+	::= { zigorDvrAlarms 15}
+
+zigorAlarmaStatusChange OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"Alarma de cambio de estado"
+	::= { zigorDvrAlarms 16}
+
+
+--
+-- Registro de Huecos
+--
+zigorDvrGapLog		OBJECT IDENTIFIER ::= { zigorDvrMIB 3 }
+
+zigorDvrGapLogTotalEntries OBJECT-TYPE
+	SYNTAX     Integer32	-- XXX Gauge32?
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The total number of gap entries currently in the log."
+	::= { zigorDvrGapLog 1 }
+
+zigorDvrGapLogMaxEntries OBJECT-TYPE
+	SYNTAX     Integer32	-- XXX Gauge32?
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"This object represents the maximum number of 
+		gap entries in the zigorDvrGapLogTable. When the 
+		object zigorDvrGapLogTotalEntries equals this object,
+		the next gap appearing causes the oldest entry 
+		to be deleted.
+		If the value of this object is increased, then oldest 
+		entry removal ceases until the maximum is reached 
+		again. If management reduces the value of this 
+		object, then, starting with the oldest, gap
+		entries are removed until the new number of 
+		entries is reached."
+	::= { zigorDvrGapLog 2 }
+
+zigorDvrGapLogQueueWraps OBJECT-TYPE
+	SYNTAX     Integer32	-- XXX Counter32?
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"This object represents the number of times the queue has wrapped.
+		Since circular queues are used for storing the entries, when all allocated
+		entries are used, the oldest entries are reused, thus
+		creating a wrap condition.  A value of zero indicates the
+		queue has not wrapped, except in the case that the counter
+		itself has wrapped."
+	::= { zigorDvrGapLog 3 }
+
+zigorDvrGapLogIndex OBJECT-TYPE
+	SYNTAX     PositiveInteger
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The current index in the circular buffer where gaps are 
+		being logged."
+	::= { zigorDvrGapLog 4 }
+
+zigorDvrGapLogTable OBJECT-TYPE
+	SYNTAX     SEQUENCE OF ZigorDvrGapLogEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+               "Gap log table. The number of rows in the table at 
+	       any given time is reflected by the value of zigorDvrGapLogPresent."
+	::= { zigorDvrGapLog 5 }
+
+zigorDvrGapLogEntry OBJECT-TYPE
+	SYNTAX     ZigorDvrGapLogEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"An entry containing information applicable to a
+               particular gap log."
+	INDEX { zigorDvrGapLogId }
+	::= { zigorDvrGapLogTable 1 }
+
+ZigorDvrGapLogEntry ::= SEQUENCE {
+	zigorDvrGapLogId		PositiveInteger,
+	zigorDvrGapLogTime		ZDateAndTime,
+	zigorDvrGapLogMinimo		INTEGER,
+	zigorDvrGapLogIntegral		INTEGER,
+	zigorDvrGapLogTiempo		INTEGER,
+	zigorDvrGapLogFase		Fase
+}
+
+zigorDvrGapLogId OBJECT-TYPE
+	SYNTAX		PositiveInteger
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION
+		"A unique identifier for an gap condition.  This
+		value must remain constant."
+	::= { zigorDvrGapLogEntry 1 }
+
+zigorDvrGapLogTime OBJECT-TYPE
+	SYNTAX		ZDateAndTime
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Date and time when the gap condition was detected."
+	::= { zigorDvrGapLogEntry 2 }
+
+zigorDvrGapLogMinimo OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Minimo de IntLimitVSal."
+	::= { zigorDvrGapLogEntry 3 }
+
+zigorDvrGapLogIntegral OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Integral de (1-IntLimitVSal)."
+	::= { zigorDvrGapLogEntry 4 }
+
+zigorDvrGapLogTiempo OBJECT-TYPE
+	SYNTAX		INTEGER
+	UNITS		"milisegundos"
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Duracion del hueco."
+	::= { zigorDvrGapLogEntry 5 }
+
+zigorDvrGapLogFase OBJECT-TYPE
+	SYNTAX		Fase
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Fase."
+	::= { zigorDvrGapLogEntry 6 }
+
+--
+-- Traps
+--
+zigorDvrGapLogTraps OBJECT IDENTIFIER ::= { zigorDvrMIB 4 }
+
+zigorTrapDvrGapLogEntryAdded NOTIFICATION-TYPE
+        OBJECTS { zigorDvrGapLogId }
+	STATUS  current
+	DESCRIPTION
+	        "This trap is sent each time a gap is inserted into
+		the gap log table."
+	::= { zigorDvrGapLogTraps 1 }
+
+END

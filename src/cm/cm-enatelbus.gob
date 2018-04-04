@@ -1,0 +1,488 @@
+%{
+/**
+ * \file cm-enatelbus.c
+ */
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-enatelbus"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+ 
+%h{
+#include <ags-cm.h>
+#include <ags-cf.h>
+
+typedef union  {
+	char caracteres[8];
+	struct {
+		char prioridad;	// Prioridad del mensaje.
+		char relleno;	// Para alinear los bytes.
+		char hayParametro;	// Indica si el comando lleva asociado un parámetro.
+		char direccion;	// Dirección del nodo.
+		char comando[2];	// Comando.
+		gint16 parametro;	// Parámetro del comando.
+	} Estructura;
+} tipo_InformacionMensaje;
+	
+%}
+
+%privateheader{
+#include <configif.h>
+#include <textbufferif.h>
+#include <sys/time.h>  /*temporizadores: gettimeofday...*/
+
+#include <stdio.h> /*printf*/
+
+
+#define BUFFER_MAX 1
+
+enum {
+  ESPERA_INICIO=0,
+  ESPERA_DIRECCION,
+  ESPERA_COMANDO,
+  ESPERA_PARAMETRO,
+  ESPERA_CHECKSUM,
+  FIN,
+};
+
+/* Constantes de la trama	*/
+const char INICIO_PREGUNTA = '$';
+const char INICIO_RESPUESTA = ':';
+const char SEPARADOR = ',';
+const char INICIO_CHECKSUM = '*';
+const char CR = 0x0D;
+const char LF = 0x0A;
+%}
+
+class Cm:EnatelBus from Ags:Cm {
+
+/* variables privadas */
+private GObject*	r_textbuffer;		/* parametro cfg buffer de lectura */
+private GObject*	w_textbuffer;		/* parametro cfg buffer de escritura */
+private GIOChannel*	io;
+private GQueue*		queue = { g_queue_new(); };
+private unsigned char	state = ESPERA_INICIO;
+private gboolean	eco;			/* parametro de cfg de presencia o no de eco */
+private gboolean	flag_respuesta;		/* flag tratamiento interno del eco */
+private guint32		temp;
+private unsigned int len; /* bytes que queda por leer en esta trama */
+
+public
+GObject*
+new (char *cm_name, AgsCf *cf, CfTable cft) {
+  /* constructor de CmEnatelBus */
+  GObject *ret = G_OBJECT(GET_NEW);
+  
+  /* obtener tabla cfg modulo */
+  CfTable my_cft= config_get_table(CONFIGIF(cf), cft, cm_name);
+
+  GError* error=NULL;
+
+  const gchar* filename=config_get_string(CONFIGIF(cf), my_cft, "bus_filename");
+  if(filename) {
+    CM_ENATELBUS(ret)->_priv->io = g_io_channel_new_file(filename, "r+", &error);
+    free(filename);
+  } else {
+    g_error("Error, no se especificó bus_filename para bus enatel.");
+  }
+
+  CM_ENATELBUS(ret)->_priv->r_textbuffer = config_get_object(CONFIGIF(cf), my_cft, "rbuffer");
+  CM_ENATELBUS(ret)->_priv->w_textbuffer = config_get_object(CONFIGIF(cf), my_cft, "wbuffer");
+
+  if(CM_ENATELBUS(ret)->_priv->io) {
+    g_clear_error(&error);
+    g_io_channel_set_encoding(CM_ENATELBUS(ret)->_priv->io, NULL, &error);
+    g_io_channel_set_buffered(CM_ENATELBUS(ret)->_priv->io, FALSE);
+    ags_debug(1,"bus buffered=%d", g_io_channel_get_buffered(CM_ENATELBUS(ret)->_priv->io));
+
+    ags_debug(1, "IO buffer size=%d", g_io_channel_get_buffer_size(CM_ENATELBUS(ret)->_priv->io) );
+    g_io_add_watch(CM_ENATELBUS(ret)->_priv->io, G_IO_IN, self_io_in, (gpointer) ret);
+
+    /* Conectar con buffer de escritura */
+    g_signal_connect(G_OBJECT(CM_ENATELBUS(ret)->_priv->w_textbuffer), "changed", (GCallback) self_changed, (gpointer) ret);
+  } else {
+    g_critical("No se pudo abrir BUS Enatel.");
+  }
+
+  /* polling */
+  gint timeout = config_get_int(CONFIGIF(cf), my_cft, "timeout_poll");
+  if(timeout) {
+    g_timeout_add(timeout, self_poll, (gpointer) ret);
+  }
+  
+  CM_ENATELBUS(ret)->_priv->eco = config_get_boolean(CONFIGIF(cf), my_cft, "eco");
+  
+  self_inicia_temp(&CM_ENATELBUS(ret)->_priv->temp);
+  
+  return ret;
+}
+
+private
+void
+changed (GObject *textbuffer, gpointer self) {
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+
+  t1=self_lee_temp(CM_ENATELBUS(self)->_priv->temp);
+  gchar* buffer = textbuffer_get(TEXTBUFFERIF(textbuffer), NULL);
+
+  /* Encolamos la trama */
+  g_queue_push_head(CM_ENATELBUS(self)->_priv->queue, (gpointer) buffer);
+
+  t2=self_lee_temp(CM_ENATELBUS(self)->_priv->temp);
+//  printf("cm-enatelbus.changed -> timeout:%d\ttiempo consumido:%d\n", t1-t_ant, t2-t1);fflush(0);
+  t_ant=t1;
+}
+
+/* interrogacion periodica a los modulos */
+private
+gboolean
+poll(gpointer self) {
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+
+  t1=self_lee_temp(CM_ENATELBUS(self)->_priv->temp);
+  
+  self_io_out(self);
+
+  t2=self_lee_temp(CM_ENATELBUS(self)->_priv->temp);
+  printf("cm-enatelbus.poll -> T:%u\ttimeout:%ld\ttiempo consumido:%d\n", t1, t1-t_ant, t2-t1);fflush(0);
+  t_ant=t1;
+  
+  return TRUE;
+}
+
+private 
+gboolean
+io_out(self)
+{
+  gboolean res=FALSE;
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+  char * auxCharArray;
+  tipo_InformacionMensaje buffer;
+
+  t1=self_lee_temp(CM_ENATELBUS(self)->_priv->temp);
+  ags_debug(2,"tiempo timeout:%d",t1-t_ant);
+  t_ant=t1;
+
+  /* ordenar en función de prioridad de mensaje en la cola y luego desencolar */
+  g_queue_sort(CM_ENATELBUS(self)->_priv->queue, self_ordena_cola, (gpointer)self);
+  
+  auxCharArray = g_queue_pop_tail(CM_ENATELBUS(self)->_priv->queue);
+
+  ags_debug(2,"io_out");
+
+  if(auxCharArray) {
+    gsize bytes_written;
+    GError* error=NULL;
+    char checksum;
+    char aux[5];
+    
+  	memcpy(buffer.caracteres, auxCharArray, sizeof(tipo_InformacionMensaje));
+    ags_debug(2, "ENVIO TRAMA POLL");
+    int i;
+    // Inicio de trama.
+    g_io_channel_write_chars(CM_ENATELBUS(self)->_priv->io, &INICIO_PREGUNTA, 1, &bytes_written, &error);
+    g_clear_error(&error);
+    checksum = 0;
+    // Dirección.
+    sprintf(aux, "%02X", buffer.Estructura.direccion);
+    for(i = 0; i < 2; i++) {
+    	g_io_channel_write_chars(CM_ENATELBUS(self)->_priv->io, &aux[i], 1, &bytes_written, &error);
+    	g_clear_error(&error);
+    	checksum = self_sumaC1(checksum, aux[i]);
+    }
+    g_io_channel_write_chars(CM_ENATELBUS(self)->_priv->io, &SEPARADOR, 1, &bytes_written, &error);
+    g_clear_error(&error);
+    // Código del parámetro.
+    for(i = 0; i < 2; i++) {
+    	g_io_channel_write_chars(CM_ENATELBUS(self)->_priv->io, &buffer.Estructura.comando[i], 1, &bytes_written, &error);
+    	g_clear_error(&error);
+    	checksum = self_sumaC1(checksum, buffer.Estructura.comando[i]);
+    }
+    if(buffer.Estructura.hayParametro) {
+    	// Valor del parámetro.
+    	g_io_channel_write_chars(CM_ENATELBUS(self)->_priv->io, &SEPARADOR, 1, &bytes_written, &error);
+    	g_clear_error(&error);
+    	sprintf(aux, "%04X", buffer.Estructura.parametro);
+//    	printf("cm-enatelbus.io_out -> parametro: %d, transformado: %s\n", buffer.Estructura.parametro, aux);fflush(0);
+    	for(i = 0; i < 4; i++) {
+    		g_io_channel_write_chars(CM_ENATELBUS(self)->_priv->io, &aux[i], 1, &bytes_written, &error);
+    		g_clear_error(&error);
+    		checksum = self_sumaC1(checksum, aux[i]);
+    	}
+    }
+    // Checksum.
+    g_io_channel_write_chars(CM_ENATELBUS(self)->_priv->io, &INICIO_CHECKSUM, 1, &bytes_written, &error);
+    g_clear_error(&error);
+    checksum = ~checksum;
+    sprintf(aux, "%02X", (int)(checksum & 0x00FF));
+    for(i = 0; i < 2; i++) {
+	    g_io_channel_write_chars(CM_ENATELBUS(self)->_priv->io, &aux[i], 1, &bytes_written, &error);
+	    g_clear_error(&error);
+	  }
+	  g_io_channel_write_chars(CM_ENATELBUS(self)->_priv->io, &CR, 1, &bytes_written, &error);
+	  g_clear_error(&error);
+	  g_io_channel_write_chars(CM_ENATELBUS(self)->_priv->io, &LF, 1, &bytes_written, &error);
+	  g_clear_error(&error);
+	  
+    printf("cm-enatelbus.io_out -> Trama enviada T:%u\n", t1);fflush(0);
+//    printf("cm-enatelbus.io_out %2X %2X %2X %2X %2X %2X %2X %2X\n", buffer.caracteres[2], buffer.caracteres[3], buffer.caracteres[4], buffer.caracteres[5], buffer.caracteres[6], buffer.caracteres[7], buffer.caracteres[8], buffer.caracteres[9]);fflush(0);
+
+    g_free(auxCharArray);
+    res=TRUE;
+  }
+  
+  t2=self_lee_temp(CM_ENATELBUS(self)->_priv->temp);
+  ags_debug(2,"tiempo consumido:%d",t2-t1);
+
+  return res;
+}
+
+private
+gint
+ordena_cola(gconstpointer a, gconstpointer b, gpointer self)
+{
+  /* 0 en adelante: de mayor a menor prioridad */
+  if(*(gchar*)a>*(gchar*)b)
+    return -1; /*a delante de b*/
+  else if(*(gchar*)a<*(gchar*)b)
+    return 1; /*a detras de b*/
+  else
+    return 0;
+}
+
+/*
+private
+int
+timeout_read(gpointer self)
+{
+  ags_debug(2, "timeout!");
+  CM_ENATELBUS(self)->_priv->flag_envio=TRUE;
+  CM_ENATELBUS(self)->_priv->flag_eco = TRUE;
+  return FALSE;
+}*/
+
+private
+gboolean
+io_in(GIOChannel *io, GIOCondition condition, gpointer self) 
+{
+  gchar buffer[BUFFER_MAX];
+  gchar c;
+  gsize bytes_read;
+  GError* error=NULL;
+  GIOStatus status;
+  int i;
+  //---
+  guint32 t1, t2;
+  static guint32 t_ant=0;
+  gboolean tramaRecibida = FALSE;
+  static gchar suma = 0;
+  static char checksum[2] = {0, 0};
+  char aux[3];
+	static tipo_InformacionMensaje bufferResp;	// Guarda la información de la respuesta.
+	static char numero[5];
+	char * nulo;
+
+  t1=self_lee_temp(CM_ENATELBUS(self)->_priv->temp);
+  ags_debug(2,"temporizador_in:%d",t1-t_ant);
+
+  status=g_io_channel_read_chars(io, buffer, BUFFER_MAX, &bytes_read, &error);
+  /* XXX comprobar error */
+  g_clear_error(&error);
+
+  ags_debug(2,"io_in (bytes_read: %d)",bytes_read);
+
+  if(status==G_IO_STATUS_NORMAL) {
+    for(i = 0; i < bytes_read; i++) {
+      c = buffer[i];
+      printf("cm-enatelbus.io_in -> estado: %d, recibido: %2X\n", CM_ENATELBUS(self)->_priv->state, c);fflush(0);
+      /* Máquina de estados implementada mediante "switch" */
+      switch(CM_ENATELBUS(self)->_priv->state) {
+        case ESPERA_INICIO:
+				  if(c == INICIO_PREGUNTA) { /* trama pregunta */
+				  	suma = 0;
+				    CM_ENATELBUS(self)->_priv->flag_respuesta = 0;
+            ags_debug(2, "trama pregunta (ECO)");
+            CM_ENATELBUS(self)->_priv->len = 3;
+					  CM_ENATELBUS(self)->_priv->state = ESPERA_DIRECCION;
+				  }
+				  else if(c == INICIO_RESPUESTA) { /* trama respuesta */
+				  	suma = 0;
+				    CM_ENATELBUS(self)->_priv->flag_respuesta = 1;
+            ags_debug(2, "trama respuesta (RESPUESTA)");
+            CM_ENATELBUS(self)->_priv->len = 3;
+					  CM_ENATELBUS(self)->_priv->state = ESPERA_DIRECCION;
+				  }
+				  break;
+				case ESPERA_DIRECCION:
+					CM_ENATELBUS(self)->_priv->len--;
+					if(CM_ENATELBUS(self)->_priv->len <= 0) {
+						// Comprobar que el formato de la trama va correctamente.
+						if(c == SEPARADOR) {
+							// Guardar el valor de la dirección.
+							numero[3] = 0;	// Cerrar la cadena;
+							bufferResp.Estructura.direccion = strtol(numero, &numero, 16);
+	            CM_ENATELBUS(self)->_priv->len = 3;
+							CM_ENATELBUS(self)->_priv->state = ESPERA_COMANDO;
+						}
+						else {
+							// Error en la trama. Se descarta todo y se espera una nueva trama.
+							CM_ENATELBUS(self)->_priv->state = ESPERA_INICIO;
+						}
+					}
+					else {
+						numero[2 - CM_ENATELBUS(self)->_priv->len] = c;
+						suma = self_sumaC1(suma, c);
+					}
+					break;
+				case ESPERA_COMANDO:
+					CM_ENATELBUS(self)->_priv->len--;
+					if(CM_ENATELBUS(self)->_priv->len <= 0) {
+						// Comprobar que el formato de la trama va correctamente.
+						if(c == SEPARADOR) {
+							// Ahora se espera el valor del parámetro.
+							bufferResp.Estructura.hayParametro = TRUE;
+	            CM_ENATELBUS(self)->_priv->len = 5;
+							CM_ENATELBUS(self)->_priv->state = ESPERA_PARAMETRO;
+						}
+						else if(c == INICIO_CHECKSUM) {
+							// Ahora se espera el valor el checksum.
+							bufferResp.Estructura.hayParametro = FALSE;
+	            CM_ENATELBUS(self)->_priv->len = 2;
+							CM_ENATELBUS(self)->_priv->state = ESPERA_CHECKSUM;
+						}
+						else {
+							// Error en la trama. Se descarta todo y se espera una nueva trama.
+							CM_ENATELBUS(self)->_priv->state = ESPERA_INICIO;
+						}
+					}
+					else {
+						bufferResp.Estructura.comando[2 - CM_ENATELBUS(self)->_priv->len] = c;
+						suma = self_sumaC1(suma, c);
+					}
+					break;
+				case ESPERA_PARAMETRO:
+					CM_ENATELBUS(self)->_priv->len--;
+					if(CM_ENATELBUS(self)->_priv->len <= 0) {
+						// Comprobar que el formato de la trama va correctamente.
+						if(c == INICIO_CHECKSUM) {
+							// Ahora se espera el valor el checksum.
+	            CM_ENATELBUS(self)->_priv->len = 2;
+							CM_ENATELBUS(self)->_priv->state = ESPERA_CHECKSUM;
+						}
+						else {
+							// Error en la trama. Se descarta todo y se espera una nueva trama.
+							CM_ENATELBUS(self)->_priv->state = ESPERA_INICIO;
+						}
+						numero[4] = 0;	// Cerrar la cadena.
+						bufferResp.Estructura.parametro = strtol(numero, &nulo, 16);
+					}
+					else {
+						numero[4 - CM_ENATELBUS(self)->_priv->len] = c;
+						suma = self_sumaC1(suma, c);
+					}
+					break;
+				case ESPERA_CHECKSUM:
+					CM_ENATELBUS(self)->_priv->len--;
+					checksum[1 - CM_ENATELBUS(self)->_priv->len] = c;
+					if(CM_ENATELBUS(self)->_priv->len <= 0) {
+						CM_ENATELBUS(self)->_priv->state = ESPERA_INICIO;
+						// Comprobar el checksum del mensaje.
+						suma = ~suma;
+						sprintf(aux, "%02X", (int)(suma & 0x00FF));
+						//printf("cm-enatelbus.io_in -> chk recibido: %c %c, chk calculado: %s\n", checksum[0], checksum[1], aux);fflush(0);
+						if((aux[0] == checksum[0]) && (aux[1] == checksum[1])) {
+						  if(CM_ENATELBUS(self)->_priv->flag_respuesta == 0) {
+						  	// Es el Eco. Se descarta.
+						    break;
+						  }
+						  ags_debug(2,"RESPUESTA!!!!!");
+						  /* set de trama en buffer de lectura */
+						  //printf("cm-enatelbus.io_in -> Dir: %02X, Com: %c%c, Param:%ld\n", bufferResp.Estructura.direccion, bufferResp.Estructura.comando[0], bufferResp.Estructura.comando[1], bufferResp.Estructura.parametro);fflush(0);
+						  textbuffer_set(TEXTBUFFERIF(CM_ENATELBUS(self)->_priv->r_textbuffer), bufferResp.caracteres, sizeof(tipo_InformacionMensaje));
+						  tramaRecibida = TRUE;
+						}
+						else {
+							// Error en la trama. Se descarta todo y se espera una nueva trama.
+						}
+					}
+					break;
+					
+				default:
+				  break;
+      }/*switch*/
+    }/*for*/
+  }/*if*/
+
+  // Incrementar la cuenta de tiempo.
+  t2=self_lee_temp(CM_ENATELBUS(self)->_priv->temp);
+  t_ant += t2 - t1;
+  if(tramaRecibida) {
+	  printf("cm-enatelbus.io_in -> Trama recibida T:%u\ttiempo consumido:%d\n", t1, t_ant);fflush(0);
+	  // Resetear la cuenta.
+	  t_ant = 0;
+	  tramaRecibida = FALSE;
+	}
+
+  return TRUE;
+}
+
+/************************************************************************
+* FUNCION: char sumaC1(char v1, char v2)
+* OBJETO:
+* Cálculo de la suma parcial para el checksum
+* ENTRADA:
+*   v1: primer sumando.
+*   v2: segundo sumando.
+* SALIDA:
+*   suma parcial para el checksum.
+*************************************************************************/
+private
+char
+sumaC1(unsigned char v1, unsigned char v2)
+{
+  unsigned int aux;
+  
+  aux = v1 + v2;
+  if(aux >= 256)
+     aux -= 255;
+  return ((char)(aux & 0xFF));
+}
+
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+}/*fin class*/
+
+%{
+  GObject *(*cmenatelbus_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

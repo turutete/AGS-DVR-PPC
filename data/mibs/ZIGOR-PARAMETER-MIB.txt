@@ -1,0 +1,963 @@
+ZIGOR-PARAMETER-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	MODULE-IDENTITY,
+	OBJECT-TYPE,
+	Integer32
+		FROM SNMPv2-SMI
+	DisplayString,
+	TEXTUAL-CONVENTION
+		FROM SNMPv2-TC
+	NonNegativeInteger,
+	ZDateAndTime
+		FROM ZIGOR-TC
+	zigorMgmt,
+	zigorExperiment
+		FROM ZIGOR-SMI;
+
+zigorParameterMIB MODULE-IDENTITY
+	LAST-UPDATED	"201003071130Z"
+	ORGANIZATION	"Corporacion Zigor, S.A."
+	CONTACT-INFO
+		"	Corporacion Zigor, S.A.
+			Depto. I+D
+
+		Postal:	C/ Portal de Gamarra, 28
+			C.P 01013 Vitoria-Gasteiz , Alava
+			(Spain)
+
+		Tel:	+34 (945) 214 600
+
+		E-mail:	zigor@zigor.com"
+	DESCRIPTION
+		"Zigor Parameter MIB"
+	::= { zigorExperiment 3 }
+
+ParamState ::= TEXTUAL-CONVENTION
+	STATUS	current
+	DESCRIPTION
+		"Type to represent the state of the parameters.
+
+		The returned values are:
+
+		   temp (1)    Parameters currently in edition.
+		               The system is not synchronized with
+		               parameters shown.
+		               5 minutes after last modification,
+		               the system returns to the last active state.
+
+		   active (2)  The parameters shown are 
+		               active (have not been edited)
+		               The system is synchronized with
+		               parameters shown.
+
+		   factory (3) The parameters correspond to
+		               factory configuration.
+		               The system is synchronized with
+		               parameters shown.
+
+		Setting this variable the result is:
+
+		   temp (1)    Saves the current edition as active
+		               parameters and the system is synchronized.
+			       If successful, this variable
+		               becomes active (2).
+
+		   active (2)  Reload the active configuration,
+		               cancelling any temporary state.
+
+		   factory (3) Factory configuration is loaded.
+		               This configuration is also temporary
+		               should then establish temp (1)
+		               if you want to save the settings
+		               factory and synchronize the system."
+
+	SYNTAX	INTEGER {
+		temp(1),    -- current edition (temporary)
+		active(2),  -- cancel current edition (reload "active")
+		factory(3)  -- load factory parameters
+	}
+
+NotificationLang ::= TEXTUAL-CONVENTION
+	STATUS	current
+	DESCRIPTION
+		"Type to represent the language for notifications."
+	SYNTAX	INTEGER {
+		english(1),
+		spanish(2),
+		french(3),
+		italian(4),
+		german(5)
+	}
+
+TimeZone ::= TEXTUAL-CONVENTION
+	STATUS	current
+	DESCRIPTION
+		"Type to represent the TimeZone based on 'tz' database (http://www.twinsun.com/tz/tz-link.htm) '2011a' updated."
+	SYNTAX	INTEGER {
+		AfricaAbidjan(1),
+		AfricaAccra(2),
+		AfricaAddisAbaba(3),
+		AfricaAlgiers(4),
+		AfricaAsmara(5),
+		AfricaAsmera(6),
+		AfricaBamako(7),
+		AfricaBangui(8),
+		AfricaBanjul(9),
+		AfricaBissau(10),
+		AfricaBlantyre(11),
+		AfricaBrazzaville(12),
+		AfricaBujumbura(13),
+		AfricaCairo(14),
+		AfricaCasablanca(15),
+		AfricaCeuta(16),
+		AfricaConakry(17),
+		AfricaDakar(18),
+		AfricaDaresSalaam(19),
+		AfricaDjibouti(20),
+		AfricaDouala(21),
+		AfricaElAaiun(22),
+		AfricaFreetown(23),
+		AfricaGaborone(24),
+		AfricaHarare(25),
+		AfricaJohannesburg(26),
+		AfricaKampala(27),
+		AfricaKhartoum(28),
+		AfricaKigali(29),
+		AfricaKinshasa(30),
+		AfricaLagos(31),
+		AfricaLibreville(32),
+		AfricaLome(33),
+		AfricaLuanda(34),
+		AfricaLubumbashi(35),
+		AfricaLusaka(36),
+		AfricaMalabo(37),
+		AfricaMaputo(38),
+		AfricaMaseru(39),
+		AfricaMbabane(40),
+		AfricaMogadishu(41),
+		AfricaMonrovia(42),
+		AfricaNairobi(43),
+		AfricaNdjamena(44),
+		AfricaNiamey(45),
+		AfricaNouakchott(46),
+		AfricaOuagadougou(47),
+		AfricaPortoNovo(48),
+		AfricaSaoTome(49),
+		AfricaTimbuktu(50),
+		AfricaTripoli(51),
+		AfricaTunis(52),
+		AfricaWindhoek(53),
+		AmericaAdak(54),
+		AmericaAnchorage(55),
+		AmericaAnguilla(56),
+		AmericaAntigua(57),
+		AmericaAraguaina(58),
+		AmericaArgentina(59),
+		AmericaAruba(60),
+		AmericaAsuncion(61),
+		AmericaAtikokan(62),
+		AmericaAtka(63),
+		AmericaBahia(64),
+		AmericaBahiaBanderas(65),
+		AmericaBarbados(66),
+		AmericaBelem(67),
+		AmericaBelize(68),
+		AmericaBlancSablon(69),
+		AmericaBoaVista(70),
+		AmericaBogota(71),
+		AmericaBoise(72),
+		AmericaBuenosAires(73),
+		AmericaCambridgeBay(74),
+		AmericaCampoGrande(75),
+		AmericaCancun(76),
+		AmericaCaracas(77),
+		AmericaCatamarca(78),
+		AmericaCayenne(79),
+		AmericaCayman(80),
+		AmericaChicago(81),
+		AmericaChihuahua(82),
+		AmericaCoralHarbour(83),
+		AmericaCordoba(84),
+		AmericaCostaRica(85),
+		AmericaCuiaba(86),
+		AmericaCuracao(87),
+		AmericaDanmarkshavn(88),
+		AmericaDawson(89),
+		AmericaDawsonCreek(90),
+		AmericaDenver(91),
+		AmericaDetroit(92),
+		AmericaDominica(93),
+		AmericaEdmonton(94),
+		AmericaEirunepe(95),
+		AmericaElSalvador(96),
+		AmericaEnsenada(97),
+		AmericaFortWayne(98),
+		AmericaFortaleza(99),
+		AmericaGlaceBay(100),
+		AmericaGodthab(101),
+		AmericaGooseBay(102),
+		AmericaGrandTurk(103),
+		AmericaGrenada(104),
+		AmericaGuadeloupe(105),
+		AmericaGuatemala(106),
+		AmericaGuayaquil(107),
+		AmericaGuyana(108),
+		AmericaHalifax(109),
+		AmericaHavana(110),
+		AmericaHermosillo(111),
+		AmericaIndiana(112),
+		AmericaIndianapolis(113),
+		AmericaInuvik(114),
+		AmericaIqaluit(115),
+		AmericaJamaica(116),
+		AmericaJujuy(117),
+		AmericaJuneau(118),
+		AmericaKentucky(119),
+		AmericaKnoxIN(120),
+		AmericaLaPaz(121),
+		AmericaLima(122),
+		AmericaLosAngeles(123),
+		AmericaLouisville(124),
+		AmericaMaceio(125),
+		AmericaManagua(126),
+		AmericaManaus(127),
+		AmericaMarigot(128),
+		AmericaMartinique(129),
+		AmericaMatamoros(130),
+		AmericaMazatlan(131),
+		AmericaMendoza(132),
+		AmericaMenominee(133),
+		AmericaMerida(134),
+		AmericaMexicoCity(135),
+		AmericaMiquelon(136),
+		AmericaMoncton(137),
+		AmericaMonterrey(138),
+		AmericaMontevideo(139),
+		AmericaMontreal(140),
+		AmericaMontserrat(141),
+		AmericaNassau(142),
+		AmericaNewYork(143),
+		AmericaNipigon(144),
+		AmericaNome(145),
+		AmericaNoronha(146),
+		AmericaNorthDakota(147),
+		AmericaOjinaga(148),
+		AmericaPanama(149),
+		AmericaPangnirtung(150),
+		AmericaParamaribo(151),
+		AmericaPhoenix(152),
+		AmericaPortauPrince(153),
+		AmericaPortofSpain(154),
+		AmericaPortoAcre(155),
+		AmericaPortoVelho(156),
+		AmericaPuertoRico(157),
+		AmericaRainyRiver(158),
+		AmericaRankinInlet(159),
+		AmericaRecife(160),
+		AmericaRegina(161),
+		AmericaResolute(162),
+		AmericaRioBranco(163),
+		AmericaRosario(164),
+		AmericaSantaIsabel(165),
+		AmericaSantarem(166),
+		AmericaSantiago(167),
+		AmericaSantoDomingo(168),
+		AmericaSaoPaulo(169),
+		AmericaScoresbysund(170),
+		AmericaShiprock(171),
+		AmericaStBarthelemy(172),
+		AmericaStJohns(173),
+		AmericaStKitts(174),
+		AmericaStLucia(175),
+		AmericaStThomas(176),
+		AmericaStVincent(177),
+		AmericaSwiftCurrent(178),
+		AmericaTegucigalpa(179),
+		AmericaThule(180),
+		AmericaThunderBay(181),
+		AmericaTijuana(182),
+		AmericaToronto(183),
+		AmericaTortola(184),
+		AmericaVancouver(185),
+		AmericaVirgin(186),
+		AmericaWhitehorse(187),
+		AmericaWinnipeg(188),
+		AmericaYakutat(189),
+		AmericaYellowknife(190),
+		AntarcticaCasey(191),
+		AntarcticaDavis(192),
+		AntarcticaDumontDUrville(193),
+		AntarcticaMacquarie(194),
+		AntarcticaMawson(195),
+		AntarcticaMcMurdo(196),
+		AntarcticaPalmer(197),
+		AntarcticaRothera(198),
+		AntarcticaSouthPole(199),
+		AntarcticaSyowa(200),
+		AntarcticaVostok(201),
+		ArcticLongyearbyen(202),
+		AsiaAden(203),
+		AsiaAlmaty(204),
+		AsiaAmman(205),
+		AsiaAnadyr(206),
+		AsiaAqtau(207),
+		AsiaAqtobe(208),
+		AsiaAshgabat(209),
+		AsiaAshkhabad(210),
+		AsiaBaghdad(211),
+		AsiaBahrain(212),
+		AsiaBaku(213),
+		AsiaBangkok(214),
+		AsiaBeirut(215),
+		AsiaBishkek(216),
+		AsiaBrunei(217),
+		AsiaCalcutta(218),
+		AsiaChoibalsan(219),
+		AsiaChongqing(220),
+		AsiaChungking(221),
+		AsiaColombo(222),
+		AsiaDacca(223),
+		AsiaDamascus(224),
+		AsiaDhaka(225),
+		AsiaDili(226),
+		AsiaDubai(227),
+		AsiaDushanbe(228),
+		AsiaGaza(229),
+		AsiaHarbin(230),
+		AsiaHoChiMinh(231),
+		AsiaHongKong(232),
+		AsiaHovd(233),
+		AsiaIrkutsk(234),
+		AsiaIstanbul(235),
+		AsiaJakarta(236),
+		AsiaJayapura(237),
+		AsiaJerusalem(238),
+		AsiaKabul(239),
+		AsiaKamchatka(240),
+		AsiaKarachi(241),
+		AsiaKashgar(242),
+		AsiaKathmandu(243),
+		AsiaKatmandu(244),
+		AsiaKolkata(245),
+		AsiaKrasnoyarsk(246),
+		AsiaKualaLumpur(247),
+		AsiaKuching(248),
+		AsiaKuwait(249),
+		AsiaMacao(250),
+		AsiaMacau(251),
+		AsiaMagadan(252),
+		AsiaMakassar(253),
+		AsiaManila(254),
+		AsiaMuscat(255),
+		AsiaNicosia(256),
+		AsiaNovokuznetsk(257),
+		AsiaNovosibirsk(258),
+		AsiaOmsk(259),
+		AsiaOral(260),
+		AsiaPhnomPenh(261),
+		AsiaPontianak(262),
+		AsiaPyongyang(263),
+		AsiaQatar(264),
+		AsiaQyzylorda(265),
+		AsiaRangoon(266),
+		AsiaRiyadh(267),
+		AsiaRiyadh87(268),
+		AsiaRiyadh88(269),
+		AsiaRiyadh89(270),
+		AsiaSaigon(271),
+		AsiaSakhalin(272),
+		AsiaSamarkand(273),
+		AsiaSeoul(274),
+		AsiaShanghai(275),
+		AsiaSingapore(276),
+		AsiaTaipei(277),
+		AsiaTashkent(278),
+		AsiaTbilisi(279),
+		AsiaTehran(280),
+		AsiaTelAviv(281),
+		AsiaThimbu(282),
+		AsiaThimphu(283),
+		AsiaTokyo(284),
+		AsiaUjungPandang(285),
+		AsiaUlaanbaatar(286),
+		AsiaUlanBator(287),
+		AsiaUrumqi(288),
+		AsiaVientiane(289),
+		AsiaVladivostok(290),
+		AsiaYakutsk(291),
+		AsiaYekaterinburg(292),
+		AsiaYerevan(293),
+		AtlanticAzores(294),
+		AtlanticBermuda(295),
+		AtlanticCanary(296),
+		AtlanticCapeVerde(297),
+		AtlanticFaeroe(298),
+		AtlanticFaroe(299),
+		AtlanticJanMayen(300),
+		AtlanticMadeira(301),
+		AtlanticReykjavik(302),
+		AtlanticSouthGeorgia(303),
+		AtlanticStHelena(304),
+		AtlanticStanley(305),
+		AustraliaACT(306),
+		AustraliaAdelaide(307),
+		AustraliaBrisbane(308),
+		AustraliaBrokenHill(309),
+		AustraliaCanberra(310),
+		AustraliaCurrie(311),
+		AustraliaDarwin(312),
+		AustraliaEucla(313),
+		AustraliaHobart(314),
+		AustraliaLHI(315),
+		AustraliaLindeman(316),
+		AustraliaLordHowe(317),
+		AustraliaMelbourne(318),
+		AustraliaNSW(319),
+		AustraliaNorth(320),
+		AustraliaPerth(321),
+		AustraliaQueensland(322),
+		AustraliaSouth(323),
+		AustraliaSydney(324),
+		AustraliaTasmania(325),
+		AustraliaVictoria(326),
+		AustraliaWest(327),
+		AustraliaYancowinna(328),
+		EuropeAmsterdam(329),
+		EuropeAndorra(330),
+		EuropeAthens(331),
+		EuropeBelfast(332),
+		EuropeBelgrade(333),
+		EuropeBerlin(334),
+		EuropeBratislava(335),
+		EuropeBrussels(336),
+		EuropeBucharest(337),
+		EuropeBudapest(338),
+		EuropeChisinau(339),
+		EuropeCopenhagen(340),
+		EuropeDublin(341),
+		EuropeGibraltar(342),
+		EuropeGuernsey(343),
+		EuropeHelsinki(344),
+		EuropeIsleofMan(345),
+		EuropeIstanbul(346),
+		EuropeJersey(347),
+		EuropeKaliningrad(348),
+		EuropeKiev(349),
+		EuropeLisbon(350),
+		EuropeLjubljana(351),
+		EuropeLondon(352),
+		EuropeLuxembourg(353),
+		EuropeMadrid(354),
+		EuropeMalta(355),
+		EuropeMariehamn(356),
+		EuropeMinsk(357),
+		EuropeMonaco(358),
+		EuropeMoscow(359),
+		EuropeNicosia(360),
+		EuropeOslo(361),
+		EuropeParis(362),
+		EuropePodgorica(363),
+		EuropePrague(364),
+		EuropeRiga(365),
+		EuropeRome(366),
+		EuropeSamara(367),
+		EuropeSanMarino(368),
+		EuropeSarajevo(369),
+		EuropeSimferopol(370),
+		EuropeSkopje(371),
+		EuropeSofia(372),
+		EuropeStockholm(373),
+		EuropeTallinn(374),
+		EuropeTirane(375),
+		EuropeTiraspol(376),
+		EuropeUzhgorod(377),
+		EuropeVaduz(378),
+		EuropeVatican(379),
+		EuropeVienna(380),
+		EuropeVilnius(381),
+		EuropeVolgograd(382),
+		EuropeWarsaw(383),
+		EuropeZagreb(384),
+		EuropeZaporozhye(385),
+		EuropeZurich(386),
+		IndianAntananarivo(387),
+		IndianChagos(388),
+		IndianChristmas(389),
+		IndianCocos(390),
+		IndianComoro(391),
+		IndianKerguelen(392),
+		IndianMahe(393),
+		IndianMaldives(394),
+		IndianMauritius(395),
+		IndianMayotte(396),
+		IndianReunion(397),
+		PacificApia(398),
+		PacificAuckland(399),
+		PacificChatham(400),
+		PacificChuuk(401),
+		PacificEaster(402),
+		PacificEfate(403),
+		PacificEnderbury(404),
+		PacificFakaofo(405),
+		PacificFiji(406),
+		PacificFunafuti(407),
+		PacificGalapagos(408),
+		PacificGambier(409),
+		PacificGuadalcanal(410),
+		PacificGuam(411),
+		PacificHonolulu(412),
+		PacificJohnston(413),
+		PacificKiritimati(414),
+		PacificKosrae(415),
+		PacificKwajalein(416),
+		PacificMajuro(417),
+		PacificMarquesas(418),
+		PacificMidway(419),
+		PacificNauru(420),
+		PacificNiue(421),
+		PacificNorfolk(422),
+		PacificNoumea(423),
+		PacificPagoPago(424),
+		PacificPalau(425),
+		PacificPitcairn(426),
+		PacificPohnpei(427),
+		PacificPonape(428),
+		PacificPortMoresby(429),
+		PacificRarotonga(430),
+		PacificSaipan(431),
+		PacificSamoa(432),
+		PacificTahiti(433),
+		PacificTarawa(434),
+		PacificTongatapu(435),
+		PacificTruk(436),
+		PacificWake(437),
+		PacificWallis(438),
+		PacificYap(439),
+		localtime(440)
+	}
+
+MBBaudrate ::= TEXTUAL-CONVENTION
+	STATUS	current
+	DESCRIPTION
+		"Type to represent the Modbus RTU Baudrate"
+	SYNTAX	INTEGER {
+		s9600(1),
+		s19200(2),
+		s38400(3),
+		s57600(4),
+		s115200(5)
+	}
+MBParity ::= TEXTUAL-CONVENTION
+	STATUS	current
+	DESCRIPTION
+		"Type to represent the Modbus RTU Parity"
+	SYNTAX	INTEGER {
+		none(1),
+		even(2),
+		odd(3)
+	}
+MBMode ::= TEXTUAL-CONVENTION
+	STATUS	current
+	DESCRIPTION
+		"Type to represent the Modbus Mode"
+	SYNTAX	INTEGER {
+		rtu(1),
+		tcp(2)
+	}
+
+zigorParamSystem  OBJECT IDENTIFIER ::= { zigorParameterMIB 1 }
+zigorParamNet	  OBJECT IDENTIFIER ::= { zigorParameterMIB 2 }
+zigorParamDialUp  OBJECT IDENTIFIER ::= { zigorParameterMIB 3 }
+zigorParamControl OBJECT IDENTIFIER ::= { zigorParameterMIB 4 }
+zigorParamModbus  OBJECT IDENTIFIER ::= { zigorParameterMIB 5 }
+
+zigorSysName OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Name for this managed node.
+		If the name is unknown, the value is the zero-length
+		string."
+	::= { zigorParamSystem 1 }
+
+zigorSysDescr OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"A textual description of the entity."
+	::= { zigorParamSystem 2 }
+
+zigorSysLocation OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"The physical location of this node (e.g., `telephone
+		closet, 3rd floor').  If the location is unknown, the value
+		is the zero-length string."
+	::= { zigorParamSystem 3 }
+
+zigorSysContact OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"The textual identification of the contact person for this
+		managed node, together with information on how to contact
+		this person.  If no contact information is known, the value
+		is the zero-length string."
+	::= { zigorParamSystem 4 }
+
+zigorSysPasswordTable OBJECT-TYPE
+	SYNTAX		SEQUENCE OF ZigorSysPasswordEntry
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION
+		"Table of passwords."
+	::= { zigorParamSystem 5 }
+
+zigorSysPasswordEntry OBJECT-TYPE
+	SYNTAX		ZigorSysPasswordEntry
+	MAX-ACCESS	not-accessible
+	STATUS		current
+	DESCRIPTION
+		"Row (conceptual) in table of passwords."
+	::= { zigorSysPasswordTable 1 }
+
+ZigorSysPasswordEntry ::= SEQUENCE {
+	zigorSysPasswordIndex	   NonNegativeInteger,
+	zigorSysPasswordPass	   DisplayString,
+	zigorSysPasswordDescr	   DisplayString
+}
+
+zigorSysPasswordIndex OBJECT-TYPE
+	SYNTAX		NonNegativeInteger
+	MAX-ACCESS	not-accessible	
+	STATUS		current
+	DESCRIPTION
+		"The auxiliary variable used for identifying instances of
+		the columnar objects in the zigorSysPasswordTable."
+	::= { zigorSysPasswordEntry 1 }
+
+zigorSysPasswordPass OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Password."
+	::= { zigorSysPasswordEntry 2 }
+
+zigorSysPasswordDescr OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Password description (role, access, etc.)."
+	::= { zigorSysPasswordEntry 3 }
+
+zigorSysCode OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"The identification code of the manufacturer."
+	::= { zigorParamSystem 6 }
+
+zigorSysVersion OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Firmware Version."
+	::= { zigorParamSystem 7 }
+
+zigorSysDate OBJECT-TYPE
+	SYNTAX		ZDateAndTime
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Date and time."
+	::= { zigorParamSystem 8 }
+
+zigorSysTimeZone OBJECT-TYPE
+	SYNTAX		TimeZone
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Time Zone."
+	::= { zigorParamSystem 9 }
+
+zigorSysNotificationLang OBJECT-TYPE
+	SYNTAX		NotificationLang
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Language for notifications. (Only in firmware >=1.1.2)"
+	::= { zigorParamSystem 10 }
+
+zigorSysBacklightTimeout OBJECT-TYPE
+	SYNTAX		INTEGER (0..65535)
+	UNITS		"seconds"
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Timeout for Display Backlight Off & Logout (local)."
+	::= { zigorParamSystem 11 }
+
+zigorSysLogoutTimeout OBJECT-TYPE
+	SYNTAX		INTEGER (0..65535)
+	UNITS		"minutes"
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Timeout for GUI Logout (remote)."
+	::= { zigorParamSystem 12 }
+
+-- DialUp
+zigorDialUpPin OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"SIM PIN Number"
+	::= { zigorParamDialUp 1 }
+
+zigorDialUpSmsNum1 OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Mobile number to send SMS (1)."
+	::= { zigorParamDialUp 2 }
+
+zigorDialUpSmsNum2 OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Mobile number to send SMS (2)."
+	::= { zigorParamDialUp 3 }
+
+zigorDialUpSmsNum3 OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Mobile number to send SMS (3)."
+	::= { zigorParamDialUp 4 }
+
+zigorDialUpSmsNum4 OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Mobile number to send SMS (4). Only in firmware >=1.1.2"
+	::= { zigorParamDialUp 5 }
+
+-- Net
+zigorNetIP OBJECT-TYPE
+	--SYNTAX		INTEGER32
+	--DISPLAY-HINT	"3a.3a.3a.3a"
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"IP Adrress"
+	::= { zigorParamNet 1 }
+
+zigorNetMask OBJECT-TYPE
+	--SYNTAX		INTEGER32
+	--DISPLAY-HINT	"3a.3a.3a.3a"
+	SYNTAX		DisplayString (SIZE(0..255))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Network Mask"
+	::= { zigorParamNet 2 }
+
+zigorNetGateway OBJECT-TYPE
+	--SYNTAX		INTEGER32
+	--DISPLAY-HINT	"3a.3a.3a.3a"
+	SYNTAX		DisplayString (SIZE(0..255))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Default Gateway"
+	::= { zigorParamNet 3 }
+
+zigorNetPortVnc OBJECT-TYPE
+	SYNTAX		INTEGER (0..65535)
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"TCP Port for VNC communication by Web Access."
+	::= { zigorParamNet 4 }
+
+zigorNetPortHttp OBJECT-TYPE
+	SYNTAX		INTEGER (0..65535)
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"TCP Port for Web Access."
+	::= { zigorParamNet 5 }
+
+zigorNetDNS OBJECT-TYPE
+	SYNTAX		DisplayString (SIZE(0..255))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Domain Name Server (Only in firmware >=1.1.2)"
+	::= { zigorParamNet 6 }
+
+zigorNetEmail1 OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Email Address 1 (Only in firmware >=1.1.2)"
+	::= { zigorParamNet 7 }
+
+zigorNetEmail2 OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Email Address 2 (Only in firmware >=1.1.2)"
+	::= { zigorParamNet 8 }
+
+zigorNetEmail3 OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Email Address 3 (Only in firmware >=1.1.2)"
+	::= { zigorParamNet 9 }
+
+zigorNetEmail4 OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Email Address 4 (Only in firmware >=1.1.2)"
+	::= { zigorParamNet 10 }
+
+zigorNetSmtp OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"SMTP email server (Only in firmware >=1.1.2)"
+	::= { zigorParamNet 11 }
+
+zigorNetSmtpUser OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"SMTP account user (Only in firmware >=1.1.2)"
+	::= { zigorParamNet 12 }
+
+zigorNetSmtpPass OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"SMTP account password (Only in firmware >=1.1.2)"
+	::= { zigorParamNet 13 }
+
+zigorNetSmtpEmail OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"SMTP account email (Only in firmware >=1.1.2)"
+	::= { zigorParamNet 14 }
+
+zigorNetSmtpAuth OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"SMTP account authentication (NO/SSL/TLS). Only in firmware >=1.1.2"
+	::= { zigorParamNet 15 }
+
+zigorNetSmtpTest OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"SMTP email for test. (Only in firmware >=1.1.2)"
+	::= { zigorParamNet 16 }
+
+-- Control
+zigorCtrlParamState OBJECT-TYPE
+	SYNTAX		ParamState
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		""
+	::= { zigorParamControl 1 }
+
+zigorCtrlParamDemo OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		""
+	::= { zigorParamControl 2 }
+
+-- MODBUS
+zigorModbusAddress OBJECT-TYPE
+	SYNTAX		INTEGER (0..247)
+	UNITS		""
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"MODBUS RTU Address"
+	::= { zigorParamModbus 1 }
+
+zigorModbusBaudrate OBJECT-TYPE
+	SYNTAX		MBBaudrate
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"MODBUS RTU Baudrate"
+	::= { zigorParamModbus 2 }
+
+zigorModbusParity OBJECT-TYPE
+	SYNTAX		MBParity
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"MODBUS RTU Parity"
+	::= { zigorParamModbus 3 }
+
+zigorModbusMode OBJECT-TYPE
+	SYNTAX		MBMode
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"MODBUS Mode"
+	::= { zigorParamModbus 4 }
+
+zigorModbusTCPPort OBJECT-TYPE
+	SYNTAX		INTEGER (1..65535)
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"MODBUS TCP Port"
+	::= { zigorParamModbus 5 }
+
+zigorModbusTCPTimeout OBJECT-TYPE
+	SYNTAX		INTEGER (1..65535)
+	UNITS		"seconds"
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"MODBUS TCP Inactivity Timeout for Connection Reset"
+	::= { zigorParamModbus 6 }
+
+END

@@ -1,0 +1,223 @@
+%{
+/**
+   \page gtk2treestore Gtk2TreeStore
+   \section gtk2treestore_desc DESCRIPCIÓN
+   Árbol.
+   \section gtk2treestore_reqs REQUISITOS
+     \subsection gtk2treestore_deps Dependencias
+     NINGUNA
+     \subsection gtk2treestore_pres Precarga
+     NINGUNA*
+     \subsection gtk2treestore_evs  Eventos
+     NINGUNO
+     \subsection gtk2treestore_cfs Configuración
+	-# columns
+	   - Tipo: CfTable
+	   - Requerido
+	   - Descripción: Tabla de configuración para definir las columnas del árbol.
+	   - Formato: 
+	   n_columna = TABLA_COLUMNA,... (n_columna es G_TYPE_STRING y TABLA_COLUMNA es CfTable).
+	   - Formato TABLA_COLUMNA:
+	      -# name
+	         - Tipo: G_TYPE_STRING
+		 - Requerido
+		 - Descripción: Nombre de la columna.
+	      -# type
+	         - Tipo: G_TYPE_INT (GType)
+		 - Requerido
+		 - Descripción: Tipo de la columna.
+     \subsection gtk2treestore_reqpros Propiedades
+     NINGUNA
+   \section gtk2treestore_feas CARACTERÍSTICAS
+     \subsection gtk2treestore_ifs  Implementa
+        -# \ref treestoreif
+     \subsection gtk2treestore_sigs Señales
+     NINGUNA
+*/
+%}
+
+%h{
+  /**
+   * GTK2 Treestore.
+   */
+
+#include <gtk/gtk.h>
+#include <ags-cf.h>
+#include <treestoreif.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "gtk2-treestore"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+%privateheader{
+
+%}
+
+requires 2.0.0
+
+class Gtk2:TreeStore from Gtk:Tree:Store (interface :TreestoreIf) {
+
+private GHashTable *column_number = { g_hash_table_new(g_str_hash, g_str_equal) }; 
+
+public 
+GObject *
+new (char *ts_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  CfTable my_cft;
+  char *col_name;
+  CfTable columns;
+  CfTable column;
+  GValue *v;
+  int i, len=0;
+  GType type;
+  GType *types=NULL;
+
+  ags_debug(1,"Leyendo configuración...");
+  my_cft=config_get_table(CONFIGIF(cf), cft, ts_name);
+
+  columns=config_get_table(CONFIGIF(cf), my_cft, "columns");
+  if(! config_check_table(CONFIGIF(cf), columns) )
+    g_error("Gtk2TreeStore %s sin configuración de columnas.", ts_name);
+
+  types=g_new(GType, 1);
+
+  i=1;
+  GString *gs_i=g_string_new("");
+  for(g_string_printf(gs_i, "%d", i)
+      ;config_check_table( CONFIGIF(cf), (column=config_get_table(CONFIGIF(cf), columns, gs_i->str)) )      
+      ;g_string_printf(gs_i, "%d", ++i)) {
+    col_name=config_get_string(CONFIGIF(cf), column, "name");
+    type=config_get_int(CONFIGIF(cf), column, "type");
+    
+    if(i>len) {
+      len=i;
+      types=g_renew(GType, types, len);
+    }
+    types[i-1]=type;
+
+    g_hash_table_insert(GTK2_TREESTORE(ret)->_priv->column_number, col_name, (gpointer)i); /* para buscar #columna por nombre */
+    
+    ags_debug(5,"i=%d type=%d types=%p", i, type, types);
+  }
+
+  gtk_tree_store_set_column_types(GTK_TREE_STORE(ret), len, types);
+  if(types)
+    free(types);
+  g_object_set_data(G_OBJECT(ret), "column_number", GTK2_TREESTORE(ret)->_priv->column_number);
+
+  return G_OBJECT(ret);
+}
+
+private
+gboolean select_row(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, SelectData *data)
+  {
+    gboolean visible=TRUE;   
+    char* rule_name=NULL;
+    CfTable rule;
+    char* col_name=NULL;
+    char* col_val=NULL;
+    GValue vv = { 0, };
+    GValue *model_val=&vv;
+
+    while( rule_name=config_getnextkey(data->cfif, data->rules, rule_name) ) {
+      rule=config_get_table(data->cfif, data->rules, rule_name);
+      if( config_check_table(data->cfif, rule) ) {
+	visible=TRUE;
+	col_name=NULL;
+	while(visible && (col_name=config_getnextkey(data->cfif, rule, col_name)) ) {
+	  col_val=config_get_string(data->cfif, rule, col_name);
+	  gtk_tree_model_get_value(model, iter, self_get_column_number(model, col_name), model_val);
+	  const char *aux=g_value_get_string(model_val);
+	  if(!aux || strcmp(col_val, aux) != 0) /* diferente! */
+	    visible=FALSE; /* condición de salida del bucle */
+	  /* clean */
+	  if(col_val)
+	    free(col_val);
+	  if(aux)
+	    free(aux);
+	}
+	if(visible)
+	  break;
+      }
+    }
+
+    if(visible) {
+      g_array_append_val(data->array, *iter);
+    }
+    
+    return FALSE;
+  }
+
+ interface :TreestoreIf private GArray* select(TreestoreIf* self, ConfigIf *cfif, CfTable rules)
+  {
+    GArray* array;
+    SelectData select_data;
+
+    array=g_array_new(FALSE, FALSE, sizeof(GtkTreeIter));
+
+    select_data.array=array;
+    select_data.cfif=cfif;
+    select_data.rules=rules;
+    gtk_tree_model_foreach(GTK_TREE_MODEL(self), (GtkTreeModelForeachFunc)self_select_row, &select_data);
+
+    return array;
+  }
+ interface :TreestoreIf private void new_iter(TreestoreIf* self, TsRow* row) 
+   {
+     *row=(void*) g_new(GtkTreeIter, 1);
+   }
+ interface :TreestoreIf private void free_iter(TreestoreIf* self, TsRow row) 
+   {
+     gtk_tree_iter_free( (GtkTreeIter*)row );
+   }
+ interface :TreestoreIf private gboolean first(TreestoreIf* self, TsRow row)
+   {
+     return gtk_tree_model_get_iter_first(GTK_TREE_MODEL(self), (GtkTreeIter*)row);
+   }
+ interface :TreestoreIf private gboolean children(TreestoreIf* self, TsRow child_row, TsRow row)
+   {
+     return gtk_tree_model_iter_children(GTK_TREE_MODEL(self), (GtkTreeIter*) child_row, (GtkTreeIter*) row);
+   }
+ interface :TreestoreIf private gboolean next(TreestoreIf* self, TsRow row)
+   {
+     return gtk_tree_model_iter_next(GTK_TREE_MODEL(self), (GtkTreeIter*) row);
+   }
+ interface :TreestoreIf private void get_value(TreestoreIf* self, TsRow row, gint col, GValue* v)
+   {
+     gtk_tree_model_get_value(GTK_TREE_MODEL(self), (GtkTreeIter*)row, col, v);
+   }
+ interface :TreestoreIf private void set_value(TreestoreIf* self, TsRow row, gint col, GValue* v)
+   {
+     gtk_tree_store_set_value(GTK_TREE_STORE(self), (GtkTreeIter*)row, col, v);
+   }
+ interface :TreestoreIf private GType get_column_type(TreestoreIf* self, gint col) 
+   {
+     return gtk_tree_model_get_column_type(GTK_TREE_MODEL(self), col);
+   }
+
+ interface :TreestoreIf private void append(TreestoreIf* self, TsRow row, TsRow parent_row)
+   {
+     gtk_tree_store_append(GTK_TREE_STORE(self), (GtkTreeIter*)row, (GtkTreeIter*)parent_row);
+   }
+ interface :TreestoreIf private gint get_column_number(TreestoreIf* self, gchar* name)
+   {
+     return ((gint)g_hash_table_lookup(g_object_get_data(G_OBJECT(self), "column_number"), name))-1;
+   }
+ interface :TreestoreIf private void remove(TreestoreIf* self, TsRow row)
+   {
+     gtk_tree_store_remove(GTK_TREE_STORE(self), (GtkTreeIter*)row);
+   }
+}
+
+%{
+  GObject *(*gtk2treestore_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

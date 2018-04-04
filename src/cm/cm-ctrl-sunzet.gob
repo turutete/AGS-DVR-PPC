@@ -1,0 +1,1353 @@
+%{
+/**
+ * \file cm-ctrl-sunzet.c
+ */
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cm-ctrl-sunzet"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...)
+#endif
+%}
+ 
+%h{
+#include <ags-cm.h>
+#include <ags-cf.h>
+%}
+
+%privateheader{
+#include <ags-type.h>	/*AGS_TYPE_OBJID*/
+#include <my-defs-sunzet.h>
+#include <configif.h>
+#include <accessif.h>	/*set/get...*/
+#include <accessxif.h>	/*getnextkey...*/
+#include <sys/time.h>	/*temporizadores: gettimeofday...*/
+#include <time.h>	/*broken-down time*/
+#include <math.h>	/*sqrt*/
+//XXX:
+#include <tmwtypes.h>
+#include <sz_AGS.h>
+#include <sz_maniobra.h>
+#include <sz_ventiladores.h>
+#include <spa.h>	/*solar position algorithm*/
+
+#include <stdio.h> /*printf*/
+
+/* Estados del DSP */
+enum ESTADOS_DSP {DSP_OFF=1, DSP_ESPERA_CARGA, DSP_ESPERA_AC, DSP_ESPERA_ON, DSP_ON, DSP_ESPERA_OFF, DSP_ESPERA_APERTURA, DSP_INHABILITADO, DSP_PARO_ERROR, DSP_ERROR_RESET1, DSP_ERROR_RESET2, DSP_ERROR_RESET3, DSP_ERROR_DESCARGA};
+/* Estados del DSP para la maniobra */
+#define CONV_OFF		1
+#define CONV_ON			4
+#define CONV_PARO_ERROR		8
+/* Estados sistema */
+enum ESTADOS_SIS {SIS_PARADA=1, SIS_ESPERA, SIS_ARRANQUE, SIS_FALLO, SIS_MPPT, SIS_DESCONEXION};  //Desconexion sin uso
+/* Estados maniobra */
+enum ESTADOS_MANIOBRA {PARADA=0, ESPERA_1, ESPERA_2, ARRANQUE, MPPT_1, MPPT_2, EMERGENCIA, FALLO};
+/* Valores severidad */
+enum SEVERIDAD {LEVE=1, PERSISTENTE, GRAVE, SEVERA};
+//debug:
+const char *eti_estado[][1] = {
+   "PARADA",
+   "ESPERA_1",
+   "ESPERA_2",
+   "ARRANQUE",
+   "MPPT_1",
+   "MPPT_2",
+   "EMERGENCIA",
+   "FALLO"
+};
+const char *eti_estado_sis[][1] = {
+   "SIS_PARADA",
+   "SIS_ESPERA",
+   "SIS_ARRANQUE",
+   "SIS_FALLO",
+   "SIS_MPPT",
+   "SIS_DESCONEXION"
+};
+
+static gint sdig1_aux=0;
+static gint error_grave_aux=0;
+static gint error_severa_aux=0;
+
+#define N_TAREAS_CTRL	3
+%}
+
+
+class Cm:Ctrl:Sunzet from Ags:Cm {
+
+/* variables privadas */
+private GObject *sds;
+private guint32 temp;
+private GHashTable *alarm_hashtable = { g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free) } destroywith g_hash_table_destroy;
+private gint timeout;
+private gulong setsig_handler_id;
+private gint DeratingT;
+//private gint PotNominal;
+
+public
+GObject*
+new (char *cm_name, AgsCf *cf, CfTable cft) {
+  GValue *v;
+  
+  /* constructor */
+  GObject *ret = G_OBJECT(GET_NEW);
+  
+  /* obtener tabla cfg modulo */
+  CfTable my_cft= config_get_table(CONFIGIF(cf), cft, cm_name);
+  
+  CM_CTRL_SUNZET(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "elsds");
+
+//  CM_CTRL_SUNZET(ret)->_priv->PotNominal = config_get_int(CONFIGIF(cf), my_cft, "potencia_nominal");
+
+  self_inicia_temp(&CM_CTRL_SUNZET(ret)->_priv->temp);
+
+  /* control */
+  gint timeout = config_get_int(CONFIGIF(cf), my_cft, "timeout_ctrl");
+  CM_CTRL_SUNZET(ret)->_priv->timeout = timeout;
+  if(timeout)
+    g_timeout_add(timeout, self_control, (gpointer) ret);
+
+  /* ademas de periodicamente, se realiza llamada al reloj_astronomico en cada modificacion de los parametros relacionados */
+  g_timeout_add(24*60*60*1000, self_reloj_astronomico, (gpointer) ret);  //lamada 1 vez al dia
+  
+  /* regulacion para el derating */
+  CM_CTRL_SUNZET(ret)->_priv->DeratingT = 10000;  //10seg.
+  g_timeout_add(CM_CTRL_SUNZET(ret)->_priv->DeratingT, self_derating, (gpointer) ret);
+  
+  CM_CTRL_SUNZET(ret)->_priv->setsig_handler_id = g_signal_connect(G_OBJECT( CM_CTRL_SUNZET(ret)->_priv->sds ), "setsig", (GCallback)self_setsig, (gpointer) ret);
+  
+  return ret;
+}
+
+/*
+Manejador de señal de set, se conecta _antes_ que el manejador del objeto script lua (veanse dependencias de los objetos),
+de manera que es este ultimo el que gestiona el retorno (TRUE o FALSE).
+Nota: no confundir la gestion del set en objeto sds, con el manejador por defecto de la señal que es "return FALSE" (vease objeto sds).
+ */
+private
+gboolean
+setsig( GObject* sds, char* k, gpointer v, gpointer self) {
+  if( strncmp(k,zigorSunzetParamCoordLong,strlen(zigorSunzetParamCoordLong))==0
+   || strncmp(k,zigorSunzetParamCoordLat,strlen(zigorSunzetParamCoordLat))==0
+   || strncmp(k,zigorSysDate,strlen(zigorSysDate))==0
+   || strncmp(k,zigorSunzetParamZonaGMT,strlen(zigorSunzetParamZonaGMT))==0 ) {
+     //printf("spa>>>recalcular hora solar, k:%s\n", k);
+     /* bloqueo _solo_ local de sets */
+     g_signal_handler_block(sds, CM_CTRL_SUNZET(self)->_priv->setsig_handler_id);
+
+     access_set(ACCESSIF(CM_CTRL_SUNZET(self)->_priv->sds), k, v);
+     self_reloj_astronomico(self);
+
+     g_signal_handler_unblock(sds, CM_CTRL_SUNZET(self)->_priv->setsig_handler_id);
+     g_signal_stop_emission_by_name(sds, "setsig");
+  }
+  return FALSE;  /* el manejador del script lua gestiona el retorno */
+}
+
+
+private
+void
+set_oid_int(gpointer self, char *nombre_var, int n_instancia, int valor) {
+  GValue v= {0,};
+  char aux_str[50];
+  
+  g_value_init(&v, G_TYPE_INT);
+  g_value_set_int(&v, valor);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_CTRL_SUNZET(self)->_priv->sds), aux_str, &v);
+}
+
+private
+void
+set_oid_float(gpointer self, char *nombre_var, int n_instancia, gfloat valor) {
+  GValue v= {0,};
+  char aux_str[50];
+  
+  g_value_init(&v, G_TYPE_FLOAT);
+  g_value_set_float(&v, valor);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_CTRL_SUNZET(self)->_priv->sds), aux_str, &v);
+}
+
+private
+void
+set_oid_str(gpointer self, char *nombre_var, int n_instancia, char *str) {
+  GValue v= {0,};
+  char aux_str[50];
+  
+  g_value_init(&v, G_TYPE_STRING);
+  g_value_set_string(&v, str);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_CTRL_SUNZET(self)->_priv->sds), aux_str, &v);
+}
+
+private
+void
+set_oid_objid(gpointer self, char *nombre_var, int n_instancia, char *str) {
+  GValue v= {0,};
+  char aux_str[50];
+  
+  g_value_init(&v, AGS_TYPE_OBJID);
+  //sprintf(aux_str,"%s.0", str);	//incluir numero de instancia aqui dentro
+  g_value_set_objid(&v, str);
+  //g_value_set_objid(&v, aux_str);
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  access_set(ACCESSIF(CM_CTRL_SUNZET(self)->_priv->sds), aux_str, &v);
+}
+
+private
+gint
+get_oid_int(gpointer self, char *nombre_var, int n_instancia) {
+  GValue *v;
+  char aux_str[50];
+  int n;
+  
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  v=access_get( ACCESSIF(CM_CTRL_SUNZET(self)->_priv->sds), aux_str );
+  n=g_value_get_int(v);
+  /* clean */
+  g_free(v);
+  return n;
+}
+
+private
+gchar *
+get_oid_string(gpointer self, char *nombre_var, int n_instancia) {
+  GValue *v;
+  char aux_str[50];
+  char* s=NULL;
+  
+  sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
+  v=access_get( ACCESSIF(CM_CTRL_SUNZET(self)->_priv->sds), aux_str );
+  if(v) {
+    s=g_value_get_string(v);
+    /* clean */
+    g_free(v);
+  }
+
+  return s;
+}
+
+/* rutinas varias de control */
+private
+gboolean
+control(gpointer self) {
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+  //--
+  /* pseudo-tareas para aligerar la carga de proceso en cada iteracion */
+  static gint i_control_carga=0;  //indice de control de carga
+  //--
+  static conta_analiza_eventos=0;
+
+  ags_debug(2, "control");
+
+  //t1=self_lee_temp(CM_CTRL_SUNZET(self)->_priv->temp);
+  //ags_debug(2,"tiempo timeout:%d",t1-t_ant);
+//printf("----------\n");
+//printf("tiempo timeout:%d\n",t1-t_ant);
+  //t_ant=t1;
+  //---
+  
+  switch(i_control_carga) {
+    case 0:  //init (solo una vez)
+      self_crea_tabla_alarmas_cfg(self);
+      i_control_carga=1;
+      break;
+    case 1:
+      self_maniobras(self);
+      i_control_carga=2;
+      break;
+    case 2:
+      self_ventiladores(self);
+      i_control_carga=3;
+      break;
+    case 3:
+      self_calculos(self);
+      //--- analiza eventos cada 2 pasadas
+      conta_analiza_eventos++;
+      if(conta_analiza_eventos==2) {
+         conta_analiza_eventos=1;
+	 self_analiza_eventos(self);
+      }
+      //---
+      i_control_carga=1;
+      break;
+  }
+
+  //---
+  //t2=self_lee_temp(CM_CTRL_SUNZET(self)->_priv->temp);
+  //ags_debug(2,"tiempo consumido:%d",t2-t1);
+//printf("tiempo consumido:%d\n",t2-t1);
+
+  return TRUE;
+}
+
+private
+gboolean
+derating(gpointer self) {
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+  //---
+  static float error;
+  static float derating;
+  float Kp;
+  float Ti;
+  float T;
+  float derating_max;
+  float derating_min;
+  float Tref, Tmed;
+  float salida;
+  //
+  static int t;
+  
+  t1=self_lee_temp(CM_CTRL_SUNZET(self)->_priv->temp);
+  //ags_debug(2,"tiempo timeout:%d",t1-t_ant);
+//printf("derating>>>----------\n");
+//printf("derating>>>tiempo timeout:%d\n",t1-t_ant);
+  t_ant=t1;
+  //---
+  Kp = (float)self_get_oid_int(self, zigorSunzetParamDeratingKp, 0)/1000;  //Kp en milesimas en sds
+//printf("derating>>>Kp: %f\n", Kp);
+  Ti = self_get_oid_int(self, zigorSunzetParamDeratingTi, 0);
+//printf("derating>>>Ti: %f\n", Ti);
+  //derating_max = (float)self_get_oid_int(self, zigorSunzetParamDeratingMax, 0)/10;  // /1000: xq esta en milesimas en sds & *100: para fijar los limites acordes a la potencia nominal 100Kw!
+  //derating_max = (float)self_get_oid_int(self, zigorSunzetParamDeratingMax, 0)/1000*CM_CTRL_SUNZET(self)->_priv->PotNominal;  // /1000: xq esta en milesimas en sds & *PotNominal: para fijar los limites acordes a la potencia nominal
+  derating_max = (float)self_get_oid_int(self, zigorSunzetParamDeratingMax, 0)/1000*(float)self_get_oid_int(self, zigorSunzetObjPSalNom, 0);// /1000: xq esta en milesimas en sds, & *PSalNom: para fijar los limites acordes a la potencia nominal
+//printf("derating>>>derating_max: %f\n", derating_max);
+  Tref = self_get_oid_int(self, zigorSunzetParamDeratingTref, 0);  //grados
+//printf("derating>>>Tref: %f\n", Tref);
+
+  Tmed = self_get_oid_int(self, zigorSunzetObjTempRec, 0);  //grados
+//printf("derating>>>Tmed: %f\n", Tmed);
+
+  T = (float)CM_CTRL_SUNZET(self)->_priv->DeratingT/1000;  /* periodo en seg. */
+//printf("derating>>>T: %f\n", T);
+  derating_min = 0;
+
+  /* ecuacion en diferencias */
+  /* uk = u(k-1) + Kp*(ek - e(k-1)) + Kp/Ti*T*e(k-1) */
+  /* uk = u(k-1) + Kp*ek - Kp*e(k-1) + Kp/Ti*T*e(k-1) */
+//printf("derating>>>error(k-1): %f\n", error);
+  derating += Kp/Ti*T*error - Kp*error;  //uso e(k-1) y u(k-1)
+  error = Tref - Tmed;  //ek
+//printf("derating>>>error(k): %f\n", error);
+  derating += Kp*error;  //uso ek
+//printf("derating>>>derating: %f\n", derating);
+
+  //derating = derating/100;  // /100: xq la salida es por kW y la potencia nominal es 100kW
+  //printf("derating>>>derating(/100): %f\n", derating);
+
+  /* saturacion y anti-windup */
+  if(derating > derating_max) {
+    derating = derating_max;
+    //printf("derating>>>recorte derating por encima de max: %f\n", derating);
+  }
+  else if(derating < derating_min) {
+    derating = derating_min;
+    //printf("derating>>>recorte derating por debajo de min: %f\n", derating);
+  }
+  
+//  salida = derating*10;  // /100 para ser por unidad & *1000: paso a milesimas que se quiere en DSP
+//  salida = derating/25*1000;  // /25 para ser por unidad & *1000: paso a milesimas que se quiere en DSP
+//  salida = derating/CM_CTRL_SUNZET(self)->_priv->PotNominal*1000;  // /PotNominal para ser por unidad & *1000: paso a milesimas que se quiere en DSP
+  salida = derating/(float)self_get_oid_int(self, zigorSunzetObjPSalNom,0)*1000;  // /PSalNom para ser por unidad, & *1000: paso a milesimas xq asi se espera en DSP
+//printf("salida:%f\n",salida);
+  self_set_oid_int(self, zigorSunzetObjDerating, 0, salida);  //en milesimas
+
+//printf("log>>>%d,%.0f,%.0f,%.0f,%.0f\n", t,Tref,Tmed,error,derating);
+//t += 10;
+  
+  return TRUE;
+}
+
+private
+gboolean
+reloj_astronomico(gpointer self) {
+  guint32 t1,t2;
+  static guint32 t_ant=0;
+  //--
+  //struct timeval t;
+  time_t curtime;
+  struct tm *tm;
+  static spa_data spa;
+  //--
+  float longitud, latitud;
+  int error;
+  int horas,segundos,minutos;
+  
+  ags_debug(2, "reloj astronomico");
+
+  //t1=self_lee_temp(CM_CTRL_SUNZET(self)->_priv->temp);
+  //ags_debug(2,"tiempo timeout:%d",t1-t_ant);
+//printf("spa>>>----------\n");
+//printf("spa>>>tiempo timeout:%d\n",t1-t_ant);
+  //t_ant=t1;
+  //---
+  
+  /* Get the current time. */
+  curtime = time(NULL);
+  /* Convert it to local time representation. */
+  tm = localtime(&curtime);
+
+  //printf("sec:%d\n", tm->tm_sec);
+  //printf("min:%d\n", tm->tm_min);
+  //printf("hour:%d\n", tm->tm_hour);
+  //printf("day:%d\n", tm->tm_mday);
+  //printf("mon:%d\n", tm->tm_mon +1);
+  //printf("year:%d\n", tm->tm_year +1900);
+  //printf("gmtoff:%ld\n", tm->tm_gmtoff);	//describes the time zone, including daylight saving (the number of seconds east of UTC)
+  //printf("timezone:%d\n", tm->tm_gmtoff/3600);
+  
+  //gets de parametros: (enteros-> 4 bytes)
+  longitud = self_get_oid_int(self, zigorSunzetParamCoordLong, 0);  //segundos
+  longitud = longitud/3600;  //grados
+  latitud = self_get_oid_int(self, zigorSunzetParamCoordLat, 0);
+  latitud = latitud/3600;  //grados
+  //printf("spa>>>Long:%f, Lat:%f\n", longitud, latitud);
+  //XXX: ToDo: proteccion ante gets fallidos
+  
+  //rellenar estructura de datos de entrada:
+  spa.year   = tm->tm_year +1900;
+  spa.month  = tm->tm_mon +1;
+  spa.day    = tm->tm_mday;
+  spa.hour   = tm->tm_hour;
+  spa.minute = tm->tm_min;
+  spa.second = tm->tm_sec;
+  
+  spa.timezone = tm->tm_gmtoff/3600;
+  if( self_get_oid_int(self, zigorSunzetParamZonaGMT, 0)==2 ) {  //Canarias
+     spa.timezone -= 1;
+  }
+  
+  spa.longitude = longitud;
+  spa.latitude  = latitud;
+  
+  //valores fijos:
+  spa.delta_t       = 33;
+  spa.elevation     = 800;
+  spa.pressure      = 1024;
+  spa.temperature   = 20;
+  spa.slope         = 0;
+  spa.azm_rotation  = 0;
+  spa.atmos_refract = 0.5667;
+  
+  spa.function = SPA_ALL;
+
+  //calculo solar position algorithm:
+  error = spa_calculate(&spa);
+  if(error!=0)
+     printf("spa>>>error spa: %d\n", error);
+  
+  //sets valores de salida:
+  self_set_oid_int(self, zigorSunzetObjHoraOrto, 0, spa.sunrise*3600);  //segundos
+  self_set_oid_int(self, zigorSunzetObjHoraOcaso, 0, spa.sunset*3600);  //segundos
+
+  //print...
+  //printf("spa>>>sunrise:%f, sunset:%f\n", spa.sunrise, spa.sunset);
+
+  segundos = spa.sunrise*60*60;
+  //minutos:
+  minutos = segundos/60;
+  segundos = segundos%60;
+  //horas:
+  horas = minutos/60;
+  minutos = minutos%60;
+  //printf("spa>>>sunrise:%d:%d:%d\n", horas, minutos, segundos);
+
+  segundos = spa.sunset*60*60;
+  //minutos:
+  minutos = segundos/60;
+  segundos = segundos%60;
+  //horas:
+  horas = minutos/60;
+  minutos = minutos%60;
+  //printf("spa>>>sunset:%d:%d:%d\n", horas, minutos, segundos);
+
+  //---
+  //t2=self_lee_temp(CM_CTRL_SUNZET(self)->_priv->temp);
+  //ags_debug(2,"tiempo consumido:%d",t2-t1);
+//printf("spa>>>tiempo consumido:%d\n",t2-t1);
+
+  return TRUE;
+}
+
+private
+void crea_tabla_alarmas_cfg(gpointer self)
+{
+  char *nextkey;
+  gint len,id;
+  char saux[10];
+  
+//printf("crea_tabla_alarmas_cfg\n");fflush(stdout);
+
+  len = strlen(zigorAlarmCfgDescr);
+  nextkey = accessx_getnextkey(ACCESSXIF(CM_CTRL_SUNZET(self)->_priv->sds), zigorAlarmCfgDescr);
+  while(nextkey && strncmp(zigorAlarmCfgDescr, nextkey, len)==0 ){
+    //printf("crea_tabla_alarmas_cfg>>>nextkey: %s\n", nextkey);fflush(stdout);
+    sprintf(saux,"%%*%ds%%d", len+1);
+    //printf("crea_tabla_alarmas_cfg>>>saux:%s\n", saux);fflush(stdout);
+    sscanf(nextkey,saux,&id);
+    //printf("crea_tabla_alarmas_cfg>>>id:%d\n", id);fflush(stdout);
+
+    //---
+    GValue *v;
+    char *s=NULL;
+  
+    v=access_get( ACCESSIF(CM_CTRL_SUNZET(self)->_priv->sds), nextkey );
+    if(v) {
+      s=g_value_get_string(v);
+      //clean
+      g_free(v);
+      if(s) {
+        g_hash_table_insert(CM_CTRL_SUNZET(self)->_priv->alarm_hashtable, s, g_memdup(&id,sizeof(gint)));
+      }
+    }
+    //---
+
+    char *aux=nextkey;
+    nextkey = accessx_getnextkey(ACCESSXIF(CM_CTRL_SUNZET(self)->_priv->sds), nextkey);
+    //clean
+    if(aux)
+      g_free(aux);
+  }
+  //clean
+  if(nextkey)
+    g_free(nextkey);
+}
+
+private
+void analiza_eventos(gpointer self)
+{
+  char *nextkey;
+  gint len,id;
+  char saux[10];
+  char *descr;
+  
+//printf("analiza_eventos\n");fflush(stdout);
+  
+  //recorrer lista de alarmas para deteccion alarma 71 _y_ deteccion eventos graves y persistentes
+  len = strlen(zigorAlarmId);
+  nextkey = accessx_getnextkey(ACCESSXIF(CM_CTRL_SUNZET(self)->_priv->sds), zigorAlarmId);
+  sdig1_aux=0;  //inicializar
+  error_grave_aux=0;  //inicializar
+  error_severa_aux=0;  //inicializar
+  while(nextkey && strncmp(zigorAlarmId, nextkey, len)==0 ){
+    sprintf(saux,"%%*%ds%%d", len+1);
+    sscanf(nextkey,saux,&id);
+    if(descr = self_get_oid_string(self, zigorAlarmDescr, id)) {
+      //---- deteccion alarma 71 (parada emergencia)
+      if(strcmp(descr, zigorAlarmaPEmergencia)==0) {
+//printf("analiza_eventos>>>sdig a 1\n");fflush(stdout);
+	sdig1_aux=1;
+      }
+      //---- deteccion eventos graves y persistentes
+      gint *n_alarm=g_hash_table_lookup(CM_CTRL_SUNZET(self)->_priv->alarm_hashtable, descr);
+      gint severity = self_get_oid_int(self, zigorAlarmCfgSeverity, *n_alarm);
+//printf("analiza_eventos>>>Severity:%d\n", severity);fflush(stdout);
+      if(severity==GRAVE)
+        error_grave_aux=1;
+      else if(severity==SEVERA)
+        error_severa_aux=1;
+      //----
+      g_free(descr);
+    }
+    char *aux=nextkey;
+    nextkey = accessx_getnextkey(ACCESSXIF(CM_CTRL_SUNZET(self)->_priv->sds), nextkey);
+    //clean
+    if(aux)
+      g_free(aux);
+  }
+  //clean
+  if(nextkey)
+    g_free(nextkey);
+}
+
+private
+void maniobras(gpointer self)
+{
+  struct timeval t;
+  unsigned long epoch;
+  //---
+  unsigned long epoch_aux;
+  long inc_t;
+  static unsigned long epoch_ant;
+  static long epoch_inc;
+  //---
+  static SFc1_sz4InstanceStruct chartInstance;
+  SFc1_sz4InputDataStruct chartInputData;
+  static SFc1_sz4OutputDataStruct chartOutputData;
+  //---
+  gint32 marcha, paro, rerror, errors, estado, estado_sis;
+  guint ContMedDC, IntOnOff, CondStart, EstadoConv, estado_conv;
+  //---
+  time_t curtime;
+  struct tm *tm;
+  //--
+  int hora, hora_orto, hora_ocaso;
+
+
+  /* Como proteccion ante fallo de comunicaciones tanto con CInt, como con DSP, existen eventos acociados y
+     en funcion del nivel configurado para cada uno de ellos, la maniobra mandara a paro o no. No obstante,
+     por otro lado está lo que decida hacer cada carta en caso de fallo. Así por ejemplo, la CInt abre todos
+     los reles. El DSP ?
+     A su vez tanto en la maniobra como en los demas calculos se habran de incluir las protecciones necesarias.
+   */
+  
+//printf("maniobra\n");fflush(stdout);
+  
+  /* obtener elapsed time y almacenarlo en mseg */
+  gettimeofday(&t,NULL);
+  epoch = t.tv_sec*1000 + t.tv_usec/1000;  /*mseg*/
+  /* proteccion ante cambio de hora! (mas facil seria si se pasase la diferencia ad+ teniendo en cuenta que es lo que se calcula en la maniobra) */
+  inc_t = epoch - epoch_ant;
+  /* si incremento fuera de un rango (negativo o bien demasiado alto (la estimacion*valor_margen))
+     entonces hacer correccion con variable epoch_inc para dar siempre un valor epoch continuo sin saltos */
+  if( (inc_t<0) || (inc_t > (CM_CTRL_SUNZET(self)->_priv->timeout*N_TAREAS_CTRL*10)) ) {
+     epoch_aux = epoch_ant + (CM_CTRL_SUNZET(self)->_priv->timeout*N_TAREAS_CTRL);  //se le suma estimacion aprox.
+     epoch_inc += epoch_aux - epoch;
+  }
+  epoch_ant = epoch;
+  epoch += epoch_inc;
+
+  /* para discriminar si UPv o Irradiancia */
+  CondStart = self_get_oid_int(self, zigorSunzetParamCondStart, 0);  //1:UPv, 2:Irradiancia, 3:HoraSolar
+  
+  /* interruptores */
+  ContMedDC = self_get_oid_int(self, zigorSunzetObjContMedDC, 0);  //1:abierto, 2:cerrado
+  IntOnOff = self_get_oid_int(self, zigorSunzetObjIntOnOff, 0);  //1:paro, 2:marcha
+  
+  EstadoConv = self_get_oid_int(self, zigorSunzetObjEstadoConv, 0);
+  if(EstadoConv==DSP_OFF)
+     estado_conv=CONV_OFF;
+  else if(EstadoConv==DSP_ON)
+     estado_conv=CONV_ON;
+  else if( EstadoConv==DSP_PARO_ERROR || EstadoConv==DSP_ERROR_DESCARGA )
+     estado_conv=CONV_PARO_ERROR;
+
+  //--
+
+  chartInputData.ContMedDC = ContMedDC==2?1:0;  //pasar 1:on, 0:off
+  chartInputData.IntOnOff = IntOnOff==2?1:0;  //pasar 1:on, 0:off
+  chartInputData.TParada = self_get_oid_int(self, zigorSunzetParamTParada, 0)*1000;  //ms
+  chartInputData.t = epoch;
+  
+  /* mirar si errores graves o severos: eventos graves:1, eventos severos:2, ninguno:0 (prevalece el severo) */
+  if(error_severa_aux==1)
+    chartInputData.Error = 2;
+  else if(error_grave_aux==1)
+    chartInputData.Error = 1;
+  else
+    chartInputData.Error = 0;
+
+  chartInputData.EstadoConv = estado_conv;
+
+  chartInputData.PAc = self_get_oid_int(self, zigorSunzetObjPot, 0);  //dkW, potencia activa
+  chartInputData.PParadaH = self_get_oid_int(self, zigorSunzetParamPAC, 0)*1.05;  //histeresis 5%
+  chartInputData.PParadaL = self_get_oid_int(self, zigorSunzetParamPAC, 0);  //dkW
+
+  chartInputData.TArranque = self_get_oid_int(self, zigorSunzetParamTArr, 0)*1000;  //ms
+  chartInputData.TEspera = self_get_oid_int(self, zigorSunzetParamTEspera, 0)*1000;  //ms
+  
+  chartInputData.TEsperaDSP = 30000;  //ms, espera arranque dsp, valor fijo
+  
+  if(CondStart==1) {  //UPv
+    chartInputData.UpvRad = self_get_oid_int(self, zigorSunzetObjVPv, 0);  //dV
+    chartInputData.UpvRadArranque = self_get_oid_int(self, zigorSunzetParamUPv, 0);  //dV
+    chartInputData.UpvRadEspera = self_get_oid_int(self, zigorSunzetParamUPv, 0)*0.95;  //histeresis 5%
+  }
+  else if(CondStart==2) {  //Irradiancia
+    chartInputData.UpvRad = self_get_oid_int(self, zigorSunzetObjIrrad, 0);
+    chartInputData.UpvRadArranque = self_get_oid_int(self, zigorSunzetParamIrradMin, 0);
+    chartInputData.UpvRadEspera = self_get_oid_int(self, zigorSunzetParamIrradMin, 0)*0.95;  //histeresis 5%
+  }
+  else if(CondStart==3) {  //HoraSolar
+    /* Get the current time. */
+    curtime = time(NULL);
+    /* Convert it to local time representation. */
+    tm = localtime(&curtime);
+    //tratamiento previo, compraracion horas (en segundos)
+    hora       =tm->tm_sec + tm->tm_min*60 + tm->tm_hour*3600;
+    hora_orto  =self_get_oid_int(self, zigorSunzetObjHoraOrto, 0);
+    hora_ocaso =self_get_oid_int(self, zigorSunzetObjHoraOcaso, 0);
+    if( hora>hora_orto && hora<hora_ocaso ) {
+       chartInputData.UpvRad = 3;  //condicion de entrada
+    }
+    else {
+       chartInputData.UpvRad = 0;  //condicion de salida
+    }
+    chartInputData.UpvRadArranque = 2;
+    chartInputData.UpvRadEspera = 1;
+  }
+
+  sz4_initializer();
+  /* llamada a la maquina de estados de la maniobra de control */
+  c1_sz4(&chartInstance, &chartInputData, &chartOutputData);
+
+  marcha = (gint32)chartOutputData.Marcha;
+  paro = (gint32)chartOutputData.Paro;
+  rerror = (gint32)chartOutputData.RError;
+  estado = (gint32)chartOutputData.Estado;
+  errors = (gint32)chartOutputData.ErrorS;  //0:no error, 1:error -TOut
+  /*
+  printf("maniobra>>>ErrorS: %d\n", errors);fflush(stdout);
+  printf("maniobra>>>Marcha: %d\n", marcha);fflush(stdout);
+  printf("maniobra>>>Paro: %d\n", paro);fflush(stdout);
+  printf("maniobra>>>RError: %d\n", rerror);fflush(stdout);
+  printf("maniobra>>>Estado: %d\n", estado);fflush(stdout);
+  if(estado>=0 && estado<=7)
+    printf("maniobra>>>Estado (etiqueta): %s\n", eti_estado[estado][0]);fflush(stdout);
+  */
+  self_set_oid_int(self, zigorSunzetObjMarcha, 0, marcha==1?1:2);
+  self_set_oid_int(self, zigorSunzetObjParo, 0, paro==1?1:2);
+  self_set_oid_int(self, zigorSunzetObjRError, 0, rerror==1?1:2);
+
+  if(estado==PARADA)
+     estado_sis=SIS_PARADA;
+  else if(estado==ESPERA_1 || estado==ESPERA_2)
+     estado_sis=SIS_ESPERA;
+  else if(estado==ARRANQUE)
+     estado_sis=SIS_ARRANQUE;
+  else if(estado==MPPT_1 || estado==MPPT_2)
+     estado_sis=SIS_MPPT;
+  else if(estado==FALLO || estado==EMERGENCIA)
+     estado_sis=SIS_FALLO;
+  else
+     estado_sis=0;
+
+  /*
+  printf("maniobra>>>Estado_SIS: %d\n", estado_sis);fflush(stdout);
+  if(estado_sis>=1 && estado_sis<=6)
+    printf("maniobra>>>Estado_SIS (etiqueta): %s\n", eti_estado_sis[estado_sis-1][0]);fflush(stdout);
+  */
+  self_set_oid_int(self, zigorSunzetObjEstadoSis, 0, estado_sis);
+}
+
+private
+void ventiladores(gpointer self)
+{
+  struct timeval t;
+  unsigned long epoch;
+  //---
+  unsigned long epoch_aux;
+  long inc_t;
+  static unsigned long epoch_ant;
+  static long epoch_inc;
+  //---
+  guint32 salida;
+  //gint32 TPer, TOn, Ta, TaOn, TaOff;
+  //---
+  static SFc2_sz4InstanceStruct chartInstance_caseta;
+  SFc2_sz4InputDataStruct chartInputData_caseta;
+  SFc2_sz4OutputDataStruct chartOutputData_caseta;
+  chartOutputData_caseta.Salida=0;  //asegurar valor en las transiciones de la m.estados donde no se establece
+
+  static SFc2_sz4InstanceStruct chartInstance_armario;
+  SFc2_sz4InputDataStruct chartInputData_armario;
+  SFc2_sz4OutputDataStruct chartOutputData_armario;
+  chartOutputData_armario.Salida=0;
+
+  static SFc2_sz4InstanceStruct chartInstance_transfo;
+  SFc2_sz4InputDataStruct chartInputData_transfo;
+  SFc2_sz4OutputDataStruct chartOutputData_transfo;
+  chartOutputData_transfo.Salida=0;
+  //---
+  
+//printf("ventiladores\n");fflush(stdout);
+  
+  /* proteccion ante fallo de comunicaciones CInt: obtencion de temperaturas,
+     se establecen los valores que fija la carta CInt ante fallo
+  if(self_get_oid_int(self, zigorSunzetObjCComCInt, 0)==1) {
+     self_set_oid_int(self, zigorSunzetObjVentCaseta,  0, 2);  //off
+     self_set_oid_int(self, zigorSunzetObjVentArmario, 0, 2);  //on
+     self_set_oid_int(self, zigorSunzetObjVentTransfo, 0, 2);  //on
+     return;  //XXX
+  }
+  */
+  
+  /* obtener elapsed time y almacenarlo en mseg */
+  gettimeofday(&t,NULL);
+  epoch = t.tv_sec*1000 + t.tv_usec/1000;  /*mseg*/
+  /* proteccion ante cambio de hora! (mas facil seria si se pasase la diferencia ad+ teniendo en cuenta que es lo que se calcula en la maniobra) */
+  inc_t = epoch - epoch_ant;
+  /* si incremento fuera de un rango (negativo o bien demasiado alto (la estimacion*valor_margen))
+     entonces hacer correccion con variable epoch_inc para dar siempre un valor epoch continuo sin saltos */
+  if( (inc_t<0) || (inc_t > (CM_CTRL_SUNZET(self)->_priv->timeout*N_TAREAS_CTRL*10)) ) {
+     epoch_aux = epoch_ant + (CM_CTRL_SUNZET(self)->_priv->timeout*N_TAREAS_CTRL);  //se le suma estimacion aprox.
+     epoch_inc += epoch_aux - epoch;
+  }
+  epoch_ant = epoch;
+  epoch += epoch_inc;
+
+  /* ventilador CASETA
+  *********************/
+  //TPer = self_get_oid_int(self, zigorSunzetParamTmaxVenCas, 0)*60000;  //tiempo en ms
+  //TOn = self_get_oid_int(self, zigorSunzetParamTminVenCas, 0)*60000;  //tiempo en ms
+  //Ta = self_get_oid_int(self, zigorSunzetObjTAmb, 0);
+  //TaOn = self_get_oid_int(self, zigorSunzetParamTactVenCas, 0);
+  //TaOff = self_get_oid_int(self, zigorSunzetParamTactVenCas, 0) - self_get_oid_int(self, zigorSunzetParamThysVenCas, 0);
+  //printf("ventiladores>>>TPer:%d\n",TPer);fflush(stdout);
+  //printf("ventiladores>>>TOn:%d\n",TOn);fflush(stdout);
+  //printf("ventiladores>>>Ta:%d\n",Ta);fflush(stdout);
+  //printf("ventiladores>>>TaOn:%d\n",TaOn);fflush(stdout);
+  //printf("ventiladores>>>TaOff:%d\n",TaOff);fflush(stdout);
+  chartInputData_caseta.TPer = self_get_oid_int(self, zigorSunzetParamTmaxVenCas, 0)*60000;  //tiempo en ms
+  chartInputData_caseta.TOn = self_get_oid_int(self, zigorSunzetParamTminVenCas, 0)*60000;  //tiempo en ms
+  chartInputData_caseta.Ta = self_get_oid_int(self, zigorSunzetObjTAmb, 0);
+  chartInputData_caseta.TaOn = self_get_oid_int(self, zigorSunzetParamTactVenCas, 0);
+  chartInputData_caseta.TaOff = self_get_oid_int(self, zigorSunzetParamTactVenCas, 0) - self_get_oid_int(self, zigorSunzetParamThysVenCas, 0);
+  chartInputData_caseta.t = epoch;
+  //printf("ventiladores>>>epoch:%u\n",epoch);fflush(stdout);
+  //chartInputData_caseta.TPer = TPer;
+  //chartInputData_caseta.TOn = TOn;
+  //chartInputData_caseta.Ta = Ta;
+  //chartInputData_caseta.TaOn = TaOn;
+  //chartInputData_caseta.TaOff = TaOff;
+
+  /* llamada a la maquina de estados de la maniobra de control */
+  c2_sz4(&chartInstance_caseta, &chartInputData_caseta, &chartOutputData_caseta);
+  
+  salida = (guint32)chartOutputData_caseta.Salida;  //Off=0, On=1
+  //printf("ventiladores>>>salida ventcaseta:%d\n", salida);fflush(stdout);
+  self_set_oid_int(self, zigorSunzetObjVentCaseta, 0, salida==1?1:2);  //Marcha=1, Paro=2
+  //---
+  /* proteccion ante fallo de comunicaciones CInt: se establecen los valores que fija la carta CInt ante fallo */
+  if(self_get_oid_int(self, zigorSunzetObjCComCInt, 0)==1) {
+     self_set_oid_int(self, zigorSunzetObjVentCaseta,  0, 2);  //off
+  }
+  //---
+
+  /* ventilador ARMARIO
+  *********************/
+  chartInputData_armario.TPer = self_get_oid_int(self, zigorSunzetParamTmaxVenArm, 0)*60000;  //tiempo en ms
+  chartInputData_armario.TOn = self_get_oid_int(self, zigorSunzetParamTminVenArm, 0)*60000;  //tiempo en ms
+  chartInputData_armario.Ta = self_get_oid_int(self, zigorSunzetObjTArm, 0);
+  chartInputData_armario.TaOn = self_get_oid_int(self, zigorSunzetParamTactVenArm, 0);
+  chartInputData_armario.TaOff = self_get_oid_int(self, zigorSunzetParamTactVenArm, 0) - self_get_oid_int(self, zigorSunzetParamThysVenArm, 0);
+  chartInputData_armario.t = epoch;
+
+  /* llamada a la maquina de estados de la maniobra de control */
+  c2_sz4(&chartInstance_armario, &chartInputData_armario, &chartOutputData_armario);
+
+  salida = chartOutputData_armario.Salida;  //Off=0, On=1
+  //printf("ventiladores>>>salida ventarmario:%d\n", salida);fflush(stdout);
+  self_set_oid_int(self, zigorSunzetObjVentArmario, 0, salida==1?2:1);  //Marcha=2, Paro=1
+  //---
+  /* proteccion ante fallo de comunicaciones CInt: se establecen los valores que fija la carta CInt ante fallo */
+  if(self_get_oid_int(self, zigorSunzetObjCComCInt, 0)==1) {
+     self_set_oid_int(self, zigorSunzetObjVentArmario, 0, 2);  //on
+  }
+  //---
+
+  /* ventilador TRANSFO
+  *********************/
+  chartInputData_transfo.TPer = self_get_oid_int(self, zigorSunzetParamTmaxVenTrf, 0)*60000;  //tiempo en ms
+  chartInputData_transfo.TOn = self_get_oid_int(self, zigorSunzetParamTminVenTrf, 0)*60000;  //tiempo en ms
+  chartInputData_transfo.Ta = self_get_oid_int(self, zigorSunzetObjTTrans, 0);
+  chartInputData_transfo.TaOn = self_get_oid_int(self, zigorSunzetParamTactVenTrf, 0);
+  chartInputData_transfo.TaOff = self_get_oid_int(self, zigorSunzetParamTactVenTrf, 0) - self_get_oid_int(self, zigorSunzetParamThysVenTrf, 0);
+  chartInputData_transfo.t = epoch;
+
+  /* llamada a la maquina de estados de la maniobra de control */
+  c2_sz4(&chartInstance_transfo, &chartInputData_transfo, &chartOutputData_transfo);
+
+  salida = chartOutputData_transfo.Salida;  //Off=0, On=1
+  //printf("ventiladores>>>salida venttransfo:%d\n", salida);fflush(stdout);
+  self_set_oid_int(self, zigorSunzetObjVentTransfo, 0, salida==1?2:1);  //Marcha=2, Paro=1
+  //---
+  /* proteccion ante fallo de comunicaciones CInt: se establecen los valores que fija la carta CInt ante fallo */
+  if(self_get_oid_int(self, zigorSunzetObjCComCInt, 0)==1) {
+     self_set_oid_int(self, zigorSunzetObjVentTransfo, 0, 2);  //on
+  }
+  //---
+}
+
+private
+void calculos(gpointer self)
+{
+  #define RAIS_MAX 10000  //->valor Maximo en MIB
+
+//printf("calculos\n");fflush(stdout);
+
+  //variables de entrada (get de SDS)
+  gint VAis;
+  gint PotR;
+  gint PotS;
+  gint PotT;
+  gint Pot;
+  gint EAcDSPE;
+  gint EAcDSPD;
+  gint TRec;
+  gint TChop;
+  gint TArm;
+  gint CorrRadRec;
+  gint CorrRadChop;
+  //variables de salida (set SDS)
+  gint RAis;
+  gint PApR;
+  gint PApS;
+  gint PApT;
+  gint PReR;
+  gint PReS;
+  gint PReT;
+  gint fPotR;
+  gint fPotS;
+  gint fPotT;
+  gint fPot;
+  gint PAp;
+  gint PReac;
+  gint EAc;
+  gint TempRec;
+  gint TempChop;
+  //variables entrada-salida (get y set)
+  gint VRedR;
+  gint IRedR;
+  gint VRedS;
+  gint IRedS;
+  gint VRedT;
+  gint IRedT;
+  gint EReacL, EReacC;
+  //variables locales (persistentes)
+  struct timeval t;
+  unsigned long tact;
+  long inc_t;
+  static unsigned long tant;
+  //static long ereac_dkWms,ereac_dkWh;
+  static long ereacL_dkWms, ereacC_dkWms;
+  long ereacL_dkWh, ereacC_dkWh;
+  //---
+  gint estado_conv;
+  gint estado_sis;
+  gint num_alarmas;
+  static gint estado_sis_ant=-1;
+  static gint num_alarmas_ant=-1;
+  char *nextkey;
+  gint len,id;
+  char saux[10];
+  char *paux;
+  gint sdig1=0;
+  static gint sdig1_ant=-1;
+  //---
+  gint VRedNom, VRedNomV, ICaidaRed, ISubRed, FrecNom, FrecNomHz, CaidaFreq, SubidFreq, VRedMin, VRedMax, FrecMin, FrecMax;
+  gint AjusteEAc, AjusteEReacL, AjusteEReacC;
+  //static gint offsetEAc;
+  gint OffsetEAc;
+  gint ContDC, OffsetRAis;
+
+ /**
+  * Variables calculadas
+  */
+  //resistencia aislamiento
+  //----------
+  VAis = self_get_oid_int(self, zigorSunzetObjVAis, 0);  //VAis en cV
+  if(VAis>0) {
+    //RAis=120*(10/(VAis/100)-1);  //kOhms
+    RAis = 120*((float)1000/VAis-1);  //kOhms
+    /* temporal fix: restar si contactorDC abierto */
+    ContDC = self_get_oid_int(self, zigorSunzetObjEDig1, 0);
+    if(ContDC==1) {  //1:abierto, 2:cerrado
+      OffsetRAis = self_get_oid_int(self, zigorSunzetParamOffsetRAis, 0);
+      RAis -= OffsetRAis;
+      if(RAis<0)
+        RAis=0;
+    }
+    if(RAis>RAIS_MAX)
+      RAis=RAIS_MAX;
+  }
+  else {
+    RAis=RAIS_MAX;
+  }
+  self_set_oid_int(self, zigorSunzetObjRAis, 0, RAis);
+
+  /*limitacion tensiones y corrientes ya contemplado el rango en la MIB*/
+  VRedR = self_get_oid_int(self, zigorSunzetObjVRedR, 0);
+  VRedS = self_get_oid_int(self, zigorSunzetObjVRedS, 0);
+  VRedT = self_get_oid_int(self, zigorSunzetObjVRedT, 0);
+  /*
+  VRedR=(VRedR<0 ? 0: VRedR);
+  VRedS=(VRedS<0 ? 0: VRedS);
+  VRedT=(VRedT<0 ? 0: VRedT);
+  self_set_oid_int(self, zigorSunzetObjVRedR, 0, VRedR);
+  self_set_oid_int(self, zigorSunzetObjVRedS, 0, VRedS);
+  self_set_oid_int(self, zigorSunzetObjVRedT, 0, VRedT);
+  */
+  IRedR = self_get_oid_int(self, zigorSunzetObjIRedR, 0);
+  IRedS = self_get_oid_int(self, zigorSunzetObjIRedS, 0);
+  IRedT = self_get_oid_int(self, zigorSunzetObjIRedT, 0);
+  /*
+  IRedR=(IRedR<0 ? 0: IRedR);
+  IRedS=(IRedS<0 ? 0: IRedS);
+  IRedT=(IRedT<0 ? 0: IRedT);
+  self_set_oid_int(self, zigorSunzetObjIRedR, 0, IRedR);
+  self_set_oid_int(self, zigorSunzetObjIRedS, 0, IRedS);
+  self_set_oid_int(self, zigorSunzetObjIRedT, 0, IRedT);
+  */
+  
+  //potencias aparentes
+  //----------
+  PApR=(VRedR*IRedR)/10/1000;  //dkVA
+  PApS=(VRedS*IRedS)/10/1000;
+  PApT=(VRedT*IRedT)/10/1000;
+  self_set_oid_int(self, zigorSunzetObjPApR, 0, PApR);
+  self_set_oid_int(self, zigorSunzetObjPApS, 0, PApS);
+  self_set_oid_int(self, zigorSunzetObjPApT, 0, PApT);
+
+  //potencia aparente
+  //----------
+  PAp=PApR+PApS+PApT;
+  self_set_oid_int(self, zigorSunzetObjPAp, 0, PAp);
+
+
+  //potencias reactivas
+  //----------
+  PotR = self_get_oid_int(self, zigorSunzetObjPotR, 0);
+  if(PApR>PotR)
+    PReR=sqrt(PApR*PApR-PotR*PotR);  //dKVAr
+  else
+    PReR=0;
+
+  PotS = self_get_oid_int(self, zigorSunzetObjPotS, 0);
+  if(PApS>PotS)
+    PReS=sqrt(PApS*PApS-PotS*PotS);
+  else
+    PReS=0;
+
+  PotT = self_get_oid_int(self, zigorSunzetObjPotT, 0);
+  if(PApT>PotT)
+    PReT=sqrt(PApT*PApT-PotT*PotT);
+  else
+    PReT=0;
+  //---
+  //establecer signo segun CosPhi(calculada en script del servidor):
+  gint CosPhi = self_get_oid_int(self, zigorSunzetObjCosPhi, 0);
+  if(CosPhi<0) {
+    PReR = -PReR;
+    PReS = -PReS;
+    PReT = -PReT;
+  }
+  self_set_oid_int(self, zigorSunzetObjPReR, 0, PReR);
+  self_set_oid_int(self, zigorSunzetObjPReS, 0, PReS);
+  self_set_oid_int(self, zigorSunzetObjPReT, 0, PReT);
+
+  //potencia reactiva
+  //----------
+  PReac=PReR+PReS+PReT;  //dKVAr
+  self_set_oid_int(self, zigorSunzetObjPReac, 0, PReac);
+
+
+  //factores de potencia
+  //----------
+  if(PApR>0) {
+    fPotR=(PotR*1000)/PApR;  //milesimas
+    if(fPotR>1000) fPotR=1000;
+  }else
+    fPotR=1000;
+
+  if(PApS>0) {
+    fPotS=(PotS*1000)/PApS;
+    if(fPotS>1000) fPotS=1000;
+  }else
+    fPotS=1000;
+
+  if(PApT>0) {
+    fPotT=(PotT*1000)/PApT;
+    if(fPotT>1000) fPotT=1000;
+  }else
+    fPotT=1000;
+  //---
+  //establecer signo segun PReac:
+  if(PReac<0) {
+    fPotR = -fPotR;
+    fPotS = -fPotS;
+    fPotT = -fPotT;
+  }
+  self_set_oid_int(self, zigorSunzetObjfPotR, 0, fPotR);
+  self_set_oid_int(self, zigorSunzetObjfPotS, 0, fPotS);
+  self_set_oid_int(self, zigorSunzetObjfPotT, 0, fPotT);
+
+  //factor potencia
+  //----------
+  Pot = self_get_oid_int(self, zigorSunzetObjPot, 0);
+  if(PAp>0) {
+    fPot=(Pot*1000)/PAp;  //ojo petaba: floating point exception (al dividir 0/0)
+    if(fPot>1000) fPot=1000;
+  }else
+    fPot=1000;
+  //establecer signo segun PReac:
+  if(PReac<0) {
+    fPot = -fPot;
+  }
+  self_set_oid_int(self, zigorSunzetObjfPot, 0, fPot);
+  
+
+  //contador energia activa
+  //----------
+  EAcDSPE = self_get_oid_int(self, zigorSunzetObjEAcDSPE, 0);
+  EAcDSPD = self_get_oid_int(self, zigorSunzetObjEAcDSPD, 0);
+  //EAc=EAcDSPE*10+EAcDSPD + offsetEAc;  //dkWh
+  OffsetEAc = self_get_oid_int(self, zigorSunzetObjOffsetEAc, 0);
+  EAc=EAcDSPE*10+EAcDSPD + OffsetEAc;  //dkWh
+  self_set_oid_int(self, zigorSunzetObjEAc, 0, EAc);
+
+  
+  //contador energia reactiva
+  //----------
+  /* proteccion ante fallo de comunicaciones DSP: se deja de hacer el calculo */
+  if(self_get_oid_int(self, zigorSunzetObjCComDSP, 0)!=1) {
+  //obtener elapsed time y almacenarlo en mseg
+  gettimeofday(&t,NULL);
+  tact = t.tv_sec*1000 + t.tv_usec/1000;
+  /* proteccion ante cambio de hora! */
+  if(tant==0)  /*primera vez*/
+     inc_t = 0;
+  else {  /*restantes*/
+     inc_t = tact - tant;
+     if( (inc_t<0) || (inc_t > (CM_CTRL_SUNZET(self)->_priv->timeout*N_TAREAS_CTRL*10)) ) {
+        inc_t = CM_CTRL_SUNZET(self)->_priv->timeout*N_TAREAS_CTRL;
+     }
+  }
+  tant = tact;
+
+  //contador de ereacL o ereacC en funcion del signo de la PReac:
+  //signo positivo>>capacitivo, negativo>>inductivo
+  if(PReac<0) {
+    //ojo:ereacL_dkWms+=(PReac*(tact-tant));  //dkW*ms   para 100Kw 2^31/1000/1000/3600 horas = algo mas de 1/2 h
+    ereacL_dkWms+=(-PReac*(inc_t));  //dkW*ms   para 100Kw 2^31/1000/1000/3600 horas = algo mas de 1/2 h
+    ereacL_dkWh=ereacL_dkWms/3600000L;
+    ereacL_dkWms-=ereacL_dkWh*3600000L;
+
+    EReacL = self_get_oid_int(self, zigorSunzetObjEReacL, 0);
+    EReacL=EReacL+ereacL_dkWh;
+    self_set_oid_int(self, zigorSunzetObjEReacL, 0, EReacL);
+  }
+  else {
+    ereacC_dkWms+=(PReac*(inc_t));  //dkW*ms   para 100Kw 2^31/1000/1000/3600 horas = algo mas de 1/2 h
+    ereacC_dkWh=ereacC_dkWms/3600000L;
+    ereacC_dkWms-=ereacC_dkWh*3600000L;
+
+    EReacC = self_get_oid_int(self, zigorSunzetObjEReacC, 0);
+    EReacC=EReacC+ereacC_dkWh;
+    self_set_oid_int(self, zigorSunzetObjEReacC, 0, EReacC);
+  }
+  ////tant=tact;
+  }//if no fallo com.
+
+  //temperaturas corregidas de rectificador y chopper
+  //----------
+  TRec = self_get_oid_int(self, zigorSunzetObjTRec, 0);
+  TChop = self_get_oid_int(self, zigorSunzetObjTChop, 0);
+  TArm = self_get_oid_int(self, zigorSunzetObjTArm, 0);
+  CorrRadRec = self_get_oid_int(self, zigorSunzetParamCorrRadRec, 0);  //milesimas
+  CorrRadChop = self_get_oid_int(self, zigorSunzetParamCorrRadChop, 0);  //milesimas
+  //TempRec=TRec*+CorrRadRec*(TRec-TArm);  //grados
+  TempRec=(TRec*1000+CorrRadRec*(TRec-TArm))/1000;  //grados
+  //TempChop=TChop+CorrRadChop*(TChop-TArm);
+  TempChop=(TChop*1000+CorrRadChop*(TChop-TArm))/1000;
+  self_set_oid_int(self, zigorSunzetObjTempRec, 0, TempRec);
+  self_set_oid_int(self, zigorSunzetObjTempChop, 0, TempChop);
+
+  //Contactores DC y AC
+  //----------
+  estado_conv = self_get_oid_int(self, zigorSunzetObjEstadoConv, 0);
+  if( estado_conv==DSP_ESPERA_ON || estado_conv==DSP_ON || estado_conv==DSP_ESPERA_OFF ) {
+    //self_set_oid_int(self, zigorSunzetObjContDC, 0, 2);  //contactor activado
+    self_set_oid_int(self, zigorSunzetObjContAC, 0, 2);  //contactor activado
+  }
+  else {
+    //self_set_oid_int(self, zigorSunzetObjContDC, 0, 1);  //contactor desactivado
+    self_set_oid_int(self, zigorSunzetObjContAC, 0, 1);  //contactor desactivado
+  }
+  ContDC = self_get_oid_int(self, zigorSunzetObjEDig1, 0);
+  self_set_oid_int(self, zigorSunzetObjContDC, 0, ContDC);
+
+  //----------
+  //Reles (se hace solo ante cambio)
+  //----------
+  /* si fallo de comunicaciones con CInt se abren los reles, poner estado acorde */
+  if(self_get_oid_int(self, zigorSunzetObjCComCInt, 0)==1) {
+     self_set_oid_int(self, zigorSunzetObjSDig3, 0, 2);  //off
+     self_set_oid_int(self, zigorSunzetObjSDig4, 0, 2);  //off
+     self_set_oid_int(self, zigorSunzetObjSDig1, 0, 2);  //off
+     //forzar nuevo analisis de reles para establecer valor correcto cuando salga de fallo com.
+     estado_sis_ant=-1;
+     num_alarmas_ant=-1;
+     sdig1_ant=-1;
+  }
+  else {
+  //sdig3, marcha
+  //----------
+  estado_sis = self_get_oid_int(self, zigorSunzetObjEstadoSis, 0);
+  if(estado_sis!=estado_sis_ant) {
+    estado_sis_ant = estado_sis;
+    if(estado_sis==SIS_MPPT)
+      self_set_oid_int(self, zigorSunzetObjSDig3, 0, 1);  //activado
+    else
+      self_set_oid_int(self, zigorSunzetObjSDig3, 0, 2);  //desactivado
+  }
+  //sdig4, fallo
+  //----------
+  num_alarmas = self_get_oid_int(self, zigorAlarmsPresent, 0);
+  if(num_alarmas!=num_alarmas_ant) {
+    num_alarmas_ant = num_alarmas;
+    if(num_alarmas>0)
+      self_set_oid_int(self, zigorSunzetObjSDig4, 0, 2);  //desactivado
+    else
+      self_set_oid_int(self, zigorSunzetObjSDig4, 0, 1);  //activado
+  }
+  //sdig1, parada emergencia
+  //----------
+  if(sdig1_aux!=sdig1_ant) {
+    sdig1_ant=sdig1_aux;
+    if(sdig1_aux==1)
+      self_set_oid_int(self, zigorSunzetObjSDig1, 0, 1);  //activado
+    else
+      self_set_oid_int(self, zigorSunzetObjSDig1, 0, 2);  //desactivado
+  }
+  }//else if fallo com. CInt.
+  /*
+  //recorrer lista de alarmas para deteccion alarma 71
+  len = strlen(zigorAlarmId);
+  nextkey = accessx_getnextkey(ACCESSXIF(CM_CTRL_SUNZET(self)->_priv->sds), zigorAlarmId);  //XXX segmentation fault -> fixed
+  while(nextkey && strncmp(zigorAlarmId, nextkey, len)==0 ){
+    printf("calculos>>>nextkey: %s\n", nextkey);fflush(stdout);
+    sprintf(saux,"%%*%ds%%d", len+1);
+    //printf("calculos>>>saux:%s\n", saux);fflush(stdout);
+    sscanf(nextkey,saux,&id);
+    printf("calculos>>>id:%d\n", id);fflush(stdout);
+    if(paux = self_get_oid_string(self, zigorAlarmDescr, id)) {
+      printf("calculos>>>descr:%s\n", paux);fflush(stdout);
+      if(strcmp(paux, zigorAlarmaPEmergengia)==0) {
+	printf("calculos>>>sdig a 1\n");fflush(stdout);
+	sdig1=1;
+	g_free(paux);
+	break;
+      }
+      g_free(paux);
+    }
+    char *aux=nextkey;
+    nextkey = accessx_getnextkey(ACCESSXIF(CM_CTRL_SUNZET(self)->_priv->sds), nextkey);
+    //clean
+    if(aux)
+      g_free(aux);
+  }
+  //clean
+  if(nextkey)
+    g_free(nextkey);
+  if(sdig1!=sdig1_ant) {
+    sdig1_ant=sdig1;
+    if(sdig1==1)
+      self_set_oid_int(self, zigorSunzetObjSDig1, 0, 1);  //activado
+    else
+      self_set_oid_int(self, zigorSunzetObjSDig1, 0, 2);  //desactivado
+  }
+  */
+  //----------
+  //Parametros calculados (ojo parametros solo hacer 'set' ante cambio para evitar pasar a temp(1)) >> da igual xq ahora pasados a variables
+  //----------
+  //3, VRed nominal
+  VRedNom = self_get_oid_int(self, zigorSunzetParamVRedNom, 0);  //enumerado
+  if(VRedNom==1)  //220_380
+    VRedNomV = 2200;  //dV
+  else if(VRedNom==2)  //230_400
+    VRedNomV = 2300;  //dV
+  else
+    VRedNomV = 0;  //dV
+  if( VRedNomV != self_get_oid_int(self, zigorSunzetObjVRedNomV, 0) )
+    self_set_oid_int(self, zigorSunzetObjVRedNomV, 0, VRedNomV);  //dV
+  
+  //3bis, Frecuencia nominal
+  FrecNom = self_get_oid_int(self, zigorSunzetParamFrecNom, 0);  //enumerado
+  if(FrecNom==1)  //50Hz
+    FrecNomHz = 500;  //decimas
+  else if(FrecNom==2)  //60Hz
+    FrecNomHz = 600;  //decimas
+  else
+    FrecNomHz = 0;  //decimas
+  if( FrecNomHz != self_get_oid_int(self, zigorSunzetObjFrecNomHz, 0) )
+    self_set_oid_int(self, zigorSunzetObjFrecNomHz, 0, FrecNomHz);
+  
+  //4, VRed minima
+  ICaidaRed = self_get_oid_int(self, zigorSunzetParamICaidaRed, 0);  //centesimas
+  VRedMin = (VRedNomV*ICaidaRed)/100;  //dV
+  if( VRedMin != self_get_oid_int(self, zigorSunzetObjVRedMin, 0) )
+    self_set_oid_int(self, zigorSunzetObjVRedMin, 0, VRedMin);
+  
+  //5, VRed maxima
+  ISubRed = self_get_oid_int(self, zigorSunzetParamISubRed, 0);  //centesimas
+  VRedMax = (VRedNomV*ISubRed)/100;  //dV
+  if( VRedMax != self_get_oid_int(self, zigorSunzetObjVRedMax, 0) )
+    self_set_oid_int(self, zigorSunzetObjVRedMax, 0, VRedMax);
+  
+  //6, Frec minima
+  CaidaFreq = self_get_oid_int(self, zigorSunzetParamCaidaFreq, 0);  //decimas
+  FrecMin = FrecNomHz - CaidaFreq;  //decimas
+  if( FrecMin != self_get_oid_int(self, zigorSunzetObjFrecMin, 0) )
+    self_set_oid_int(self, zigorSunzetObjFrecMin, 0, FrecMin);
+  
+  //7, Frec maxima
+  SubidFreq = self_get_oid_int(self, zigorSunzetParamSubidFreq, 0);  //decimas
+  FrecMax = FrecNomHz + SubidFreq;  //decimas
+  if( FrecMax != self_get_oid_int(self, zigorSunzetObjFrecMax, 0) )
+    self_set_oid_int(self, zigorSunzetObjFrecMax, 0, FrecMax);
+  
+
+  //----------
+  //Ajuste offset de energia
+  //----------
+  AjusteEAc = self_get_oid_int(self, zigorSunzetObjAjusteEAc, 0);
+  if(AjusteEAc!=0) {
+    OffsetEAc = self_get_oid_int(self, zigorSunzetObjOffsetEAc, 0);
+    OffsetEAc += AjusteEAc;
+    self_set_oid_int(self, zigorSunzetObjAjusteEAc, 0, 0);
+    self_set_oid_int(self, zigorSunzetObjOffsetEAc, 0, OffsetEAc);
+  }
+  /*para AjusteEReac no hace falta utilizar variable auxiliar de offset*/
+  AjusteEReacL = self_get_oid_int(self, zigorSunzetObjAjusteEReacL, 0);
+  if(AjusteEReacL!=0) {
+    EReacL = self_get_oid_int(self, zigorSunzetObjEReacL, 0);
+    EReacL = EReacL + AjusteEReacL;
+    self_set_oid_int(self, zigorSunzetObjEReacL, 0, EReacL);
+    self_set_oid_int(self, zigorSunzetObjAjusteEReacL, 0, 0);
+  }
+  AjusteEReacC = self_get_oid_int(self, zigorSunzetObjAjusteEReacC, 0);
+  if(AjusteEReacC!=0) {
+    EReacC = self_get_oid_int(self, zigorSunzetObjEReacC, 0);
+    EReacC = EReacC + AjusteEReacC;
+    self_set_oid_int(self, zigorSunzetObjEReacC, 0, EReacC);
+    self_set_oid_int(self, zigorSunzetObjAjusteEReacC, 0, 0);
+  }
+}
+
+private
+void inicia_temp(guint32 *t1)
+{
+   struct timeval t;
+
+   gettimeofday(&t,NULL);
+   
+   *t1=t.tv_sec*1000+t.tv_usec/1000;  /*mseg*/
+   return;
+}
+
+private
+guint32 lee_temp(guint32 t1)
+{
+   struct timeval t;
+   guint32 t2;
+
+   gettimeofday(&t,NULL);
+   t2=t.tv_sec*1000+t.tv_usec/1000;
+   return(t2>=t1 ? t2-t1 : t1-t2+60000);
+}
+
+}/*fin class*/
+
+%{
+  GObject *(*cmctrlsunzet_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

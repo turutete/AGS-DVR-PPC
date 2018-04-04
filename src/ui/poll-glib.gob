@@ -1,0 +1,207 @@
+%{
+/**
+   \page pollglib PollGlib
+   \section pollglib_desc DESCRIPCIÓN
+      Realiza un "poll" sobre un SDS cada "timeout" milisegundos. Lee las claves de una columna de un "store" y escribe los GValue en
+      otra columna del mismo "store". Se pueden especificar varios pares de columnas clave/valor (por defecto "key"/"val").
+   \section pollglib_reqs REQUISITOS
+     \subsection pollglib_deps Dependencias
+        -# model_obj*
+	-# sds
+	   -# \ref accessif
+     \subsection pollglib_pres Precarga
+        NINGUNO*
+     \subsection pollglib_evs  Eventos
+        NINGUNO*
+     \subsection pollglib_cfs Configuración
+        -# timeout
+	   - Tipo: G_TYPE_INT
+	   - Requerida
+	   - Descripción: Tiempo entre "pollings" en milisegundos.
+	-# objects
+	   - Tipo: CfTable
+	   - Opcional (por defecto se usan las columnas "key"/"val")
+	   - Descripción: Tabla de configuración para especificar varios pares de columnas clave/valor para realizar el "polling".
+	   - Formato: XXX
+     \subsection pollglib_reqpros Propiedades
+        NINGUNA
+   \section pollglib_feas CARACTERÍSTICAS
+     \subsection pollglib_ifs  Implementa
+        NINGUNA
+     \subsection pollglib_sigs Señales
+        NINGUNA
+     \subsection pollglib_props Propiedades
+        NINGUNA
+*/
+%}
+
+
+%h{
+  /**
+   * módulo de "poll" síncrono para.
+   */
+#include <glib-2.0/glib-object.h>
+#include <ags-cf.h>
+#include <accessif.h>
+#include <createif.h>
+#include <configif.h>
+#include <treestoreif.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "poll-glib"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+%privateheader{
+typedef struct _Object Object;
+
+struct _Object {
+  gchar *col_key;
+  gchar *col_val;
+};
+%}
+
+requires 2.0.0
+
+class Poll:Glib from G:Object {
+
+private CfTable my_cft;
+private GObject *treestore = NULL unrefwith g_object_unref;
+private GObject *sds       = NULL unrefwith g_object_unref;
+private GArray  *objects_garray = {
+  g_array_new(FALSE, FALSE, sizeof(Object)); 
+} destroy {
+  if(VAR) g_array_free(VAR, TRUE);
+};
+private gint timer_id = -1
+destroy {
+  if (G_UNLIKELY (VAR >= 0))
+    g_source_remove (VAR);
+};
+
+private
+gboolean
+poll_row(GObject *model, TsRow iter, gpointer self)
+  {
+    gchar *key=NULL;
+    gchar *id=NULL;
+    GValue *v;
+    GValue *old=NULL;
+    GObject *sds=POLL_GLIB(self)->_priv->sds;
+    int i;
+    Object* object;
+
+    for(i=0;i<POLL_GLIB(self)->_priv->objects_garray->len;i++) {
+      object=&(g_array_index(POLL_GLIB(self)->_priv->objects_garray, Object, i));
+
+      key=treestore_get_string(TREESTOREIF(model), iter, treestore_get_column_number(TREESTOREIF(model), object->col_key));
+      id=treestore_get_string(TREESTOREIF(model), iter, treestore_get_column_number(TREESTOREIF(model), "id"));
+      old=treestore_get_gvalue(TREESTOREIF(model), iter, treestore_get_column_number(TREESTOREIF(model), object->col_val));
+
+      if(key) {
+	ags_debug(5, "key=%s id=%s", key, id);
+	gchar* aux=NULL;
+	if(id && strlen(id))
+	  aux=g_strconcat(key, ".", id, NULL);
+	v=access_get(ACCESSIF(sds), aux?aux:key);
+	if(v) {
+	  if(!old || g_value_compare(v, old) != 0) {
+	    treestore_set_gvalue(TREESTOREIF(model), iter, treestore_get_column_number(TREESTOREIF(model), object->col_val), v);
+	  }
+	  g_value_unset(v);
+	  free(v);
+	}
+	free(key);
+	if(aux) free(aux);
+      }
+      
+      if(id)  free(id);
+      if(old) {
+	g_value_unset(old);
+	free(old);
+      }
+    }
+
+/* XXX esto hace este módulo dependiente de GTK2
+   borrar si se desea eliminar dependencia */
+   #include <gtk/gtk.h>
+   gtk_main_iteration_do(FALSE);
+   /**/
+
+    return FALSE;
+  }
+
+private
+gboolean
+poll(gpointer self) 
+  {
+    GObject *tree_store=POLL_GLIB(self)->_priv->treestore;
+
+    treestore_foreach(TREESTOREIF(tree_store), (TreestoreForeachFunc) self_poll_row, self);
+
+    return TRUE;
+  }
+
+public
+GObject *
+new (char *pm_name, AgsCf *cf, CfTable *cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  GObject *obj;
+  gchar   *model_name;
+  CfTable objects;
+  CfTable object;
+  gchar*  objname=NULL;
+  Object  object_data;
+
+  POLL_GLIB(ret)->_priv->my_cft=config_get_table(CONFIGIF(cf), cft, pm_name);
+  
+  /* treestore=model_obj */
+  obj=config_get_object(CONFIGIF(cf), POLL_GLIB(ret)->_priv->my_cft, "model_obj");
+  g_object_ref(obj);
+  POLL_GLIB(ret)->_priv->treestore=G_OBJECT(obj);
+  /* sds=sds */
+  obj=config_get_object(CONFIGIF(cf), POLL_GLIB(ret)->_priv->my_cft, "sds");
+  g_object_ref(obj);
+  POLL_GLIB(ret)->_priv->sds=obj;
+
+  gint timeout=config_get_int(CONFIGIF(cf), POLL_GLIB(ret)->_priv->my_cft, "timeout");
+  POLL_GLIB(ret)->_priv->timer_id=g_timeout_add(timeout, self_poll, ret);
+
+  /* objects */
+  objects=config_get_table(CONFIGIF(cf), POLL_GLIB(ret)->_priv->my_cft, "objects");
+  if(config_check_table(CONFIGIF(cf), objects)) {
+    /* bucle objects */
+    while(objname=config_getnextkey(CONFIGIF(cf), objects, objname)) {
+      object=config_get_table(CONFIGIF(cf), objects, objname);
+      if( config_check_table(CONFIGIF(cf), object) ) {
+	object_data.col_key=config_get_string(CONFIGIF(cf), object, "key");
+	object_data.col_val=config_get_string(CONFIGIF(cf), object, "val");
+	g_array_append_val(POLL_GLIB(ret)->_priv->objects_garray, object_data);
+      } else {
+        /* XXX error, object no es tabla? */
+      }
+    }
+  } else {
+    /* poner en Objects "key" y "val" por defecto */
+    object_data.col_key="key";
+    object_data.col_val="val";
+    g_array_append_val(POLL_GLIB(ret)->_priv->objects_garray, object_data);
+  }
+
+  return ret;
+}
+
+}
+
+%{
+  GObject *(*pollglib_new())(char*, AgsCf*, CfTable*)
+    {
+      return self_new;
+    }
+%}

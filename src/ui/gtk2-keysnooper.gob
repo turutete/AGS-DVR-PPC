@@ -1,0 +1,215 @@
+requires 2.0.0
+
+%h{
+#include <ags-cf.h>
+#include <gtk/gtk.h>
+#include <gdk/gdkx.h>
+#include <textbufferif.h>
+%}
+
+%{
+/**
+   \file gtk2-keysnooper.c
+*/
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "gtk2-keysnooper"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+%privateheader{
+
+typedef struct _KeyData KeyData;
+
+struct _KeyData {
+  guint   keyval;
+  guint16 keycode;
+  guint8  group;
+};
+
+%}
+
+class Gtk2:KeySnooper from G:Object {
+
+private guint       keysnooper unrefwith gtk_key_snooper_remove;
+private guint       last=0;
+private gint        idx=0;
+private GTimer*     timer={ g_timer_new(); } unrefwith g_timer_destroy;
+private gdouble     timeout=0;
+private gboolean    hotspot=FALSE;
+private GHashTable* keys_hashtable = {
+  g_hash_table_new(g_direct_hash, g_direct_equal); 
+} destroy {
+//   XXX
+};
+
+private
+gboolean
+hotspot(GtkWidget* widget)
+  {
+    GtkWidget *toplevel;
+    GtkWidget *focused;
+    
+    g_return_val_if_fail (GTK_IS_WIDGET (widget), FALSE);
+    
+    toplevel = gtk_widget_get_toplevel (widget);
+    focused  = GTK_WINDOW(toplevel)->focus_widget;
+
+    if(focused) {
+      Window   win = GDK_WINDOW_XID( focused->window );
+      Display *dpy = GDK_WINDOW_XDISPLAY( focused->window );
+      
+      int  dx   = focused->allocation.x;
+      int  dy   = focused->allocation.y;
+      
+      XWarpPointer(dpy, None, win, 0, 0, 0, 0, dx, dy);
+    }
+
+    return TRUE;
+  }
+
+private
+gint
+keysnooper(GtkWidget *window, GdkEventKey *event, gpointer self)
+  {
+    ags_debug(2,"\ntype=%d\nstate=%#X\nkeyval=%#X\nhardware_keycode=%#X\ngroup=%d\nlast=%d\nidx=%d",
+	      event->type,
+	      event->state,
+	      event->keyval,
+	      event->hardware_keycode,
+	      event->group,
+	      GTK2_KEYSNOOPER(self)->_priv->last,
+	      GTK2_KEYSNOOPER(self)->_priv->idx);
+
+    GArray* keyarray=g_hash_table_lookup(GTK2_KEYSNOOPER(self)->_priv->keys_hashtable, (gconstpointer) event->keyval);
+    guint aux=event->keyval;
+
+    GtkWidget* widget;
+    if(keyarray && (widget=gtk_window_get_focus(GTK_WINDOW(window)))) {
+      gboolean visible=FALSE;
+      if(g_object_class_find_property(G_OBJECT_GET_CLASS(G_OBJECT(widget)), "visibility"))
+	g_object_get(widget, "visibility", &visible, NULL);
+
+      gulong  useless;
+      gdouble elapsed=g_timer_elapsed(GTK2_KEYSNOOPER(self)->_priv->timer, &useless)*1000;
+
+      /* Calculamos idx */
+      if(GTK_IS_EDITABLE(widget) || IS_TEXTBUFFERIF(widget)) {
+	/* Atención: se incrementa idx en el 'if' */
+	if(!visible                                                                                 /* Si campo oculto */
+	   || (aux!=GTK2_KEYSNOOPER(self)->_priv->last)                                             /* o distinta tecla */
+	   || ( event->type==GDK_KEY_PRESS && ++GTK2_KEYSNOOPER(self)->_priv->idx >= keyarray->len) /* o pasamos la última */
+	   || (elapsed >= GTK2_KEYSNOOPER(self)->_priv->timeout) ) {                                /* o "timeout" */
+	  /* entonces: primera tecla */	  
+	  GTK2_KEYSNOOPER(self)->_priv->idx=1; /* si es editable, primera es idx 1 */
+	}	
+      } else {
+	GTK2_KEYSNOOPER(self)->_priv->idx=0; /* si NO es editable, _siempre_ idx 0 */
+      }
+      
+      KeyData* keydata=&g_array_index(keyarray, KeyData, GTK2_KEYSNOOPER(self)->_priv->idx);
+      event->keyval=keydata->keyval;
+      event->hardware_keycode=keydata->keycode;
+      event->group=keydata->group;
+      
+      /* Efecto multitecla en entrada de texto, borramos carácter anterior si multitecla y no 'BackSpace' */
+      if( visible
+	  && (aux==GTK2_KEYSNOOPER(self)->_priv->last && event->type==GDK_KEY_PRESS) 
+	  && (elapsed < GTK2_KEYSNOOPER(self)->_priv->timeout) 
+	  && (event->keyval != gdk_keyval_from_name("BackSpace")) ) {
+	if(GTK_IS_EDITABLE(widget) && gtk_editable_get_editable(GTK_EDITABLE(widget)) ) {
+	  /* Si implementa GtkEditable */
+	  gint pos=gtk_editable_get_position(GTK_EDITABLE(widget));
+	  if(pos) {
+	    pos--;
+	    gtk_editable_delete_text(GTK_EDITABLE(widget), pos, pos+1);
+	  };
+	}
+	/* XXX soporte TextbufferIf */
+      }
+      /**/
+      
+    } else {
+      GTK2_KEYSNOOPER(self)->_priv->idx=0;
+    }
+      
+    g_timer_start(GTK2_KEYSNOOPER(self)->_priv->timer);
+    GTK2_KEYSNOOPER(self)->_priv->last=aux;
+
+    if(GTK2_KEYSNOOPER(self)->_priv->hotspot)
+      self_hotspot(window);
+
+    return FALSE;
+  }
+
+public
+GObject*
+new (char* ks_name, AgsCf* cf, CfTable cft)
+  {
+    GObject *ret = G_OBJECT(GET_NEW);
+    CfTable  my_cft=config_get_table(CONFIGIF(cf), cft, ks_name);
+
+    CfTable keymap = config_get_table(CONFIGIF(cf), my_cft, "keymap");
+
+    if(config_check_table(CONFIGIF(cf), keymap)) {
+      char* mkeyname=NULL;
+      guint mkeyval=0;
+      CfTable keytable;
+      /* bucle para cada multitecla */
+      while(mkeyname=config_getnextkey(CONFIGIF(cf), keymap, mkeyname)) {
+	/* Obtenemos tabla de teclas para esta multitecla */
+	mkeyval=gdk_keyval_from_name(mkeyname);
+	GArray* keyarray=g_hash_table_lookup(GTK2_KEYSNOOPER(ret)->_priv->keys_hashtable, (gconstpointer) mkeyval);
+	if(!keyarray) {
+	  keyarray=g_array_new(FALSE, FALSE, sizeof(KeyData));
+	}
+	keytable=config_get_table(CONFIGIF(cf), keymap, mkeyname);
+	/* Creamos "array" de teclas para esta multitecla y la guardamos en "hash" */
+	if(config_check_table(CONFIGIF(cf), keytable)) {
+	  int   i=1;
+	  char* keyname=NULL;
+	  guint keyval=0;
+	  GString *gs_i=g_string_new("");
+	  for(g_string_printf(gs_i, "%d", i)
+		;keyname=config_get_string(CONFIGIF(cf), keytable, gs_i->str)
+		;g_string_printf(gs_i, "%d", ++i) ) {
+	    keyval=gdk_keyval_from_name(keyname);
+	    GdkKeymapKey* keys;
+	    gint n_keys;
+	    if(gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), keyval, &keys, &n_keys)) {
+	      KeyData keydata;
+	      keydata.keyval=keyval;
+	      keydata.keycode=keys[0].keycode;
+	      keydata.group=keys[0].group;
+	      g_array_append_val(keyarray, keydata);
+	      g_free(keys);
+	      g_hash_table_insert(GTK2_KEYSNOOPER(ret)->_priv->keys_hashtable, (gpointer) mkeyval, keyarray);
+	    }
+	  }
+	}
+      }	
+
+      GTK2_KEYSNOOPER(ret)->_priv->timeout=config_get_int(CONFIGIF(cf), my_cft, "timeout");
+      GTK2_KEYSNOOPER(ret)->_priv->hotspot=config_get_boolean(CONFIGIF(cf), my_cft, "hotspot");
+      GTK2_KEYSNOOPER(ret)->_priv->keysnooper=gtk_key_snooper_install(self_keysnooper, (gpointer) ret);
+    } else {
+      g_critical("No keymap!");
+    }
+
+    return ret;    
+  }
+
+}
+
+%{
+  GObject *(*gtk2keysnooper_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

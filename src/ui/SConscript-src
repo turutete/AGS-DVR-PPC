@@ -1,0 +1,57 @@
+Import('*')
+
+env.AgsMods={}
+for k, v in this['modules'].iteritems():
+    thisEnv=env.Copy()
+    
+    lib_insdir=this.has_key('lib_install_dir') and this['lib_install_dir']
+    bin_insdir=this.has_key('bin_install_dir') and this['bin_install_dir']
+    mod_insdir=this.has_key('mod_install_dir') and this['mod_install_dir']
+    
+    for pc in v['pc']:
+       thisEnv.ParseConfig(pc)
+    if(v.has_key('libs')):
+       thisEnv.Append(LIBS=v['libs'])
+    if(v.has_key('slibs')):
+       thisEnv.Append(SLIBS=v['slibs'])
+       thisEnv.Append(LIBS=v['slibs']) # para dependencias
+    if(v.has_key('linkflags')):
+       thisEnv.Append(LINKFLAGS=v['linkflags'])
+
+    if(v.has_key('do_shared') and v['do_shared']):
+       so=thisEnv.SharedLibrary(v['name'], v['sources_fn'])
+       env.AgsMods['name']=so
+       if(ARGUMENTS.get('strip', '0')!='0' and ARGUMENTS.get('debug', '0')=='0'):
+           thisEnv.AddPostAction(so, strip_action)
+       thisEnv.Install(dest_dir + install_dir + lib_insdir, so)
+       thisEnv.AddPreAction(so, slibs_action)
+    if (v.has_key('do_static') and v['do_static']):
+       a=thisEnv.StaticLibrary(v['name'], v['sources_fn'])
+       env.AgsMods[v['name']]=a
+       if(ARGUMENTS.get('strip', '0')!='0' and ARGUMENTS.get('debug', '0')=='0'):
+           thisEnv.AddPostAction(a, strip_action)
+       if(ARGUMENTS.get('ins_static', False)):
+           thisEnv.Install(dest_dir + install_dir + lib_insdir, a)
+       thisEnv.AddPreAction(a, slibs_action)
+    if (v.has_key('do_sstatic') and v['do_sstatic']):
+       os=thisEnv.SharedObject(v['sources_fn'])
+       a=thisEnv.StaticLibrary(v['name'], os)
+       env.AgsMods[v['name']]=a
+       if(ARGUMENTS.get('strip', '0')!='0' and ARGUMENTS.get('debug', '0')=='0'):
+           thisEnv.AddPostAction(a, strip_action)
+       if(ARGUMENTS.get('ins_static', False)):
+           thisEnv.Install(dest_dir + install_dir + lib_insdir, a)
+       thisEnv.AddPreAction(a, slibs_action)
+    if (v.has_key('do_bin') and v['do_bin']):
+       bin=thisEnv.Program(v['name'], v['sources_fn'])
+       env.AgsMods['name']=bin
+       if(ARGUMENTS.get('strip', '0')!='0' and ARGUMENTS.get('debug', '0')=='0'):
+           thisEnv.AddPostAction(bin, strip_action)
+       thisEnv.Install(dest_dir + install_dir + bin_insdir, bin)
+       thisEnv.AddPreAction(bin, slibs_action)
+    if (v.has_key('do_mod') and v['do_mod']):
+       SConscript('SConscript-mod', build_dir=target_dir+'/'+k+'/ags/', exports={'thisEnv':thisEnv, 'v':v})
+
+# NOTA IMPORTANTE: Para "sources" especificados mediante #dir/file.in, 
+# el "target" implicito es #dir/file.out _incluso_ con build_dir
+# se debe pues "explicitar" el "target".

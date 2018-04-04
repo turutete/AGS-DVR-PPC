@@ -1,0 +1,45 @@
+requires 2.0.0
+
+%h{
+#include "configif.h"
+%}
+
+%{
+  /** \addtogroup cfmods Módulos CF
+   */
+  /*@{*/
+
+  /** \defgroup cf
+   */
+  /*@{*/
+%}
+
+class Ags:Cf from G:Object (interface :ConfigIf) {
+
+public GObject *
+  new (char *config_name) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  return G_OBJECT (ret);
+}
+
+ interface :ConfigIf private CfTable add_table(ConfigIf *self (check null type), CfTable cft, const char *k)
+   {
+     return NULL;
+   }
+ interface :ConfigIf private CfTable get_table(ConfigIf *self (check null type), CfTable cft, const char *k)
+   {
+     return NULL;
+   }
+ interface :ConfigIf private GValue *get(ConfigIf *self (check null type), CfTable cft, const char *k)
+   {
+     return NULL;
+   }
+ interface :ConfigIf private int set(ConfigIf *self (check null type), CfTable cft, const char *k, GValue *v)
+   {
+     return 0;
+   }
+ interface :ConfigIf private char* getnextkey(ConfigIf *self, CfTable cft, const char *k)
+   {
+     return NULL;
+   }
+}

@@ -1,0 +1,15 @@
+Import('*')
+
+for datafile in this['data_fn']:
+    insdir=(this.has_key('config_install_dir') and this['config_install_dir'])
+    if type(datafile)==str:
+        env.Install(dest_dir + install_dir + insdir, datafile)
+    else:
+        car=''
+        cdr=[]
+        for k in datafile:
+            if not car:
+                car=k
+            else:
+                cdr=cdr + [k]
+        env.Command(dest_dir + install_dir + insdir + car, cdr, concat)

@@ -1,0 +1,9 @@
+Import('*')
+
+Export('this')
+
+# Los fuentes generados van en este dir
+SConscript('SConscript-gen', duplicate=0)
+
+# sin duplicados no funciona
+SConscript('SConscript-src', build_dir=target_dir+this['target_dir'])

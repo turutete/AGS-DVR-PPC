@@ -1,0 +1,351 @@
+requires 2.0.0
+
+%h{
+#include <config.h>
+#include <stdlib.h>
+#include <string.h>
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+
+#include <ags-cf.h>
+#include <ags-type.h>
+#include <configif.h>
+#include <lua-gvalue.h>
+#include <interpreterif.h>
+
+%}
+
+%{
+  /**
+   * \addtogroup cfmods Módulos CF
+   */
+
+  /** 
+   * \defgroup cflua_g CfLua
+   * \ingroup cfmods
+   */
+
+  /*@{*/
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "cf-lua"
+
+#ifdef AGS_DEBUG
+#undef ags_debug
+#define ags_debug(level, format,...)  if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+
+#define LUA_CONSTANT(c) lua_pushstring(L, #c); lua_pushnumber(L, c); lua_settable(L, LUA_GLOBALSINDEX);
+%}
+
+%privateheader{
+#define BUFFER_MAX 1024 /* Tamaño máximo de "stream" a ejecutar */
+%}
+
+class Cf:Lua from Ags:Cf (interface :ConfigIf) (interface :InterpreterIf) {
+
+private char *config_name = NULL unrefwith g_free;
+//public lua_State *Ls; /* XXX Debug con llamadas a gc de lua */
+private lua_State *L
+  destroy {
+     lua_close(VAR);
+  };
+
+private void set_lua_path(self) {
+  /* Establece path Lua */
+  gchar* lua_path=g_build_path(";", AGS_CONFIG_PATH G_DIR_SEPARATOR_S "?.lua", g_getenv("AGS_CONFIG_PATH"), NULL);
+  g_setenv("LUA_PATH", lua_path, TRUE);
+  free(lua_path);
+}
+
+private void lua_openlibs(self) {
+  /* XXX */
+  luaL_openlibs(self->_priv->L);
+  //luaopen_base(self->_priv->L);    /* pairs(), etc. */
+  //luaopen_string(self->_priv->L);  /* gsub(), gmatch(), etc. */
+  //luaopen_package(self->_priv->L); /* loadlib() */
+  //luaopen_io(self->_priv->L);      /* open(), write(), etc. */
+  //luaopen_math(self->_priv->L);    /* floor(), etc. */
+  //luaopen_table(self->_priv->L);   /* getn(), etc. */
+}
+
+private void load_config(self) {
+  /* carga configuración */
+  GString* gs_config=g_string_new("require '");
+  gs_config=g_string_append(gs_config, CF_LUA(self)->_priv->config_name);
+  gs_config=g_string_append(gs_config, "'\n");
+  int error=luaL_dostring(CF_LUA(self)->_priv->L, gs_config->str);
+  if(error) {
+    g_critical("ERROR lua_pcall!: %s", lua_tostring(CF_LUA(self)->_priv->L, -1) );
+  }
+
+  g_string_free(gs_config, TRUE);
+}
+
+public GObject *
+  new (char *config_name) {
+  GObject *ret = G_OBJECT(GET_NEW);
+
+  self_set_lua_path(CF_LUA(ret));
+
+  CF_LUA(ret)->_priv->L=luaL_newstate();
+  //CF_LUA(ret)->Ls = CF_LUA(ret)->_priv->L; /* XXX Debug con llamadas a gc de lua */
+
+  self_lua_openlibs(CF_LUA(ret));
+
+  lua_settop(CF_LUA(ret)->_priv->L, 0);
+
+  if(config_name) {
+    CF_LUA(ret)->_priv->config_name = config_name;
+    self_load_config(CF_LUA(ret));
+  }
+
+  return G_OBJECT (ret);
+}
+
+public GObject *new_with_state (char *config_name, lua_State *L) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  
+  CF_LUA(ret)->_priv->L=L;
+  
+  lua_settop(CF_LUA(ret)->_priv->L, 0);
+  
+  if(config_name) {
+    CF_LUA(ret)->_priv->config_name = config_name;
+    self_load_config(CF_LUA(ret));
+  }
+  
+  return G_OBJECT (ret);
+}
+
+ interface :ConfigIf private CfTable add_table(ConfigIf *self (check null type), CfTable cft, const char *k)
+   {
+     return NULL;
+   }
+ interface :ConfigIf private CfTable get_table(ConfigIf *self (check null type), CfTable cft, const char *k)
+   {
+     CfTable r=(CfTable)LUA_REFNIL;
+     int top=lua_gettop(CF_LUA(self)->_priv->L);
+
+     self_aux_get_table(CF_LUA(self)->_priv->L, cft, k);
+     if(lua_istable(CF_LUA(self)->_priv->L, -1)) {
+       r=(CfTable)luaL_ref(CF_LUA(self)->_priv->L, LUA_REGISTRYINDEX); /* XXX leak potencial */
+     } 
+
+     //lua_pop(CF_LUA(self)->_priv->L, top);
+     lua_settop(CF_LUA(self)->_priv->L, top);	//Dejar pila como estaba by ccabezas
+     return r;
+   }
+ interface :ConfigIf private GValue *get(ConfigIf *self (check null type), CfTable cft, const char *k)
+   {     
+     GValue *v=NULL;
+     int top=lua_gettop(CF_LUA(self)->_priv->L);
+
+     self_aux_get_table(CF_LUA(self)->_priv->L, cft, k); /* check !nil */
+     if(!lua_isnil(CF_LUA(self)->_priv->L, -1)) {
+       lua_gvalue_demarshall(CF_LUA(self)->_priv->L, &v);
+     }
+
+     //lua_pop(CF_LUA(self)->_priv->L, top);
+     lua_settop(CF_LUA(self)->_priv->L, top);	//Dejar pila como estaba by ccabezas
+     return v;
+   }
+ interface :ConfigIf private int set(ConfigIf *self (check null type), CfTable cft, const char *k, GValue *v)
+   {
+     int top=lua_gettop(CF_LUA(self)->_priv->L);
+     self_aux_set_table(CF_LUA(self)->_priv->L, cft, k, v); /* XXX check !nil */
+     
+     //lua_pop(CF_LUA(self)->_priv->L, top);
+     lua_settop(CF_LUA(self)->_priv->L, top);	//Dejar pila como estaba by ccabezas
+     return 0;
+   }
+ interface :ConfigIf private char *getnextkey(ConfigIf *self (check null type), CfTable cft, const char *k)
+   {
+     char *s=NULL;
+
+     int top=lua_gettop(CF_LUA(self)->_priv->L);
+     int index=self_aux_push_table(CF_LUA(self)->_priv->L, cft);
+
+     if( index==LUA_REFNIL )
+       return NULL;
+
+     if(k)
+       lua_pushstring(CF_LUA(self)->_priv->L, k);
+     else
+       lua_pushnil(CF_LUA(self)->_priv->L);
+
+     if(lua_next(CF_LUA(self)->_priv->L, index)) /* push k, push v */     
+       s=(char*)lua_tostring(CF_LUA(self)->_priv->L, -2);
+
+     //lua_pop(CF_LUA(self)->_priv->L, top);
+	lua_settop(CF_LUA(self)->_priv->L, top);	//Dejar pila como estaba by ccabezas
+
+     return s;
+   }
+ interface :ConfigIf private gboolean check_table(ConfigIf *self (check null type), CfTable cft)
+   {
+     return (cft!=(CfTable)LUA_REFNIL); /* true=ok, false=ko */
+   }
+
+ interface :InterpreterIf private GValue* run(InterpreterIf *self (check null type), gchar* buffer, gint len, gchar* name, AgsCf* cf, CfTable cft)
+   {
+     int error;
+
+     /* compila 'script' y lo mete en la pila */                           /* Pila --->  */
+     error=luaL_loadbuffer(CF_LUA(self)->_priv->L, buffer, len, name);    /* CHUNK */
+
+     if(error) {
+       g_critical("ERROR luaL_loadbuffer!: %s", lua_tostring(CF_LUA(self)->_priv->L, -1) );
+       lua_pop(CF_LUA(self)->_priv->L, 1); /* Evitar leak by CC */
+     }
+
+     /* nombre de tabla para parámetros: 'arg' */
+     lua_pushstring(CF_LUA(self)->_priv->L, "arg");                        /* "arg", CHUNK */
+     /* Creamos tabla para parámetros */
+     lua_newtable(CF_LUA(self)->_priv->L);                                 /* TABLE, "arg", CHUNK */
+     /* Primer parámetro: nombre del módulo */
+     lua_pushstring(CF_LUA(self)->_priv->L, name);                         /* <name>, TABLE, "arg", CHUNK */
+     lua_rawseti(CF_LUA(self)->_priv->L, -2, 1);                           /* TABLE, "arg", CHUNK */
+     /* Segundo parámetro: configuración */
+     lua_pushlightuserdata(CF_LUA(self)->_priv->L, cf);                    /* <conf>, TABLE, "arg", CHUNK */
+     lua_rawseti(CF_LUA(self)->_priv->L, -2, 2);                           /* TABLE, "arg", CHUNK */
+     /* Tercer parámetro: tabla configuración */
+     lua_pushlightuserdata(CF_LUA(self)->_priv->L, cft);                   /* <tablaconf>, TABLE, "arg", CHUNK */
+     lua_rawseti(CF_LUA(self)->_priv->L, -2, 3);                           /* TABLE, "arg", CHUNK */
+     /* establecemos la variable global arg=TABLE */
+     lua_settable(CF_LUA(self)->_priv->L, LUA_GLOBALSINDEX);               /* CHUNK */
+     /* ejecutamos CHUNK */
+     error=lua_pcall(CF_LUA(self)->_priv->L, 0, 1, 0);                           /**/
+
+     if(error) {
+       g_critical("ERROR lua_pcall!: %s", lua_tostring(CF_LUA(self)->_priv->L, -1) );
+       lua_pop(CF_LUA(self)->_priv->L, 1); /* Evitar leak by CC */
+     }
+
+     //lua_dostring(CF_LUA(self)->_priv->L, text);
+
+     return NULL; /* XXX */
+   }
+
+ interface :InterpreterIf private void stream(InterpreterIf *self (check null type), GIOChannel *io)
+   {
+     GError *error=NULL;
+
+     g_io_channel_set_flags(io, G_IO_FLAG_NONBLOCK, &error);
+     if(!error) {
+       g_io_add_watch(io, G_IO_IN, self_io_in, (gpointer) self);
+     } else {
+       g_critical("No se pudo establecer 'flag' NONBLOCK en 'stream' Lua.");
+       g_clear_error(&error);
+     }
+   }
+
+private int complete (lua_State *L, int status) {
+  gchar* aux=lua_tostring(L, -1);
+
+  if (status == LUA_ERRSYNTAX &&
+      strstr(aux, "near `<eof>'") != NULL) {
+    //lua_pop(L, 1);/* Evitar leak by CC */
+    return FALSE;
+  }
+  else
+    return TRUE;
+}
+
+private gboolean io_in(GIOChannel *io, GIOCondition condition, gpointer self) 
+  {
+    lua_State *L = CF_LUA(self)->_priv->L;
+    gsize   bytes_read;
+    GError *error=NULL;
+    /* XXX como atributos privados */
+    static gchar buffer[BUFFER_MAX];
+    static gint  pos=0;
+
+    GIOStatus status=g_io_channel_read_chars(io, &buffer[pos], BUFFER_MAX-pos, &bytes_read, &error); /* XXX ¿leak? */
+    /* XXX comprobar error */
+    g_clear_error(&error);
+    
+    if(status==G_IO_STATUS_NORMAL) {
+      int status;
+      int top=lua_gettop(L);
+
+      pos+=bytes_read;
+
+      status=luaL_loadbuffer(L, buffer, pos, "=stream");
+      if( self_complete(L, status) ) {
+	self_run(INTERPRETERIF(self), buffer, pos, "=stream", NULL, NULL); /* XXX cf y cft ? */
+	pos=0;
+      }
+
+      if (status){	/* Evitar leak by CC */
+	 lua_pop(L, 1);
+      }	
+
+      if(pos>BUFFER_MAX) {
+	g_critical("Se excedió 'buffer' de 'stream' Lua. (Leidos=%d, MAX=%d).", pos, BUFFER_MAX);
+	pos=0;
+      }
+
+      //lua_pop(L, top);
+      lua_settop(L,top);		//Dejar pila como estaba by ccabezas
+    }
+
+    return TRUE;
+  }
+
+private int aux_push_table(lua_State *L, CfTable cft)
+  {
+    int r=(int)cft;
+    int index=LUA_REFNIL;
+
+    if( r==LUA_REFNIL )
+      return LUA_REFNIL;
+
+    if(!r) { /* get de tabla global */
+      index=LUA_GLOBALSINDEX;
+    } else {
+      ags_debug(1,"r=%d", r);
+      lua_rawgeti(L, LUA_REGISTRYINDEX, r);
+      index=lua_gettop(L);
+    }
+
+    return index;
+  }
+
+private void aux_get_table(lua_State *L, CfTable cft, const char *k)
+  {
+    int index=self_aux_push_table(L, cft);
+    lua_pushstring(L, k);
+    lua_gettable(L, index);
+  }
+
+private void aux_set_table(lua_State *L, CfTable cft, const char *k, GValue *v)
+  {
+    int index=self_aux_push_table(L, cft);
+    lua_pushstring(L, k);
+    lua_gvalue_marshall(L, v); /* XXX check  */
+    lua_settable(L, index);
+  }
+}
+
+%{
+  GObject *(*cflua_new())(char *config_name)
+    {
+      return cf_lua_new;
+    }
+
+  LUALIB_API int luaopen_cflua(lua_State *L)
+    {
+      GObject *cflua = self_new_with_state(NULL, L);
+      lua_pushlightuserdata(L, (void*) cflua);
+
+      return 1;
+    }
+%}
+
+%{
+  /*@}*/
+%}

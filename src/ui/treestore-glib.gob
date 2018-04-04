@@ -1,0 +1,262 @@
+%{
+/**
+   \page treestoreglib TreeStoreGlib
+   \section treestoreglib_desc DESCRIPCIÓN
+   Implementación de árbol usando GLib.
+   \section treestoreglib_reqs REQUISISTOS
+     \subsection treestoreglib_deps Dependencias
+     NINGUNA
+     \subsection treestoreglib_pres Precarga
+     NINGUNA
+     \subsection treestoreglib_evs Eventos
+     NINGUNO
+     \subsection treestoreglib_cfs Configuración
+        -# columns
+	   - Tipo: CfTable
+	   - Requerido
+	   - Descripción: Tabla de configuración para definir columnas del árbol.
+	   - Formato:
+	   n_columna = TABLA_COLUMNA,... (n_columna es G_TYPE_STRING y TABLA_COLUMNA es CfTable).
+	   - Formato TABLA_COLUMNA:
+	      -# name
+	         - Tipo: G_TYPE_STRING
+		 - Requerido
+		 - Descripción: Nombre de la columna.
+	      -# type
+	         - Tipo: G_TYPE_INT (GType)
+		 - Requerido
+		 - Descripción: Tipo de la columna.
+     \subsection treestoreglib_reqpros Propiedades
+     NINGUNA
+   \section treestoreglib_feas CARACTERÍSTICAS
+     \subsection treestoreglib_ifs Implementa
+        -# \ref treestoreif
+     \subsection treestore_sigs Señales
+        -# changed_rowsig*
+*/
+%}
+
+%h{
+#include <treestoreif.h>
+
+#undef  G_LOG_DOMAIN
+#define G_LOG_DOMAIN "treestore-glib"
+
+#ifdef AGS_DEBUG
+#undef  ags_debug
+#define ags_debug(level, format,...) if(level<AGS_DEBUG) g_log(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, ("%s: " format), __GOB_FUNCTION__, ##__VA_ARGS__)
+#else
+#define ags_debug(...) 
+#endif
+%}
+
+%privateheader{
+typedef struct _TreeStoreGlibIter TreeStoreGlibIter;
+
+struct _TreeStoreGlibIter {
+  GNode* node;
+};
+%}
+
+requires 2.0.0
+
+class TreeStore:Glib from G:Object (interface :TreestoreIf) {
+
+private GNode* root    = { g_node_new(NULL) };
+private guint  n_cols  = 0;
+private GType  *types  = NULL;
+/**/
+private GHashTable *column_number = { g_hash_table_new(g_str_hash, g_str_equal) }; 
+
+/* señales */
+signal last NONE (POINTER) void changed_rowsig(self, GValue* row_value); 
+/**< row_value es GValue tipo G_TYPE_POINTER conteniendo TsRow */
+
+public
+GObject *
+new (char *ts_name, AgsCf *cf, CfTable cft) {
+  GObject *ret = G_OBJECT(GET_NEW);
+  CfTable my_cft;
+  CfTable columns;
+  char *col_name;
+  GType *types;
+  CfTable column;
+  GValue *v;
+  int i, len=0;
+  GType type;
+
+  ags_debug(1, "Leyendo configuración...");
+  my_cft=config_get_table(CONFIGIF(cf), cft, ts_name);
+
+  columns=config_get_table(CONFIGIF(cf), my_cft, "columns");
+  if(! config_check_table(CONFIGIF(cf), columns) )
+    g_error("TreeStoreGlib %s sin configuración de columnas.", ts_name);
+
+  types=g_new(GType, 1);
+
+  i=1;
+  GString *gs_i=g_string_new("");
+  for(g_string_printf(gs_i, "%d", i)
+      ;config_check_table( CONFIGIF(cf), (column=config_get_table(CONFIGIF(cf), columns, gs_i->str)) )      
+      ;g_string_printf(gs_i, "%d", ++i)) {
+    col_name=config_get_string(CONFIGIF(cf), column, "name");
+    type=config_get_int(CONFIGIF(cf), column, "type");
+    
+    if(i>len) {
+      len=i;
+      types=g_renew(GType, types, len);
+    }
+    types[i-1]=type;
+
+    g_hash_table_insert(TREESTORE_GLIB(ret)->_priv->column_number, col_name, (gpointer)i-1); /* para buscar #columna por nombre */
+    
+    ags_debug(5,"i=%d type=%d types=%p", i, type, types);
+  }
+
+  TREESTORE_GLIB(ret)->_priv->types=types;
+  TREESTORE_GLIB(ret)->_priv->n_cols=len;
+  g_object_set_data(G_OBJECT(ret), "column_number", TREESTORE_GLIB(ret)->_priv->column_number);
+
+  return G_OBJECT(ret);
+  return ret;
+}
+
+ interface :TreestoreIf private void append(TreestoreIf* self, TsRow row, TsRow parent_row)
+   {
+     TreeStoreGlibIter* iter = (TreeStoreGlibIter*) row;
+     TreeStoreGlibIter* parent_iter = (TreeStoreGlibIter*) parent_row;
+     GNode* parent_node;
+
+     if(!parent_row) {
+       parent_node=TREESTORE_GLIB(self)->_priv->root;
+     } else {
+       parent_node=parent_iter->node;
+     }
+
+     GPtrArray* cols_array=g_ptr_array_new();
+     g_ptr_array_set_size(cols_array, TREESTORE_GLIB(self)->_priv->n_cols);
+
+     iter->node=g_node_append_data(parent_node, cols_array);
+
+     return;
+   }
+ interface :TreestoreIf private void get_value(TreestoreIf* self, TsRow row, gint col, GValue* v)
+   {
+     TreeStoreGlibIter* iter = (TreeStoreGlibIter*) row;
+
+     if(!iter || !v)
+       return; /* XXX warning */
+
+     GPtrArray* cols_array=iter->node->data;
+     GValue* aux=g_ptr_array_index(cols_array, col);
+     if(aux) {
+       g_value_init(v, G_VALUE_TYPE(aux));
+       g_value_copy(aux, v);
+     }
+   }
+ interface :TreestoreIf private void set_value(TreestoreIf* self, TsRow row, gint col, GValue* v)
+   {
+     TreeStoreGlibIter* iter = (TreeStoreGlibIter*) row;
+
+     if(!iter || !iter->node)
+       return; /* XXX warning*/
+     
+     GPtrArray* cols_array=iter->node->data;
+     GValue* dst=g_ptr_array_index(cols_array, col);
+     if(!dst) {
+       dst=g_new0(GValue, 1);
+       g_ptr_array_index(cols_array, col)=dst;
+     } else {
+       g_value_unset(dst);
+     }
+     g_value_init(dst, G_VALUE_TYPE(v));
+     g_value_copy(v, dst);
+
+     /* emitimos changed_rowsig */
+     GValue aux={0,};
+     g_value_init(&aux, G_TYPE_POINTER);
+     g_value_set_pointer(&aux, row);
+     self_changed_rowsig(self, &aux);
+
+     return;
+   }
+ interface :TreestoreIf private GType get_column_type(TreestoreIf* self, gint col)
+   {
+     return TREESTORE_GLIB(self)->_priv->types[col];
+   }
+ interface :TreestoreIf private gint get_column_number(TreestoreIf* self, gchar* name)
+   {
+     return (gint)g_hash_table_lookup(TREESTORE_GLIB(self)->_priv->column_number, name);
+   }
+ interface :TreestoreIf private void new_iter(TreestoreIf* self, TsRow* row)
+   {
+     *row=g_new0(TreeStoreGlibIter, 1);
+
+     return;
+   }
+ interface :TreestoreIf private void free_iter(TreestoreIf* self, TsRow row)
+   {
+     free(row); /* XXX ? */
+     
+     return;
+   }
+ interface :TreestoreIf private gboolean first(TreestoreIf* self, TsRow row)
+   {
+     TreeStoreGlibIter* iter = (TreeStoreGlibIter*) row;
+     gboolean ret=FALSE;
+
+     if(iter) {
+       iter->node=TREESTORE_GLIB(self)->_priv->root->children;
+       ret=iter->node != NULL;
+     }
+
+     return ret;
+   }
+ interface :TreestoreIf private gboolean children(TreestoreIf* self, TsRow child_row, TsRow row)
+   {
+     TreeStoreGlibIter* iter = (TreeStoreGlibIter*) row;
+     TreeStoreGlibIter* child_iter = (TreeStoreGlibIter*) child_row;
+     gboolean ret=FALSE;
+
+     if(iter && child_iter) {
+       child_iter->node=iter->node->children;
+       ret=child_iter->node != NULL;
+     }
+
+     return ret;
+   }
+ interface :TreestoreIf private gboolean next(TreestoreIf* self, TsRow row)
+   {
+     TreeStoreGlibIter* iter = (TreeStoreGlibIter*) row;
+     gboolean ret=FALSE;
+
+     if(iter) {
+       iter->node=iter->node->next;
+       ret=iter->node != NULL;
+     }
+
+     return ret;
+   }
+ 
+interface :TreestoreIf private gboolean copy(TreestoreIf* self, TsRow src, TsRow dst)
+   {
+     TreeStoreGlibIter* iter_src = (TreeStoreGlibIter*) src;
+     TreeStoreGlibIter* iter_dst = (TreeStoreGlibIter*) dst;
+     gboolean ret=FALSE;
+     
+     if(iter_src && iter_dst) {
+       iter_dst->node=iter_src->node;
+       ret=TRUE;
+     }
+     
+     return ret;
+   }
+/* XXX remove */
+}
+
+%{
+  GObject *(*treestoreglib_new())(char*, AgsCf*, CfTable)
+    {
+      return self_new;
+    }
+%}

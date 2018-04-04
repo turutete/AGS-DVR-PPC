@@ -1,0 +1,368 @@
+build_base_dir   = 'build'
+install_base_dir = 'install'
+mod_prefix       = 'ags-'
+lmod_prefix      = 'lua-'
+
+all_modules = {
+	'sds':	{
+		'target_dir':		'/sds/',
+		'lib_install_dir':	'/lib/',
+		'mod_install_dir':	'/lib/ags/',
+		'bin_install_dir':	'/bin/',
+		'mod_prefix':		mod_prefix,
+		'modules':	{
+			'agssds':	{
+				'name':		'agssds',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'ags-sds.gob' ],
+				'sources_fn':	[ 'ags-sds.c', 'accessif.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'agstype':	{
+				'name':		'agstype',
+				'do_sstatic':	True,
+				'sources_fn':	[ 'ags-type.c', 'ags-valuetypes.c', 'ags-paramspecs.c', 'ags-valuetransform.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'agssdsx':	{
+				'name':		'agssdsx',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'ags-sdsx.gob' ],
+				'sources_fn':	[ 'ags-sdsx.c', 'accessxif.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'net-snmp-config --libs --cflags' ],
+			},
+			'agssdscore':	{
+				'name':		'agssdscore',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'ags-sdscore.gob' ],
+				'sources_fn':	[ 'ags-sdscore.c', 'createif.c', 'limitsif.c', 'trapif.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'sdscoreglib':	{
+				'name':		'sdscoreglib',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'sdscore-glib.gob' ],
+				'sources_fn':	[ 'sdscore-glib.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'net-snmp-config --libs --cflags' ],
+			},
+			'snmpcommon':	{
+				'name':		'snmpcommon',
+				'do_sstatic':	True,
+				'sources_fn':	[ 'snmp-gvalue.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'net-snmp-config --libs --cflags' ],
+			},
+			'sdsxsnmp':		{
+				'name':		'sdsxsnmp',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'sdsx-snmp.gob' ],
+				'sources_fn':	[ 'sdsx-snmp.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'net-snmp-config --libs --cflags' ],
+			},
+		},
+	},
+	'gw':		{
+		'target_dir':		'/gw/',
+		'lib_install_dir':	'/lib/',
+		'mod_install_dir':	'/lib/ags/',
+		'bin_install_dir':	'/bin/',
+		'mod_prefix':		mod_prefix,
+		'modules':	{
+			'agsgw':	{
+				'name':		'agsgw',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'ags-gw.gob' ],
+				'sources_fn':	[ 'ags-gw.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'gwsnmp':	{
+				'name':		'gwsnmp',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'gw-snmp.gob' ],
+				'sources_fn':	[ 'gw-snmp.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'net-snmp-config --agent-libs' ],
+			},
+		},
+	},
+	'cm':		{
+		'target_dir':		'/cm/',
+		'lib_install_dir':	'/lib/',
+		'mod_install_dir':	'/lib/ags/',
+		'bin_install_dir':	'/bin/',
+		'mod_prefix':		mod_prefix,
+		'modules':	{
+			'agscm':	{
+				'name':		'agscm',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'ags-cm.gob' ],
+				'sources_fn':	[ 'ags-cm.c', 'interpreterif.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'cmserveronly':	{
+				'name':		'cmserveronly',
+				'do_sstatic':	True,
+				'sources_fn':	[ 'busif.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'cmmibinit':	{
+				'name':		'cmmibinit',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'cm-mibinit.gob' ],
+				'sources_fn':	[ 'cm-mibinit.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'net-snmp-config --libs --cflags' ],
+			},
+			'cmtextbuffer':	{
+				'name':		'cmtextbuffer',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'cm-textbuffer.gob' ],
+				'sources_fn':	[ 'cm-textbuffer.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'cmzigorbus':	{
+				'name':		'cmzigorbus',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'cm-zigorbus.gob' ],
+				'sources_fn':	[ 'cm-zigorbus.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'cmzigorobj':	{
+				'name':		'cmzigorobj',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'cm-zigorobj.gob' ],
+				'sources_fn':	[ 'cm-zigorobj.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'cmscript':	{
+				'name':		'cmscript',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'cm-script.gob' ],
+				'sources_fn':	[ 'cm-script.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+		},
+	},
+	'cf':		{
+		'target_dir':		'/cf/',
+		'lib_install_dir':	'/lib/',
+		'mod_install_dir':	'/lib/ags/',
+		'bin_install_dir':	'/bin/',
+		'mod_prefix':		mod_prefix,
+		'modules':	{
+			'agscf':	{
+				'name':		'agscf',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'ags-cf.gob' ],
+				'sources_fn':	[ 'ags-cf.c', 'configif.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'cflua':	{
+				'name':		'cflua',
+				'do_mod':		True,
+				'gobs_fn':		[ 'cf-lua.gob' ],
+				'sources_fn':	[ 'cf-lua.c', 'lua-gvalue.c' ],
+				'libs':		[ 'brihuegacommon' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'pkg-config --cflags --libs lua' ],
+			},
+		},
+	},
+	'ui':		{
+		'target_dir':		'/ui/',
+		'lib_install_dir':	'/lib/',
+		'mod_install_dir':	'/lib/ags/',
+		'bin_install_dir':	'/bin/',
+		'mod_prefix':		mod_prefix,
+		'modules':	{
+			'textbufferif':	{
+				'name':		'textbufferif',
+				'do_sstatic':	True,
+				'sources_fn':	[ 'textbufferif.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'agsui':	{
+				'name':		'agsui',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'ags-ui.gob' ],
+				'sources_fn':	[ 'ags-ui.c', 'treestoreif.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0' ],
+			},
+			'uigtk2':	{
+				'name':		'uigtk2',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'ui-gtk2.gob' ],
+				'sources_fn':	[ 'ui-gtk2.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gtk+-2.0' ],
+			},
+			'gtk2gladelo':	{
+				'name':		'gtk2gladelo',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'gtk2-gladelo.gob' ],
+				'sources_fn':	[ 'gtk2-gladelo.c' ],
+				'pc':			[ 'pkg-config --libs --cflags libglade-2.0' ],
+			},
+			'gtk2pixbufs':	{
+				'name':		'gtk2pixbufs',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'gtk2-pixbufs.gob' ],
+				'sources_fn':	[ 'gtk2-pixbufs.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gdk-pixbuf-2.0' ],
+			},
+			'gtk2treestore':	{
+				'name':		'gtk2treestore',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'gtk2-treestore.gob' ],
+				'sources_fn':	[ 'gtk2-treestore.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gtk+-2.0' ],
+			},
+			'xml2tslibxml2':	{
+				'name':		'xml2tslibxml2',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'xml2ts-libxml2.gob' ],
+				'sources_fn':	[ 'xml2ts-libxml2.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gtk+-2.0', 'pkg-config --libs --cflags libxml-2.0' ],
+			},
+			'pollglib':	{
+				'name':		'pollglib',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'poll-glib.gob' ],
+				'sources_fn':	[ 'poll-glib.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gtk+-2.0' ],
+			},
+			'gtk2line':	{
+				'name':		'gtk2line',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'gtk2-line.gob' ],
+				'sources_fn':	[ 'gtk2-line.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gtk+-2.0' ],
+			},
+			'gtk2treeview':	{
+				'name':		'gtk2treeview',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'gtk2-treeview.gob' ],
+				'sources_fn':	[ 'gtk2-treeview.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gtk+-2.0' ],
+			},
+			'gtk2keysnooper':	{
+				'name':		'gtk2keysnooper',
+				'do_sstatic':	True,
+				'gobs_fn':		[ 'gtk2-keysnooper.gob' ],
+				'sources_fn':	[ 'gtk2-keysnooper.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gtk+-2.0' ],
+			},
+		},
+	},
+	'lualib':	{
+		'target_dir':		'/lualib/',
+		'lib_install_dir':	'/lib/',
+		'mod_install_dir':	'/lib/lua/',
+		'bin_install_dir':	'/bin/',
+		'mod_prefix':		lmod_prefix,
+		'modules':	{
+			'gobject':	{
+				'name':		'gobject',
+				'do_mod':		True,
+				'sources_fn':	[ 'lgobject.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'pkg-config --libs --cflags lua' ],
+			},
+			'config':	{
+				'name':		'config',
+				'do_mod':		True,
+				'sources_fn':	[ 'lconfig.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'pkg-config --libs --cflags lua' ],
+			},
+			'textbuffer':	{
+				'name':		'textbuffer',
+				'do_mod':		True,
+				'sources_fn':	[ 'ltextbuffer.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'pkg-config --libs --cflags lua' ],
+			},
+			'treestore':	{
+				'name':		'treestore',
+				'do_mod':		True,
+				'sources_fn':	[ 'ltreestore.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'pkg-config --libs --cflags lua' ],
+			},
+			'bus':	{
+				'name':		'bus',
+				'do_mod':		True,
+				'sources_fn':	[ 'lbus.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'pkg-config --libs --cflags lua' ],
+			},
+			'access':	{
+				'name':		'access',
+				'do_mod':		True,
+				'sources_fn':	[ 'laccess.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'pkg-config --libs --cflags lua' ],
+			},
+			'gdk':	{
+				'name':		'gdk',
+				'do_mod':		True,
+				'sources_fn':	[ 'lgdk.c' ],
+				'pc':			[ 'pkg-config --libs --cflags gtk+-2.0', 'pkg-config --libs --cflags lua' ],
+			},
+		},
+		
+	},
+	'tests':	{
+		'target_dir':		'/tests/',
+		'lib_install_dir':	'/lib/',
+		'mod_install_dir':	'/lib/ags/',
+		'bin_install_dir':	'/bin/',
+		'mod_prefix':		mod_prefix,
+		'modules':	{
+			'brihuegacommon':	{
+				'name':		'brihuegacommon',
+				'do_shared':	True,
+				'slibs':		[ 'agscf', 'agstype', 'agscm', 'agssds', 'agssdsx', 'snmpcommon', 'textbufferif', 'cmscript', 'cmtextbuffer' ],
+				'sources_fn':	[],
+				'pc':			[ 'net-snmp-config --libs --cflags' ],
+			},
+			'brihuegaserver':	{
+				'name':		'brihuegaserver',
+				'do_mod':		True,
+				'slibs':		[ 'agssdscore', 'sdscoreglib', 'cmserveronly', 'cmmibinit', 'agsgw', 'gwsnmp', 'cmzigorbus', 'cmzigorobj' ],
+				'sources_fn':	[],
+				'pc':			[ 'net-snmp-config --agent-libs' ],
+			},
+			'brihuegaclient':	{
+				'name':		'brihuegaclient',
+				'do_mod':		True,
+				'slibs':		[ 'agsui', 'uigtk2', 'gtk2gladelo', 'gtk2pixbufs', 'gtk2treestore', 'xml2tslibxml2', 'pollglib', 'sdsxsnmp', 'gtk2line', 'gtk2treeview', 'gtk2keysnooper' ],
+				'sources_fn':	[],
+				'pc':			[ 'pkg-config --libs --cflags libglade-2.0' ],
+			},
+			'brihuega':		{
+				'name':		'brihuega',
+				'do_bin':		True,
+				'sources_fn':	[ 'test-mods.c' ],
+				'libs':		[ 'brihuegacommon' ],
+				'pc':			[ 'pkg-config --libs --cflags gobject-2.0', 'pkg-config --libs --cflags gmodule-2.0' ],
+			},
+		},
+	},
+}
+
+all_data = {
+	'config':	{
+		'config_install_dir':	'/share/config/',
+		'data_fn':			[ 'functions.lua', 
+						['brihuega-snmpd.lua', 'config.lua', 'setup.lua', 'brihuega-snmpd.lua'],
+						'defs-brihuega.lua', 'objs-brihuega.lua', 'oids-zigor.lua',
+						'oids-brihuega.lua', 'script-gtk2ui-brihuega.lua',
+						[ 'brihuega-gtk2ui.lua', 'config.lua','setup.lua','brihuega-gtk2ui.lua' ],
+						'script-snmpd-brihuega.lua' ],
+	},
+	'ui':	{
+		'config_install_dir':	'/share/ui/',
+		'data_fn':			[ 'ui-brihuega.lxml', 'ui-brihuega.glade' ],
+	},
+	'pixbufs':	{
+		'config_install_dir':	'/share/pixbufs/',
+		'data_fn':			[ 'sinoptico-brihuega.png', 'redball.xpm', 'greenball.xpm', 'grayball.xpm', 'openedswitch.xpm', 'closedswitch.xpm', 'zigor_p.xpm' ],
+	},
+	'mibs':	{
+		'config_install_dir':	'/share/mibs/',
+		'data_fn':			[ 'ZIGOR-SMI.txt', 'ZIGOR-TC.txt', 'ZIGOR-PRODUCTS-MIB.txt', 'ZIGOR-BRIHUEGA-MIB.txt', 'ZIGOR-ALTERNA-MIB.txt' ],
+	},
+}
+
+def f(env):
+	return

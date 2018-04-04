@@ -1,0 +1,36 @@
+ZIGOR-PRODUCTS-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	MODULE-IDENTITY
+		FROM SNMPv2-SMI
+	zigorModules,
+	zigorProducts
+		FROM ZIGOR-SMI;
+
+zigorProductsMIB MODULE-IDENTITY
+	LAST-UPDATED	"201003071130Z"
+	ORGANIZATION	"Corporacion Zigor, S.A."
+	CONTACT-INFO
+		"	Corporacion Zigor, S.A.
+			Depto. I+D
+
+		Postal: C/ Portal de Gamarra, 28
+			C.P 01013 Vitoria-Gasteiz , Alava
+			(Spain)
+	
+		Tel:	+34 (945) 214 600
+
+		E-mail:	zigor@zigor.com"
+	DESCRIPTION
+		"This module defines the object identifiers that are
+		assigned to various hardware platforms, and hence are
+		returned as values for sysObjectID"
+	::= { zigorModules 2 }
+
+zigorBrihuega		   OBJECT IDENTIFIER ::= { zigorProducts 1 }	-- Brihuega
+zigorSunzet		   OBJECT IDENTIFIER ::= { zigorProducts 2 }	-- SUNZET
+zigorPowercomm		   OBJECT IDENTIFIER ::= { zigorProducts 3 }	-- POWERCOMM
+zigorDvr		   OBJECT IDENTIFIER ::= { zigorProducts 4 }	-- DVR
+zigorSepec		   OBJECT IDENTIFIER ::= { zigorProducts 5 }	-- SEPEC
+
+END

@@ -1,0 +1,16 @@
+import sys
+
+Import('*')
+
+# todos los directorios fuente en CPPPATH y build en LIBPATH y -rpath-link
+for k, v in all_modules.iteritems():
+	env.AppendUnique(CPPPATH= [ '#src/' + v['target_dir'] ])
+	env.AppendUnique(LIBPATH= [  target_dir + '/' + v['target_dir'] ])
+	env.AppendUnique(RPATH=[Dir(install_dir + '/' + v['lib_install_dir']).abspath])
+	env.AppendUnique(RPATH=[Dir(install_dir + '/' + v['mod_install_dir']).abspath])
+	if sys.platform != "win32":
+		env.AppendUnique(LINKFLAGS='-Wl,-rpath-link,'+Dir(target_dir + '/' + v['target_dir']).abspath)
+
+# llama a los SConscript de cada directorio fuente
+for k, v in all_modules.iteritems():
+	SConscript( k +'/SConscript', exports={'this':v} )

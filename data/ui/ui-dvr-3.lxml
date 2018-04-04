@@ -1,0 +1,215 @@
+require "oids-dvr"
+require "oids-parameter"
+require "oids-alarm"
+
+loadlualib("config")
+loadlualib("textbuffer")
+
+local tabla_oids = _G -- oids-dvr.lua define los oids en global
+
+-- NO EDITAR ESTA VARIABLE. EDITAR .xml Y COPIAR AQUÍ
+local xml = [[
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<node name="DVR" >
+  <node name="Estado" >
+    <node pic="tree_sis" name="Sistema" >
+      <var key="$zigorSysName.0" name="Nombre del equipo" />
+      <var key="$zigorSysDescr.0" name="Descripción del equipo" />
+      <var key="$zigorSysLocation.0" name="Localización" />
+      <var key="$zigorSysContact.0" name="Contacto" />
+      <var key="$zigorSysCode.0" name="Código del equipo" />
+      <var key="$zigorSysVersion.0" name="Firmware" />
+      <var key="$zigorCtrlParamState.0" name="Configuración" />
+      <var key="$zigorDvrObjModemStatus.0" name="Estado módem" />
+      <var key="$zigorCtrlParamDemo.0"  name="Demo" />
+    </node>
+    <node pic="medidas" name="Medidas" >
+      <var key="$zigorDvrObjVRedR.0" units="V" name="Tensión de entrada fase R" factor="10" />
+      <var key="$zigorDvrObjVRedS.0" units="V" name="Tensión de entrada fase S" factor="10" />
+      <var key="$zigorDvrObjVRedT.0" units="V" name="Tensión de entrada fase T" factor="10" />
+      <var key="$zigorDvrObjVBus.0" units="V" name="Tensión de bus" factor="10" />
+      <var key="$zigorDvrObjVSecundarioR.0" units="V" name="Tensión de salida fase R" factor="10" />
+      <var key="$zigorDvrObjVSecundarioS.0" units="V" name="Tensión de salida fase S" factor="10" />
+      <var key="$zigorDvrObjVSecundarioT.0" units="V" name="Tensión de salida fase T" factor="10" />
+      <var key="$zigorDvrObjISecundarioR.0" units="A" name="Corriente de salida fase R" factor="10" />
+      <var key="$zigorDvrObjISecundarioS.0" units="A" name="Corriente de salida fase S" factor="10" />
+      <var key="$zigorDvrObjISecundarioT.0" units="A" name="Corriente de salida fase T" factor="10" />                
+      <var key="$zigorDvrObjPSalidaR.0" units="kW" name="Potencia de salida fase R" factor="10" />
+      <var key="$zigorDvrObjPSalidaS.0" units="kW" name="Potencia de salida fase S" factor="10" />
+      <var key="$zigorDvrObjPSalidaT.0" units="kW" name="Potencia de salida fase T" factor="10" />                                
+    </node>
+    <node pic="dsp" name="Estado" >
+      <var key="$zigorDvrObjEstadoControl.0" name="Estado de Control" />
+      <var key="$zigorDvrObjParado.0" name="Parado" />
+      <var key="$zigorDvrObjErrorVInst.0" name="Error Vinst" />
+      <var key="$zigorDvrObjSaturado.0" name="Saturado" />
+      <var key="$zigorDvrObjPwmOndOn.0" name="Pwm Ond On" />
+      <var key="$zigorDvrObjBypassOn.0" name="Bypass On" />
+      <var key="$zigorDvrObjPwmRecOn.0" name="Pwm Rec On" />
+      <var key="$zigorDvrObjDeteccionEnable.0" name="Deteccion enable" />
+      <var key="$zigorDvrObjAlarmaVBusMax.0" name="Alarma VBus Max" />
+      <var key="$zigorDvrObjAlarmaVCondMax.0" name="Alarma VCond Max" />
+      <var key="$zigorDvrObjAlarmaVBusMin.0" name="Alarma VBus Min" />
+      <var key="$zigorDvrObjAlarmaVRed.0" name="Alarma VRed" />
+      <var key="$zigorDvrObjLimitIntVSal.0" name="Hueco máximo" />
+      <var key="$zigorDvrObjErrorPLL.0" name="Error PLL" />
+      <var key="$zigorDvrObjAlarmaDriver.0" name="Alarma Driver" />
+      <var key="$zigorDvrObjParadoError.0" name="Parado Error" />
+      <var key="$zigorDvrObjErrorDriver.0" name="Error Driver" />
+      <var key="$zigorDvrObjErrorTermo.0" name="Error Termo" />
+      <var key="$zigorDvrObjLimitando.0" name="Limitando" />
+      <var key="$zigorDvrObjErrorFusible.0" name="Error Fusible" />
+      <var key="$zigorDvrObjRegHueco.0" name="Registro Hueco" />
+      <var key="$zigorDvrObjAlarmaPLL.0" name="Alarma PLL" />
+      <var key="$zigorDvrObjResetDriver.0" name="Reset Driver" />
+      <var key="$zigorDvrObjEComDSP.0" name="Error de comunicación DSP" />
+    </node>
+  </node>
+  <node name="Parametros" >
+    <node pic="tree_sis" name="Sistema" >
+      <var key="$zigorSysDescr.0" name="Descripción del equipo" />
+      <var key="$zigorSysLocation.0" name="Localización" />
+      <var key="$zigorSysContact.0" name="Contacto" />
+      <var key="$zigorSysDate.0" name="Fecha" />
+      <var enum="enum_TimeZone" key="$zigorSysTimeZone.0" name="Zona Horaria" />
+      <var enum="enum_NotificationLang" key="$zigorSysNotificationLang.0" name="Lenguaje para notificaciones" />
+      <var key="$zigorSysBacklightTimeout.0" name="Backlight Timeout" units="minutos" />
+      <var key="$zigorSysLogoutTimeout.0" name="Logout Timeout" units="minutos" />
+      <var key="$zigorCtrlParamDemo.0" enum="enum_SiNo" name="Demo" />
+      <node name="Passwords" >
+
+$passwords
+
+      </node>
+      <node name="Comunicaciones" >
+        <var key="$zigorNetIP.0" name="Dirección IP" />
+        <var key="$zigorNetMask.0" name="Máscara de red" />
+        <var key="$zigorNetGateway.0" name="Gateway" />
+        <var key="$zigorNetDNS.0" name="DNS" />
+        <var key="$zigorNetSmtp.0"     name="Envio email: Servidor de correo SMTP" />
+        <var key="$zigorNetSmtpUser.0" name="Envio email: Usuario" />
+        <var key="$zigorNetSmtpPass.0" name="Envio email: Password" />
+        <var key="$zigorNetSmtpEmail.0" name="Envio email: Dirección de correo (* vs @)" />
+        <var key="$zigorNetSmtpAuth.0" name="Envio email: Autenticación (NO/SSL/TLS)" />
+        <var key="$zigorNetSmtpTest.0" name="Envio email: Email Test Envio (* vs @)" />
+        <var key="$zigorNetEmail1.0" name="Email 1 para envio de alarmas (* vs @)" />
+        <var key="$zigorNetEmail2.0" name="Email 2 para envio de alarmas (* vs @)" />
+        <var key="$zigorNetEmail3.0" name="Email 3 para envio de alarmas (* vs @)" />
+        <var key="$zigorNetEmail4.0" name="Email 4 para envio de alarmas (* vs @)" />
+        <var key="$zigorModbusMode.0" enum="enum_MBMode"  name="Modo MODBUS" />
+        <var key="$zigorModbusAddress.0" name="Modbus RTU: Direccion" />
+        <var key="$zigorModbusBaudrate.0" enum="enum_MBBaudrate"  name="Modbus RTU: Velocidad" />
+        <var key="$zigorModbusParity.0" enum="enum_MBParity"  name="Modbus RTU: Paridad" />
+        <var key="$zigorModbusTCPPort.0" name="Modbus TCP: Puerto" />
+        <var key="$zigorModbusTCPTimeout.0" name="Modbus TCP: Tiempo inactividad para Reset (s)" />
+        <var key="$zigorDialUpPin.0" name="PIN del modem" />
+        <var key="$zigorDialUpSmsNum1.0" name="Número 1 para envio SMS" />
+        <var key="$zigorDialUpSmsNum2.0" name="Número 2 para envio SMS" />
+        <var key="$zigorDialUpSmsNum3.0" name="Número 3 para envio SMS" />
+        <var key="$zigorDialUpSmsNum4.0" name="Número 4 para envio SMS" />
+        <var key="$zigorNetPortHttp.0" name="Puerto TCP acceso HTTP" />
+        <var key="$zigorNetPortVnc.0"  name="Puerto TCP aplicación a través de HTTP" />
+      </node>
+    </node>
+    <node pic="cfg" name="Equipo" >
+      <var key="$zigorDvrParamVRedNom.0" units="V" name="Tensión de red nominal" factor="10" />
+      <var key="$zigorDvrParamVMinDVR.0" units="V" name="Tensión mínima DVR" factor="10" />
+      <var key="$zigorDvrParamNumEquipos.0" name="Equipos en paralelo" />
+      <var key="$zigorDvrParamFactor.0" name="Factor de conversión para tensiones" factor="1000" />
+      <var key="$zigorDvrParamFrecNom.0" units="Hz" name="Frecuencia nominal" factor="10" />
+    </node>
+    <node pic="graybell" name="Eventos" >
+      <node name="Niveles" >
+$niveles
+      </node>
+      <node name="Notificaciones" >
+$notificaciones
+      </node>
+    </node>
+  </node>
+</node>
+]]
+
+-- main
+-- arg = { name, cf, cft }
+local my_cft     = config.get_table(arg[2], arg[3], arg[1])
+local sds        = config.get(arg[2], my_cft, "sds")
+local xml_textbuffer = config.get(arg[2], my_cft, "xml_textbuffer")
+
+local displays_dvr=require "displays-dvr"
+local display_descr=displays_dvr.display_descr
+local display_imp  =displays_dvr.display_imp
+
+-- Forzar acceso síncrono (no usar cache)
+loadlualib("gobject")
+local cache=gobject.get_property(sds, "cache")
+gobject.set_property(sds, "cache", false)
+
+-- Obtener XML de niveles de alarma
+local niveles="" -- configuración niveles de alarma
+do
+   local n_niveles = access.get(sds, zigorAlarmsCfgPresent .. ".0")
+   for i=1,n_niveles,1 do
+      local descr = access.get(sds, zigorAlarmCfgDescr .. "." .. i)
+      if descr then  --ignorar cfg de alarmas que no se desean presentar (comentadas en factory...lua)
+         local aux=[[
+           <var enum="enum_AlarmCfgSeverity" key="$zigorAlarmCfgSeverity" id="$id" name="$display" />
+         ]]
+         --aux = string.gsub(aux, "$key", zigorAlarmCfgSeverity)
+         aux = string.gsub(aux, "$id", tostring(i))
+         niveles = niveles .. string.gsub(aux, "$display", "[" .. display_descr[descr].codigo .."] " .. display_descr[descr].display)
+      end
+   end
+   
+end
+-- Obtener XML de passwords
+local passwords="" -- passwords
+do
+   local pass_key = accessx.getnextkey(sds, zigorSysPasswordPass) 
+   while( pass_key and is_substring(pass_key, zigorSysPasswordPass) and pass_key~=zigorSysPasswordPass ) do
+      local pass=access.get(sds, pass_key)
+      _,_,row=string.find(pass_key, "%.(%d+)$")
+      local descr=access.get(sds, zigorSysPasswordDescr.."."..row )
+
+      local aux=[[
+	    <var key="$zigorSysPasswordPass" id="$id" name="$display" />
+      ]]
+      aux = string.gsub(aux, "$id", row)
+      passwords = passwords .. string.gsub(aux, "$display", descr)
+
+      pass_key = accessx.getnextkey(sds, pass_key)
+   end
+end
+
+-- Obtener XML de notificaciones de alarma
+local notificaciones="" -- configuración notificaciones de alarma
+do
+   local n_notificaciones = access.get(sds, zigorAlarmsCfgPresent .. ".0")
+   for i=1,n_notificaciones,1 do
+      local descr = access.get(sds, zigorAlarmCfgDescr .. "." .. i)
+      if descr then  --ignorar cfg de alarmas que no se desean presentar (comentadas en factory...lua)
+         local aux=[[
+           <var enum="enum_AlarmCfgNotification" key="$zigorAlarmCfgNotification" id="$id" name="$display" />
+         ]]
+         aux = string.gsub(aux, "$id", tostring(i))
+         notificaciones = notificaciones .. string.gsub(aux, "$display", "[" .. display_descr[descr].codigo .."] " .. display_descr[descr].display)
+      end
+   end
+   
+end
+
+-- Restaurar configuración cache
+gobject.set_property(sds, "cache", cache)
+
+-- Añadir XMLs de niveles y passwords a XML final
+xml=string.gsub(xml, "$niveles",   niveles)
+xml=string.gsub(xml, "$passwords", passwords)
+xml=string.gsub(xml, "$notificaciones", notificaciones)
+
+local tmpl={}
+tmpl.tmpl=xml
+local t=tmpl_get(tmpl, sds)
+textbuffer.set(xml_textbuffer, t)
+--
+
+return tmpl
