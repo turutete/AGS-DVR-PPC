@@ -367,8 +367,10 @@ local function gaplog_set(sds, date, minimo, integral, tiempo, fase)
 
 local function gaplog_init(sds)
 		   local t,last_id,last_queue_wraps=dofile("../share/config/gaplog-" .. profile .. ".lua") -- XXX path y sufijo "hardcoded"
-		   for i,v in pairs(t) do
+		   if t~=nil then
+		    for i,v in pairs(t) do
 		      insert_log_row(sds, v.time, v.minimo, v.integral, v.tiempo, v.fase, true)
+		    end
 		   end
 		   id=last_id or id
 		   access.set(sds, zigorDvrGapLogQueueWraps .. ".0", last_queue_wraps or 0)

@@ -410,9 +410,12 @@ function alarmlogtable_new(params)
 
    local init = function()
 		   local t,last_id,last_queue_wraps=dofile("../share/config/alarmlog-" .. profile .. ".lua") -- XXX path y sufijo "hardcoded"
-		   for i,v in pairs(t) do
+		   -- (new) seguridad!
+		   if t~=nil then
+		    for i,v in pairs(t) do
 		      --set(v.descr, v.cond, v.element, v.time)
 		      insert_log_row(sds, v.descr, v.time, v.element, v.cond, true)
+		    end
 		   end
 		   id=last_id or id
 		   access.set(sds, zigorAlarmLogQueueWraps .. ".0", last_queue_wraps or 0)
