@@ -448,7 +448,7 @@ all_data = {
 						'alarmlogtable.lua', 'alarms-dvr.lua', 'displays-dvr.lua', 'alarmlog-dvr.lua',
 						'gtk.lua', 'gaplog-dvr.lua', 'config-edit-dvr.lua',
 						[ 'dvr-modem.lua', 'config.lua','setup.lua','dvr-modem.lua' ],
-						'lanzar_Xvnc_sh.lua', 'index_html.lua', 'boa_conf.lua',
+						'lanzar_Xvnc_sh.lua', 'index_html.lua', 'webserver_conf.lua',
 						'resolv_conf.lua', 'msmtprc.lua', 
 						'display-timezone.lua',
 						[ 'dvr-modbus.lua', 'config.lua','setup.lua','dvr-modbus.lua' ],

@@ -67,7 +67,7 @@ function tmpl_get(this, sds, oids)
    if not oids then oids = _G end -- Si no se especifica tabla de OIDs se supone global
    
    -- Sustituimos subidentificadores por OIDs
-   local t=string.gsub(this.tmpl, "%$(%w+)", function (k) return oids[k] or "" end)
+   local t=string.gsub(this.tmpl, "%$(%w+)", function (k) return oids[k] or "$" .. k end)
    -- Sustituimos OIDs por valor
    t=string.gsub(t, "%$([%.%d]+)", function (k) local v=access.get(sds, k) return v end)
 

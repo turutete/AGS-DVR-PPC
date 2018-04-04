@@ -78,7 +78,7 @@ function save_system_data(sds)
       end
    end
    -- Puerto del HTTP
-   local config=require "boa_conf"
+   local config=require "webserver_conf"
    if(config) then
       if(config:save(sds)) then
 	 config:restart()
