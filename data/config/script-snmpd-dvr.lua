@@ -725,7 +725,11 @@ local function setsig_handler(sds, k, v, data)
       local minimo=access.get(sds, zigorDvrObjGapMinimo .. ".0")
       local tiempo=access.get(sds, zigorDvrObjGapTiempo .. ".0")
       local integral=access.get(sds, zigorDvrObjGapIntegral .. ".0")
-      integral = (1 - (integral/(tiempo*3.2)))*100
+
+      if tiempo~=0 then
+        integral = (1 - (integral/(tiempo*3.2)))*100
+      end
+
       local fase=access.get(sds, zigorDvrObjGapFase .. ".0")
       -- (new) filtrar huecos con duración -1 o media 100!
       if tiempo~=65535 and integral~=100 then
