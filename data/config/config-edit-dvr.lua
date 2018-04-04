@@ -137,7 +137,7 @@ local edit_config_dvr = {
       check_args = { len=100, re="[%w%p]+[@%*][%w%p]+%.[%w%p]+", },  -- ojo se admiten tanto * como @ (Uso de * por pb introduccion @ en gtk!)
       format = format_email,  -- para incluir el @ por el *
       null = true, },
-      
+
    [zigorNetSmtp] = {
       check = check_string,
       check_args = { len=100, },
@@ -165,7 +165,6 @@ local edit_config_dvr = {
       check_args = { len=100, re="[%w%p]+[@%*][%w%p]+%.[%w%p]+", },  -- ojo se admiten tanto * como @ (Uso de * por pb introduccion @ en gtk!)
       format = format_email,  -- para incluir el @ por el *
       null = true, },
-
    ---
    [zigorDvrParamVRedNom] = {
       check = check_number,

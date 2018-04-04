@@ -172,7 +172,7 @@ end
 
 local id=1
 local function insert_log_row(sds,time,minimo,integral,tiempo,fase, init)
-   local LOG_MAX=5000
+   local LOG_MAX=6000
    --
    local this_id=id
    access.set(sds, zigorDvrGapLogId          .. "." .. tostring(id), this_id)
@@ -912,7 +912,6 @@ local function setsig_handler(sds, k, v, data)
          end
    end
    ---
-   
   end  --FIN (if setsig_init==0)
   ------
 
@@ -1203,6 +1202,7 @@ local function alarm_manager(data)
    return true
 end
 gobject.timeout_add(2000, alarm_manager, nil)
+
 ----------------------------------------
 ----------------------------------------
 local notify_emails={

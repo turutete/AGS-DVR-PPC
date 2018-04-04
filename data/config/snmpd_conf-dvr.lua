@@ -110,8 +110,10 @@ group   grp_public  v2c     public
 ###
 ### ZADMIN (nivel de acceso total fijo, ZigorADMIN)
 view   vw_zadmin   included   .1
+
 ### ADMIN (nivel 4)
 view   vw_admin   included   .1
+
 ### ZMS (nivel 3)
 ###--read access:
 view   vw_zms     included   $zigorExperiment
@@ -119,6 +121,7 @@ view   vw_zms     excluded   $zigorSysPasswordPass.4
 ###... XXX
 ###--write access:
 view   vw_zmsW    included   $zigorExperiment
+
 ### USER (nivel 2)
 ###--read access:
 view   vw_user    included   $zigorExperiment

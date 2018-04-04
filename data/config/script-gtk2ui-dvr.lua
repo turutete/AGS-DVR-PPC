@@ -126,9 +126,11 @@ gobject.set_property(w_label_confirma, "label", '<span size="large">'..label_t..
 ----------------------------------------
 local iters = {}
 
-local NIVEL_FABRICA_MIN = 3
-local NIVEL_RMLOG_MIN = 3
-local NIVEL_ACTUACIONES_MIN = 2
+local NIVEL_MIN_FABRICA = 2
+local NIVEL_MIN_RMLOG = 3
+local NIVEL_MIN_ACTUACIONES = 2
+local NIVEL_MIN_BUTTON_REBOOT = 2
+local NIVEL_MIN_RESET_ALARMAS=2
 ----------------------------------------
 -- Cargar/Salvar parámetros (configuración)
 --
@@ -165,14 +167,14 @@ function func_CtrlParamState(w, iter)
       gobject.set_property(w_save_params_button,    "sensitive", true)
       gobject.set_property(w_cancel_params_button,  "sensitive", true)
       -- habilitar boton de fabrica solo en niveles permitidos
-      if access_level>=NIVEL_FABRICA_MIN then
+      if access_level>=NIVEL_MIN_FABRICA then
          gobject.set_property(w_factory_params_button, "sensitive", true)
       end
    elseif state == 2 then -- active(2)
       gobject.set_property(w_save_params_button,    "sensitive", false)
       gobject.set_property(w_cancel_params_button,  "sensitive", false)
       -- habilitar boton de fabrica solo en niveles permitidos
-      if access_level>=NIVEL_FABRICA_MIN then
+      if access_level>=NIVEL_MIN_FABRICA then
          gobject.set_property(w_factory_params_button, "sensitive", true)
       end
    elseif state == 3 then -- factory(3)
@@ -282,16 +284,16 @@ local funcs = {
 -- Acceso a elementos de la 'ui' en funcion del nivel de acceso:
 --
 -- deshabilitar botones de cargar cfg de fabrica en niveles no permitidos
-if access_level<NIVEL_FABRICA_MIN then
+if access_level<NIVEL_MIN_FABRICA then
    gobject.set_property(w_factory_params_button, "sensitive", false)
 end
 -- deshabilitar botones de borrar historicos en niveles no permitidos
-if access_level<NIVEL_RMLOG_MIN then
+if access_level<NIVEL_MIN_RMLOG then
    gobject.set_property(w_button_rmlog,          "sensitive", false)
    gobject.set_property(w_button_huecos_borrar,  "sensitive", false)
 end
 -- deshabilitar botones de actuaciones en nivel en niveles no permitidos
-if access_level<NIVEL_ACTUACIONES_MIN then
+if access_level<NIVEL_MIN_ACTUACIONES then
    --gobject.set_property(w_button_marcha, "sensitive", false)
    --gobject.set_property(w_button_paro,   "sensitive", false)
    --gobject.set_property(w_button_reset,  "sensitive", false)
@@ -299,9 +301,6 @@ if access_level<NIVEL_ACTUACIONES_MIN then
    gobject.set_property(w_button_par,   "sensitive", false)
    gobject.set_property(w_button_res,  "sensitive", false)
 end
-
--- boton reboot
-local NIVEL_MIN_BUTTON_REBOOT = 3  -- boton reboot
 
 local w_button_reboot = gobject.get_data(ui, "button_reboot")
 local w_button_test = gobject.get_data(ui, "button_test")
@@ -778,7 +777,7 @@ do
       local reset=treestore.get(s, iter, "reset")
       if reset then
       if treestore.get(s, iter, "cond")==index_cond.bloqueada 
-      and access_level>2 then  -- XXX (jur)
+      and access_level>=NIVEL_MIN_RESET_ALARMAS then  -- XXX (jur)
 	    local id = treestore.get(s, iter, "id")
 	    local msg = _g("Reseteando alarma...")
 	    local bar_id=gtk.statusbar_push(w_statusbar, "bar", msg)

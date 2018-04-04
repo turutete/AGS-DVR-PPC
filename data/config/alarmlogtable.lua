@@ -159,7 +159,7 @@ end
 
 local id=1
 local function insert_log_row(sds,descr,time,element,cond, init)
-   local LOG_MAX=5000
+   local LOG_MAX=6000
    --
    local this_id=id
    access.set(sds, zigorAlarmLogId          .. "." .. tostring(id), this_id)

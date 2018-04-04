@@ -85,6 +85,7 @@ register_widgets(self, GladeXML *layout) {
   g_list_foreach(lista, self_register_widget, self);
 }
 
+/* XXX (jur) */
 private
 void
 test(GtkEntry *entry, GtkMenu  *menu, gpointer  user_data) {
