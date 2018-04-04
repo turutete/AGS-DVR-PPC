@@ -2,6 +2,10 @@
 -- Variable global con el nombre del "profile"
 profile = "dvr"
 
+-- XXX (jur) para discriminar local de remoto
+remote = 1
+--remote = 0
+
 require "functions"
 
 loadlualib("gobject")
@@ -14,7 +18,7 @@ loadlualib("access")
 loadlualib("accessx")
 
 local sdsxsnmp_host = "localhost"
-local sdsxsnmp_community = "public"  -- En realidad se usara el que se introduzca en pantalla de login
+local sdsxsnmp_community = "XXX"  -- En realidad se usara el que se introduzca en pantalla de login
 
 local columns = {
    ["1"]  = { name = "name",    type = G_TYPE_STRING,   },
@@ -88,6 +92,7 @@ local columns_treeview = {
 	 ["1"] = { name = "pic",  },
 	 ["2"] = { name = "name", 
 	    -- properties = { ["family"] = "Monospace", }, 
+	    properties = { height = 45 },   -- (jur) altura de las filas de los menus gtktreeview
 	 },
       },
    },
@@ -111,8 +116,9 @@ local columns_infoview = {
       -- "Cells columna 2
       cells = {
 	 ["1"] = { name = "display",
-	    properties ={ foreground = "Blue", font = "Courier", },
-	    --properties = { background = "Black", foreground = "White", },
+	    --properties ={ foreground = "Blue", font = "Courier", },
+	    properties ={ foreground = "Blue", font = "Courier", height = 34 },
+	    ----properties = { background = "Black", foreground = "White", },
 	 },
 	 ["2"] = { name = "units", }
       },
@@ -354,8 +360,10 @@ ags = {
       --
       properties = {
 	 title = "DVR",
-	 ["default-width"]  = 640,
-	 ["default-height"] = 480,
+	 --["default-width"]  = 640,
+	 --["default-height"] = 480,
+	 ["default-width"]  = 1024,
+	 ["default-height"] = 600,
       },
       hide_cursor = true,	-- opcion de ocultar el cursor
       timeout = 5*60;		-- segundos de inactividad para considerarse inactividad (5 minutos)
@@ -368,7 +376,8 @@ ags = {
       },
       --
       container_name="mainwindow",
-      layout_filename="ui-dvr.glade",
+      --layout_filename="ui-dvr.glade",
+      layout_filename="ui-dvr-1024x600.glade",
       layout_root = "vbox1",
    },
    --
@@ -403,13 +412,14 @@ ags = {
 	 inactivo    = { pb_filename = "greenbell.xpm", },
 	 reconocido  = { pb_filename = "orangebell.xpm", },
 	 bloqueado   = { pb_filename = "yellowbell.xpm", },
-	 idioma      = { pb_filename = "language.xpm", },
+	 --idioma      = { pb_filename = "language.xpm", },
+	 idioma      = { pb_filename = "translate-32.xpm", },
 	 dsp         = { pb_filename = "DSP.xpm", },
 	 medidas     = { pb_filename = "medidas.xpm", },
 	 graybell    = { pb_filename = "graybell.xpm", },
 	 cfg         = { pb_filename = "cfg.xpm", },
 	 sinoptico   = { pb_filename = "SinopticoDVR.xpm", },
-	 ball        = { pb_filename = "SinopticoDVR.xpm", },
+	 sinoptico_on = { pb_filename = "SinopticoDVR-ON.xpm", },
 	 gris2       = { pb_filename = "grayball2.xpm", },
       },
    },
@@ -457,7 +467,7 @@ ags = {
 	 _ = "loginscript",			-- no ejecutar hasta despues de login (porque depende del nivel de acceso)
       },
       --
-      txt_filename="ui-dvr.lxml",		-- ojo, variable establecida tras hacer login (depende de access_level)
+      txt_filename="ui-dvr-XXX.lxml",		-- ojo, variable establecida tras hacer login (depende de access_level)
    },
    --
    lxml_script = {
@@ -511,6 +521,7 @@ ags = {
 	 --
 	 enum_sino       = "enum_SiNo",
 	 _               = "treeview",  -- new
+	 loginui2        = "loginui2",
       },
       --
    },
@@ -525,7 +536,7 @@ ags = {
 	 _ = "xml2store",
       },
       --
-      container_name = "scrolledwindow2",
+      container_name = "scrolledwindow_estado_tree",
       columns = columns_treeview,
 
       visible_column = "node-visible",
@@ -546,7 +557,7 @@ ags = {
 	 _ = "xml2store",
       },
       --
-      container_name = "scrolledwindow3",
+      container_name = "scrolledwindow_estado",
       columns = columns_infoview,
 
       visible_column = "var-visible",
@@ -566,7 +577,7 @@ ags = {
 	 _ = "xml2store",
       },
       --
-      container_name = "scrolledwindow4",
+      container_name = "scrolledwindow_param_tree",
       columns = columns_treeview,
 
       visible_column = "node-visible",
@@ -587,7 +598,7 @@ ags = {
 	 _ = "xml2store",
       },
       --
-      container_name = "scrolledwindow5",
+      container_name = "scrolledwindow_param",
       columns = columns_infoview,
 
       --visible_column = "param-visible", --solo si estado y param de un mismo nodo
@@ -616,7 +627,7 @@ ags = {
 	 -- _ = "xml2store",
       },
       --
-      container_name = "scrolledwindow6",
+      container_name = "scrolledwindow_eventos",
       columns = columns_alarms_view,
       sort_column = "time",
       sort_order  = GTK_SORT_DESCENDING,
@@ -645,7 +656,7 @@ ags = {
 	 -- _ = "xml2store",
       },
       --
-      container_name = "scrolledwindow7",
+      container_name = "scrolledwindow_heventos",
       columns = columns_heventos_view,
       sort_column = "time",
       sort_order  = GTK_SORT_DESCENDING,
@@ -669,7 +680,7 @@ ags = {
 	 -- _ = "xml2store",
       },
       --
-      container_name = "scrolledwindow8",
+      container_name = "scrolledwindow_huecos",
       columns = columns_gaplog_vw,
       sort_column = "time",
       sort_order  = GTK_SORT_DESCENDING,
@@ -758,7 +769,8 @@ ags = {
       mod_filename="dvrgtk2",
       mod_new="gtk2gladelo",
       --
-      layout_filename="ui-dvr.glade",
+      --layout_filename="ui-dvr.glade",
+      layout_filename="ui-dvr-1024x600.glade",
       layout_root = "window2",
    },
    loginscript_text = {
@@ -767,6 +779,9 @@ ags = {
       text = [[
 local main_loop=gobject.main_loop_new(nil, true)
 
+--zkbd=io.open("/proc/zigor/zkbd", "w")
+zkbd=io.open("/dev/kbde", "w")
+
 -- intento ocultar cursor en display local (Xfbdev) en pantalla de login (uso xsetroot -cursor)
 os.execute("/usr/local/zigor/activa/tools/hide_cursor.sh")
 	    
@@ -774,7 +789,9 @@ local login_button=gobject.get_data(loginui, "login_button")
 local login_entry =gobject.get_data(loginui, "login_entry")
 --local logo        =gobject.get_data(loginui, "image2")
 local sb          =gobject.get_data(loginui, "statusbar2")
-	    
+local w_toggle_bt   =gobject.get_data(loginui, "tbtkb1")
+
+gobject.set_property(w_toggle_bt, "visible", false)	    
 --gobject.set_property(logo, "pixbuf", gobject.get_data(pixbufs, "logo") )
 local top_id=gtk.statusbar_push(sb, "login", _g("Introduce password"))
     
@@ -810,6 +827,9 @@ local function login_handler()
 	 -- eliminar ventana de login
 	 local loginwindow=gobject.get_data(loginui, "window2")
 	 gtk.object_destroy(loginwindow)
+	 
+	 zkbd:close()
+	 
 	 return
       end
       
@@ -821,12 +841,42 @@ local function login_handler()
    gtk.statusbar_pop(sb, "login", top_id)
 
    gobject.set_property(login_entry, "text", "")
-   top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce de nuevo el password"))
+   top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce password"))
 end
 
+-- Gestion del login!
 gobject.connect(login_button, "clicked", login_handler)
 
-gobject.main_loop_run(main_loop)
+--- GUI keyboard > simplemente ocultar teclas ya q no usar al ser solo en remoto
+local w_hbtbox1kb1 = gobject.get_data(loginui, "hbtbox1kb1")
+local w_hbtbox2kb1 = gobject.get_data(loginui, "hbtbox2kb1")
+local w_hbtbox3kb1 = gobject.get_data(loginui, "hbtbox3kb1")
+local w_hbtbox4kb1 = gobject.get_data(loginui, "hbtbox4kb1")
+local function enable_kb1(enable)
+   gobject.set_property(w_hbtbox1kb1, "visible", enable)
+   gobject.set_property(w_hbtbox2kb1, "visible", enable)
+   gobject.set_property(w_hbtbox3kb1, "visible", enable)
+   gobject.set_property(w_hbtbox4kb1, "visible", enable)
+end
+enable_kb1(false)
+------
+
+-- Tratamiento cliente local > autologin!
+if remote==0 then
+   --print("login local")
+   local loginwindow=gobject.get_data(loginui, "window2")
+   gtk.object_destroy(loginwindow)
+
+   access_level = os.getenv("ACCESS_LEVEL")
+   access_level=tonumber(access_level)
+   gobject.set_property(sds, "community", "zadmin")  -- XXX
+   access_level_key = access.get(sds, zigorSysPasswordPass.."."..tostring(access_level))
+   --print("access_level / access_level_key", access_level, access_level_key)
+   gobject.set_property(sds, "community", access_level_key)
+   ags.lxml_textbuffer.txt_filename = "ui-dvr-" .. tostring(access_level) .. ".lxml"
+else
+   gobject.main_loop_run(main_loop)  -- main_loop!
+end
 ]],
    },
    --
@@ -842,6 +892,14 @@ gobject.main_loop_run(main_loop)
 	 _ = "keysnooper",
       },
       --
+   },
+   --
+   loginui2 = {
+      --mod_filename="dvrgtk2",
+      mod_new="gtk2gladelo",
+      --layout_filename="ui-dvr.glade",
+      layout_filename="ui-dvr-1024x600.glade",
+      layout_root = "window3",
    },
    -------------------------------------
    -- 

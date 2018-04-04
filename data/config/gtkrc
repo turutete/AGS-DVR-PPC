@@ -1,0 +1,61 @@
+# Fichero de recursos de gtk2 para establecer tema, etc.
+#Por defecto en /etc/gtk-2.0 o .gtkrc-2.0...
+#Indicar explicitamente con variable de entorno GTK2_RC_FILES
+
+#Definiciones de tema propias:
+style "test"
+{ 
+  #fondo pelin oscuro:
+  #bg [NORMAL] = { 0.65, 0.65, 0.65 }
+  #azul corporativo en seleccion hotspot:
+  #bg [PRELIGHT] = { 0.33, 0.44, 0.55 }
+  #bg [NORMAL] = { 0.33, 0.44, 0.55 }
+  #fondo pelin mas claro:
+  #bg [NORMAL] = { 0.80, 0.80, 0.80 }
+  #bg [NORMAL] = { 0.90, 0.90, 0.90 }
+  #font_name = "Serif 14"
+  #font_name = "Monospace 14"
+
+  font_name = "Sans 14"
+  #font_name = "Sans 15"
+}
+style "fixed"
+{
+  bg [NORMAL] = { 0.10, 0.10, 0.10 }
+  fg [NORMAL] = { 0.50, 0.50, 0.50 }
+  base [NORMAL] = { 1.00, 1.00, 1.00 }
+}
+style "scrollbar"
+{
+    GtkScrollbar::slider-width = 35  # default 9 or 14?
+    GtkScrollbar::stepper-size = 28 # default 14?
+    #slider-width = 18
+}
+style "resize-grip"
+{
+    GtkWindow::resize-grip-height = 24
+    GtkWindow::resize-grip-width = 24
+}
+class "GtkWindow*" style "resize-grip"
+
+style "tree"
+{
+    #GtkCellRenderer::height = 90
+    #GtkTreeView::vertical-separator = 15
+    #GtkTreeView::tree-line-width = 50
+    #GtkTreeView::grid-line-width = 20
+
+    GtkTreeView::expander-size = 18  # default 12
+    GtkTreeView::horizontal-separator = 12  # default 2
+}
+
+class "GtkWidget" style "test"
+#class "GtkButton" style "zigorButton"
+#class "Gtk*Scrollbar" style "scrollbar"
+class "GtkScrollbar" style "scrollbar"
+
+class "GtkTreeView" style "tree"
+
+#class "GtkFixed" style "fixed"
+#class "GtkCointainer" style "fixed"
+

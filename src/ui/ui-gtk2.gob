@@ -59,6 +59,16 @@ private GObject *sds;  //new
 signal last NONE (NONE) void inactivitysig(self);
 signal last NONE (NONE) void wakeupsig(self);
 
+/* XXX (jur) */
+private
+gboolean
+button_press_event( GtkWidget *widget, GdkEvent  *event, gpointer   data )
+  {
+    printf("\n>>>button_press_event (populate-popup)!!!\n"); fflush(stdout);
+    return FALSE;
+    //return TRUE;
+  }
+
 private
 gboolean
 delete_event( GtkWidget *widget, GdkEvent  *event, gpointer   data )
@@ -100,6 +110,8 @@ timeout_handler(gpointer data)
   {
     UiGtk2 *self=UI_GTK2(data);
 
+    printf("timeout_handler >> set inactivitysig!\n");fflush(stdout);
+    
     /* emitimos señal de inactividad */
     self_inactivitysig(self);
     self->_priv->active=FALSE;
@@ -114,8 +126,9 @@ event_handler(GdkEvent *event, gpointer data)
     UiGtk2 *self=UI_GTK2(data);
     GdkEventType type;
     type = event->type;
-
-//printf("type=%d\n", type);fflush(stdout);
+    
+    //printf(">>event_handler\n");fflush(stdout);
+    //printf("type=%d\n", type);fflush(stdout);
 
     /* Comprobamos si evento es actividad (según tipo) */
     if(type!=GDK_EXPOSE && type!=GDK_NO_EXPOSE) { /* (type 2 y 30) XXX comprobar otros tipos */
@@ -134,6 +147,18 @@ event_handler(GdkEvent *event, gpointer data)
       if(self->_priv->timeout!=0)
         self->_priv->timeout_id=g_timeout_add(self->_priv->timeout*1000, self_timeout_handler, data);
     }
+
+    /* XXX (jur)
+    if(type==GDK_BUTTON_PRESS) {
+       printf(">>>GDK_BUTTON_PRESS!!! %d %d\n", (GdkEventButton)event->button, eventbt->state);
+    }
+    if(type==GDK_BUTTON_RELEASE) {
+       printf(">>>GDK_BUTTON_RELEASE!!! %d\n", (GdkEventButton)event->button);
+    }
+    if(type==GDK_DRAG_STATUS) {
+       printf(">>>GDK_DRAG_STATUS!!!\n");
+    }
+    */
 
     /* dejamos que GTK+ procese el evento */
     gtk_main_do_event(event);
@@ -164,13 +189,13 @@ logout_handler(gpointer self) {
   gint timeout;
   timeout = self_get_oid_int(self, zigorSysLogoutTimeout, 0)*60;  // minutes en mib -> segundos
   
-  //printf("logout_handler\n");
-  //printf("timeout: %d\n", UI_GTK2(self)->_priv->timeout);
+  printf(">>logout_handler\n");
+  printf("timeout: %d\n", UI_GTK2(self)->_priv->timeout);
   
   // Mirar por CAMBIO del timeout
   if (timeout != UI_GTK2(self)->_priv->timeout) {
     UI_GTK2(self)->_priv->timeout = timeout;
-    //printf("Nuevo timeout, relanzamos temporizador con nuevo valor\n");
+    printf(">>Nuevo timeout, relanzamos temporizador con nuevo valor\n");
   
       /* Reiniciamos contador de inactividad */
       /* eliminamos "timeout" anterior */
@@ -200,6 +225,14 @@ new (char *ui_name, AgsCf *cf, CfTable cft) {
   gtk_init (0, NULL);
  
   mainwin = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+  
+  /* XXX (jur) */
+  //gtk_widget_add_events(mainwin, GDK_BUTTON_PRESS_MASK || GDK_DRAG_STATUS);
+  //gtk_widget_set_events(mainwin, GDK_BUTTON_PRESS_MASK);
+  //g_signal_connect(GTK_OBJECT (mainwin), "button-press-event", G_CALLBACK (self_button_press_event), NULL);
+
+  g_signal_connect(GTK_OBJECT (mainwin), "populate-popup", G_CALLBACK (self_button_press_event), NULL);
+  /* fin */
 
   g_signal_connect (G_OBJECT (mainwin), "delete_event", G_CALLBACK (self_delete_event), cf);
   g_signal_connect (G_OBJECT (mainwin), "destroy", G_CALLBACK (self_destroy), cf);
@@ -217,16 +250,26 @@ new (char *ui_name, AgsCf *cf, CfTable cft) {
   if(config_get_boolean(CONFIGIF(cf), my_cft, "hide_cursor"))
     self_hide_cursor(mainwin);
 
+  UI_GTK2(ret)->_priv->timeout = config_get_int(CONFIGIF(cf), my_cft, "timeout");
+  printf("ui-gtk2 >> new. %d\n", UI_GTK2(ret)->_priv->timeout);fflush(stdout);
+  
   /* timeout de inactividad opcional, si 0 no se controla inactividad */
-  if( UI_GTK2(ret)->_priv->timeout=config_get_int(CONFIGIF(cf), my_cft, "timeout") ) {
+  //if( UI_GTK2(ret)->_priv->timeout=config_get_int(CONFIGIF(cf), my_cft, "timeout") ) {
+  if(UI_GTK2(ret)->_priv->timeout) {
     gdk_event_handler_set(self_event_handler, ret, NULL);
     UI_GTK2(ret)->_priv->timeout_id=g_timeout_add(UI_GTK2(ret)->_priv->timeout*1000, self_timeout_handler, (gpointer) ret);
+    
+    printf("ui-gtk2 >> timeout_handler\n");fflush(stdout);
     
     //new:
     // Si timeout!=0 lanzar funcion periodica cada minuto para lectura nuevo parametro de timeout de logout (en minutos)
     if(UI_GTK2(ret)->_priv->timeout!=0) {
+
+      printf("ui-gtk2 >> logout_handler\n");fflush(stdout);
+
       UI_GTK2(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "sds");
-      g_timeout_add(60000, self_logout_handler, (gpointer) ret);  // cada minuto
+      //g_timeout_add(60000, self_logout_handler, (gpointer) ret);  // cada minuto
+      g_timeout_add(10000, self_logout_handler, (gpointer) ret);
       self_logout_handler(ret);
     }
   }

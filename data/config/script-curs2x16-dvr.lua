@@ -400,10 +400,8 @@ ESTADO CONTROL
 	       local EstadoControl = access.safeget(sds, zigorDvrObjEstadoControl .. ".0")
 	       -- Creamos cadena con el contenido de la pantalla
 	       local s
-	       --((ojo KO!)if EstadoControl then
-	       if EstadoControl and displays.display_EstadoControl[EstadoControl] then
+	       if EstadoControl then
 	          --s = string.format(this.template, eti_EstadosControl[EstadoControl] or "?")
-		  --(ojo KO!)s = string.format(this.template, displays.display_EstadoControl[EstadoControl].display_lcd or displays.display_EstadoControl[EstadoControl].display or "?")
 		  s = string.format(this.template, displays.display_EstadoControl[EstadoControl].display_lcd or displays.display_EstadoControl[EstadoControl].display or "?")
 	       else
 	          s = string.format(this.template, "?")
@@ -522,7 +520,7 @@ deck.Alarma = {
 	       ----
 	       -- Modo Edicion
 	       ----
-	       R = _g("Reset? ","Ocupar 7 caracteres! [usar espacios]")
+	       R = _g("Reset? ","7 characters wide [use blanks]")
 	       --comprobar periodicamente si vuelve a estar activa para salir de edicion
 	       local condition = access.safeget(sds, zigorAlarmCondition ..".".. tostring(tabla_alarmas[i_alarma]))
 	       if condition~=4 then
@@ -1712,10 +1710,10 @@ Idioma
    value = nil,   -- Valor de edición
    step  = 1,
    ---
-   locale = {["es_ES.utf8"]=1,["en_GB.utf8"]=2,["fr_FR.utf8"]=3,["it_IT.utf8"]=4,["de_DE.utf8"]=5},
-   rev_locale = {[1]="es_ES.utf8",[2]="en_GB.utf8",[3]="fr_FR.utf8",[4]="it_IT.utf8",[5]="de_DE.utf8"},
-   textos = {[1]=_g("Castellano","Maximo 16 caracteres! Solo ASCII [LCD]"),[2]=_g("Ingles","Maximo 16 caracteres! Solo ASCII"),[3]=_g("Frances","Maximo 16 caracteres! Solo ASCII"),[4]=_g("Italiano","Maximo 16 caracteres! Solo ASCII"),[5]=_g("Aleman","Maximo 16 caracteres! Solo ASCII")},  -- i18n
-   limit = 2,
+   locale = {["en_GB.utf8"]=1,["zh"]=2,["es_ES.utf8"]=3},
+   rev_locale = {[1]="en_GB.utf8",[2]="zh",[3]="es_ES.utf8"},
+   textos = {[1]=_g("Ingles","Maximum 16 characters & ASCII only"),[2]=_g("Chino","Maximum 16 characters & ASCII only"),[3]=_g("Espanol","Maximum 16 characters & ASCII only")},  -- i18n
+   limit = 3,
 }
 ----------------------------------------
 --

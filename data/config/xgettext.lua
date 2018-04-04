@@ -55,7 +55,7 @@ for line in fd:lines() do
    
    -- 3. si captura printa
    if marca==0 and text~="" then
-      print('// formato: <Maximo 16 caracteres!>\\n<Maximo 16 caracteres!>')
+      print('// format: <Maximum 16 characters>\\n<Maximum 16 characters>')
       --print('msgid "'..text..'"\nmsgstr ""\n')
       print('_("'..text..'")')
       text=""

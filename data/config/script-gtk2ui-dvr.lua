@@ -13,6 +13,9 @@ require "treestore"
 local cache=gobject.get_property(sds, "cache")
 gobject.set_property(sds, "cache", false)
 
+-- i18n test
+print(">>>>>>>>> i18n test (Estado):", _g("Estado"))
+
 -- Inicialización
 --local pb_logo=gobject.get_data(pixbufs, "logo")
 local pb_gray=gobject.get_data(pixbufs, "gris")
@@ -34,6 +37,7 @@ local w_button_huecos_borrar   = gobject.get_data(ui, "button_huecos_borrar")
 local w_button_huecos_heventos = gobject.get_data(ui, "button_huecos_heventos")
 ---
 local w_label_section      = gobject.get_data(ui, "label_section")
+gobject.set_property(w_label_section, "visible", false)
 local w_label_level        = gobject.get_data(ui, "label_level")
 --gobject.set_property(w_logo, "pixbuf", pb_logo)
 local level_str=_g("Nivel de acceso")
@@ -55,6 +59,7 @@ local w_image_heartbeat   = gobject.get_data(ui, "image_heartbeat")
 
 -- sinoptico
 local pb_sin = gobject.get_data(pixbufs, "sinoptico")
+local pb_sin_on = gobject.get_data(pixbufs, "sinoptico_on")
 local w_sin = gobject.get_data(ui, "img_sin")
 gobject.set_property(w_sin, "pixbuf", pb_sin)
 --
@@ -83,17 +88,20 @@ gobject.set_property(w_ball, "pixbuf", pb_gray)
 
 -- i18n
 gobject.set_property(gobject.get_data(ui, "image_idioma"), "pixbuf", gobject.get_data(pixbufs, "idioma"))
+gobject.set_property(gobject.get_data(ui, "image_tab_idioma"), "pixbuf", gobject.get_data(pixbufs, "idioma"))
 
 local w_button_idioma_ok = gobject.get_data(ui, "button_idioma_ok")
 local w_combo_idioma = gobject.get_data(ui, "combo_idioma")
 local w_button_idioma_cancel = gobject.get_data(ui, "button_idioma_cancel")
 
 local button_labels={
-   gobject.get_data(ui, "label_button_estado"),
-   gobject.get_data(ui, "label_button_parametros"),
-   gobject.get_data(ui, "label_button_alarmas"),
-   gobject.get_data(ui, "label_button_heventos"),
-} 
+   [1] = gobject.get_data(ui, "label_button_estado"),
+   [2] = gobject.get_data(ui, "label_button_parametros"),
+   [3] = gobject.get_data(ui, "label_button_alarmas"),
+   [4] = gobject.get_data(ui, "label_button_heventos"),
+   [6] = gobject.get_data(ui, "label_button_huecos"),
+   [8] = gobject.get_data(ui, "label_button_sin"),
+}
 
 local w_idioma_params_button = gobject.get_data(ui, "idioma_params_button")
 --gobject.connect(w_idioma_params_button, "clicked", function() gobject.set_property(w_notebook,"page",6) end )  -- XXX
@@ -101,8 +109,11 @@ local w_hbuttonbox_menu  = gobject.get_data(ui, "hbuttonbox_menu")
 gobject.connect(w_idioma_params_button, "clicked", function() gobject.set_property(w_hbuttonbox_menu, "sensitive", false) gobject.set_property(w_notebook, "page", 6) end )
 
 local w_button_descargas  = gobject.get_data(ui, "button_descargas")
+-- de momento pasar del boton:
+gobject.set_property(w_button_descargas, "visible", false)
 w_statusbar   = gobject.get_data(ui, "statusbar1")
 
+--[[ ya no hace falta
 local w_label_idioma = gobject.get_data(ui, "label_idioma")
 local label_t=gobject.get_property(w_label_idioma, "label")
 gobject.set_property(w_label_idioma, "label", '<span size="large">'..label_t..'</span>')
@@ -110,6 +121,7 @@ gobject.set_property(w_label_idioma, "label", '<span size="large">'..label_t..'<
 local w_label_confirma = gobject.get_data(ui, "label_confirma")
 local label_t=gobject.get_property(w_label_confirma, "label")
 gobject.set_property(w_label_confirma, "label", '<span size="large">'..label_t..'</span>')
+--]]
 
 ----------------------------------------
 local iters = {}
@@ -125,6 +137,8 @@ local function action_params(object, action)
    if(access_level_key ~= access.get(sds,zigorSysPasswordPass .. "." .. tostring(access_level))) then
       --cambio de password de nivel actual -> reiniciar
       gobject.main_loop_quit(main_loop)
+      print("Exit por cambio de nivel de acceso")
+      os.exit()  -- mas robustez?
    end
    --
    access.set(sds, zigorCtrlParamState .. ".0", tonumber(action) )
@@ -172,7 +186,7 @@ end
 --------------------------------------------------
 -- Factorías varias
 -- Factoría para generar funciones de formateo de celdas con magnitudes (volts, ampers, etc.)
-local function factory_cell_format(model, key, col, factor, units, name)
+local function factory_cell_format(model, key, col, factor, units, name, size, color)
    local label = nil
 
    return function()
@@ -181,10 +195,13 @@ local function factory_cell_format(model, key, col, factor, units, name)
 	     if(aux) then
 		local v = myround(aux / (factor or 1) ); -- pasamos a Volts
 		label = name .. v .. units
+		-- (jur) span
+		label ="<span foreground='"..color.."' weight='bold' font_desc='"..size.."'>" .. label .. "</span>"
 	     end
 	     return label
 	  end
 end
+
 -- Factoría para generar funciones que establecen propiedad de un objeto con el resultado de una función
 local function factory_object_property(object, prop_name, func)
    return function()
@@ -193,18 +210,20 @@ local function factory_object_property(object, prop_name, func)
 end
 
 --------------------------------------------------
-fun_vr = factory_object_property(w_lab_vr, "label", factory_cell_format(store, zigorDvrObjVRedR .. ".0", "val", 10, " V", "V1 = ") )
-fun_vs = factory_object_property(w_lab_vs, "label", factory_cell_format(store, zigorDvrObjVRedS .. ".0", "val", 10, " V", "V2 = ") )
-fun_vt = factory_object_property(w_lab_vt, "label", factory_cell_format(store, zigorDvrObjVRedT .. ".0", "val", 10, " V", "V3 = ") )
-fun_vsr = factory_object_property(w_lab_vsr, "label", factory_cell_format(store, zigorDvrObjVSecundarioR .. ".0", "val", 10, " V", "V1 = ") )
-fun_vss = factory_object_property(w_lab_vss, "label", factory_cell_format(store, zigorDvrObjVSecundarioS .. ".0", "val", 10, " V", "V2 = ") )
-fun_vst = factory_object_property(w_lab_vst, "label", factory_cell_format(store, zigorDvrObjVSecundarioT .. ".0", "val", 10, " V", "V3 = ") )
-fun_isr = factory_object_property(w_lab_isr, "label", factory_cell_format(store, zigorDvrObjISecundarioR .. ".0", "val", 10, " A", "I1 = ") )
-fun_iss = factory_object_property(w_lab_iss, "label", factory_cell_format(store, zigorDvrObjISecundarioS .. ".0", "val", 10, " A", "I2 = ") )
-fun_ist = factory_object_property(w_lab_ist, "label", factory_cell_format(store, zigorDvrObjISecundarioT .. ".0", "val", 10, " A", "I3 = ") )
-fun_psr = factory_object_property(w_lab_psr, "label", factory_cell_format(store, zigorDvrObjPSalidaR .. ".0", "val", 10, " kW", "P1 = ") )
-fun_pss = factory_object_property(w_lab_pss, "label", factory_cell_format(store, zigorDvrObjPSalidaS .. ".0", "val", 10, " kW", "P2 = ") )
-fun_pst = factory_object_property(w_lab_pst, "label", factory_cell_format(store, zigorDvrObjPSalidaT .. ".0", "val", 10, " kW", "P3 = ") )
+--fun_vr = factory_object_property(w_lab_vr, "label", factory_cell_format(store, zigorDvrObjVRedR .. ".0", "val", 10, " V", "V1 = ") )
+--fun_vr = factory_object_property(w_lab_vr, "label", factory_cell_format(store, zigorDvrObjVRedR .. ".0", "val", 10, " V", "", "22", "green") )
+fun_vr = factory_object_property(w_lab_vr, "label", factory_cell_format(store, zigorDvrObjVRedR .. ".0", "val", 10, "", "", "22", "#1d9d26") )
+fun_vs = factory_object_property(w_lab_vs, "label", factory_cell_format(store, zigorDvrObjVRedS .. ".0", "val", 10, "", "", "22", "#1d9d26") )
+fun_vt = factory_object_property(w_lab_vt, "label", factory_cell_format(store, zigorDvrObjVRedT .. ".0", "val", 10, "", "", "22", "#1d9d26") )
+fun_vsr = factory_object_property(w_lab_vsr, "label", factory_cell_format(store, zigorDvrObjVSecundarioR .. ".0", "val", 10, "", "", "22", "#1d9d26") )
+fun_vss = factory_object_property(w_lab_vss, "label", factory_cell_format(store, zigorDvrObjVSecundarioS .. ".0", "val", 10, "", "", "22", "#1d9d26") )
+fun_vst = factory_object_property(w_lab_vst, "label", factory_cell_format(store, zigorDvrObjVSecundarioT .. ".0", "val", 10, "", "", "22", "#1d9d26") )
+fun_isr = factory_object_property(w_lab_isr, "label", factory_cell_format(store, zigorDvrObjISecundarioR .. ".0", "val", 10, "", "", "22", "#1d9d26") )
+fun_iss = factory_object_property(w_lab_iss, "label", factory_cell_format(store, zigorDvrObjISecundarioS .. ".0", "val", 10, "", "", "22", "#1d9d26") )
+fun_ist = factory_object_property(w_lab_ist, "label", factory_cell_format(store, zigorDvrObjISecundarioT .. ".0", "val", 10, "", "", "22", "#1d9d26") )
+fun_psr = factory_object_property(w_lab_psr, "label", factory_cell_format(store, zigorDvrObjPSalidaR .. ".0", "val", 10, "", "", "22", "#1d9d26") )
+fun_pss = factory_object_property(w_lab_pss, "label", factory_cell_format(store, zigorDvrObjPSalidaS .. ".0", "val", 10, "", "", "22", "#1d9d26") )
+fun_pst = factory_object_property(w_lab_pst, "label", factory_cell_format(store, zigorDvrObjPSalidaT .. ".0", "val", 10, "", "", "22", "#1d9d26") )
 
 local function fun_estado(w)
    local estado = treestore.get(w, iters[zigorDvrObjEstadoControl .. ".0"    ], "display")
@@ -212,8 +231,11 @@ local function fun_estado(w)
    if estado then
       local t = estado
       -- importante habilitar propiedades de 'pango markup' a la etiqueta en glade! :-)
-      t='<span weight="ultrabold" foreground="blue" variant="smallcaps" size="large">' .. t .. '</span>'
+      --t='<span weight="ultrabold" foreground="blue" variant="smallcaps" size="large">' .. t .. '</span>'
+      --t='<span weight="bold" foreground="#261d9d" size="large">' .. t .. '</span>'
+      t='<span weight="bold" foreground="#1d949d" size="large">' .. t .. '</span>'
       gobject.set_property(w_estado, "label", t)
+   
    end
 end
 
@@ -230,6 +252,13 @@ local function fun_ball(w)
       end
    else
       gobject.set_property(w_ball, "pixbuf", pb_gray)
+   end
+
+   -- flujo sinoptico
+   if val==4 then  -- ON
+      gobject.set_property(w_sin, "pixbuf", pb_sin_on)
+   else
+      gobject.set_property(w_sin, "pixbuf", pb_sin)
    end
 end
 
@@ -275,8 +304,12 @@ end
 local NIVEL_MIN_BUTTON_REBOOT = 3  -- boton reboot
 
 local w_button_reboot = gobject.get_data(ui, "button_reboot")
+local w_button_test = gobject.get_data(ui, "button_test")
 if access_level<NIVEL_MIN_BUTTON_REBOOT then
    gobject.set_property(w_button_reboot, "sensitive", false)
+   gobject.set_property(w_button_test, "visible", false)  -- XXX
+else
+   gobject.set_property(w_button_test, "visible", true) -- XXX
 end
 
 local w_hbuttonbox_reboot = gobject.get_data(ui, "hbuttonbox_reboot")
@@ -284,7 +317,7 @@ gobject.set_property(w_hbuttonbox_reboot, "visible", false)
 
 -- discriminar seleccion en tree para mostrar/ocultar botones
 local function treeseleccion(w, iter)
-   --print("changed_rowsig") io.flush()
+   print("changed_rowsig") io.flush()
    local str = treestore.get(store, iter, "name")
    if(string.match(str, _g("Sistema"))) then   -- XXX ojo si se cambia la etiqueta (DANGEROUS)
       gobject.set_property(w_hbuttonbox_reboot, "visible", true)
@@ -329,8 +362,47 @@ local function reboot(w, args)
 end
 gobject.connect(w_button_reboot, "clicked", confirma, { f=reboot, params={ sds, }, } )
 
+local function rmlog(w, sds)
+		   local msg = _g("Borrando histórico...")
+		   local bar_id=gtk.statusbar_push(w_statusbar, "bar", msg)
+		   gtk.main_iteration_do(FALSE);
+		   local err=access.set(sds, zigorAlarmLogTotalEntries .. ".0", 0)
+		   gtk.statusbar_pop(w_statusbar, "bar", bar_id)
+		   if err==0 then
+		      msg=_g("Histórico borrado.")
+		   else
+		      msg=_g("Error, no se pudo borrar histórico.")
+		   end
+		   gtk.statusbar_push(w_statusbar, "bar", msg)
+		   heventos_dirty=true
+		   --
+		   --[[ ahora integrado en alarmlogtable.lua > del_log > llamada a update para refresco del fichero
+		   local cmd="rm /home/user/alarmlog.html"
+		   os.execute(cmd)
+		   --]]
+end
+
+local function rmsaglog(w, sds)
+		   local msg = _g("Borrando histórico...")
+		   local bar_id=gtk.statusbar_push(w_statusbar, "bar", msg)
+		   gtk.main_iteration_do(FALSE);
+		   local err=access.set(sds, zigorDvrGapLogTotalEntries .. ".0", 0)
+		   gtk.statusbar_pop(w_statusbar, "bar", bar_id)
+		   local msg
+		   if err==0 then
+		      msg=_g("Histórico borrado.")
+		   else
+		      msg=_g("Error, no se pudo borrar histórico.")
+		   end
+		   gtk.statusbar_push(w_statusbar, "bar", msg)
+
+		   gaplog_dirty=true
+end
+
 --XXX (jur)
 gobject.connect(w_factory_params_button, "clicked", confirma, { f=action_params, params={ 3, }, } )
+gobject.connect(w_button_rmlog,  "clicked", confirma, { f=rmlog, params={ sds, }, } )
+gobject.connect(w_button_huecos_borrar,  "clicked", confirma, { f=rmsaglog, params={ sds, }, } )
 ----------------------------------------
 --
 -- Actuaciones
@@ -500,8 +572,9 @@ local function factory_notebook_page(nb, p, w)
    function()
       gobject.set_property(current_w,  "sensitive", true)
       current_w=w
-      gobject.set_property(w_label_section, "label", "<b>".. gobject.get_property(current_w, "label")  .."</b>")
-      --gobject.set_property(w_label_section, "label", "<b>".. gobject.get_property(button_labels[p+1], "label")  .."</b>")  -- i18n
+      
+      --gobject.set_property(w_label_section, "label", "<b>".. gobject.get_property(current_w, "label")  .."</b>")
+      ----gobject.set_property(w_label_section, "label", "<b>".. gobject.get_property(button_labels[p+1], "label")  .."</b>")  -- i18n
       gobject.set_property(current_w,  "sensitive", false)
       gobject.set_property(nb,         "page",      p    )
       --
@@ -522,28 +595,23 @@ gobject.connect(w_button_alarms, "clicked", p_alarms )
 gobject.connect(w_button_hevent, "clicked", p_hevent )
 gobject.connect(w_button_huecos_heventos, "clicked", p_hevent )
 gobject.connect(w_button_huecos, "clicked", p_huecos )
-gobject.connect(w_button_term,   "clicked", function(w, ml) gobject.main_loop_quit(ml) end, main_loop)
-gobject.connect(w_button_rmlog,  "clicked", 
-		function(w, sds)
-		   local msg = _g("Borrando histórico...")
-		   local bar_id=gtk.statusbar_push(w_statusbar, "bar", msg)
-		   gtk.main_iteration_do(FALSE);
-		   local err=access.set(sds, zigorAlarmLogTotalEntries .. ".0", 0)
-		   gtk.statusbar_pop(w_statusbar, "bar", bar_id)
-		   if err==0 then
-		      msg=_g("Histórico borrado.")
-		   else
-		      msg=_g("Error, no se pudo borrar histórico.")
-		   end
-		   gtk.statusbar_push(w_statusbar, "bar", msg)
-		   heventos_dirty=true
-		   --
-		   --[ ahora integrado en alarmlogtable.lua > del_log > llamada a update para refresco del fichero
-		   local cmd="rm /home/user/alarmlog.html"
-		   os.execute(cmd)
-		   --]
-		end,
-		sds)
+gobject.connect(w_button_term,   "clicked",
+	function(w, ml)
+		--if remote==0 then
+		if remote==0 and access_level>1 then  -- no hacer si ya en nivel 1
+			-- salir con nivel basico (1)
+			script = os.getenv("LAUNCH")
+			cmd=[[sed -i -e 's/ACCESS_LEVEL=.*/ACCESS_LEVEL=ZZZ/' ]] .. script
+			cmd = string.gsub(cmd,"ZZZ", "1")
+			print(cmd)
+			os.execute(cmd)		
+		end
+		gobject.main_loop_quit(ml)
+		print("Exit por boton terminar")
+		os.exit()  -- mas robusto?
+	end,
+	main_loop)
+----gobject.connect(w_button_rmlog,  "clicked", rmlog, sds)
 
 --
 gobject.connect(w_button_descargas,  "clicked",
@@ -557,25 +625,7 @@ gobject.connect(w_button_descargas,  "clicked",
 		end,
 		sds)
 
-gobject.connect(w_button_huecos_borrar,  "clicked", 
-		function(w, sds)
-		   local msg = _g("Borrando histórico...")
-		   local bar_id=gtk.statusbar_push(w_statusbar, "bar", msg)
-		   gtk.main_iteration_do(FALSE);
-		   local err=access.set(sds, zigorDvrGapLogTotalEntries .. ".0", 0)
-		   gtk.statusbar_pop(w_statusbar, "bar", bar_id)
-		   local msg
-		   if err==0 then
-		      msg=_g("Histórico borrado.")
-		   else
-		      msg=_g("Error, no se pudo borrar histórico.")
-		   end
-		   gtk.statusbar_push(w_statusbar, "bar", msg)
-
-		   gaplog_dirty=true
-
-		end,
-		sds)
+----gobject.connect(w_button_huecos_borrar,  "clicked", rmsaglog, sds)
 
 -- Sección inicial: Estado
 --p_estado()
@@ -978,11 +1028,13 @@ do
 	    
 	    gobject.unblock(s, gaplog_rowchanged_handler_id)
 	 end
-      end
+      end  -- for
       --- aprovechamos para actualizar info hueco en sinoptico:
       if datos and fecha then
 	 gobject.set_property(w_lab_aux, "label", titulo.."\n"..fecha.."\n"..datos)
       end
+      -- XXX dev (pb Olarizu no update last log!!)
+      --print("--->>> minimo, duracion, datos, t, fecha", minimo, duracion, datos, t, fecha)
       ------
    end
 
@@ -1068,7 +1120,24 @@ end
 gobject.set_property(sds, "cache", cache)
 
 -- Terminar ante inactividad (requiere reinicio externo)
-gobject.connect(mainwin, "inactivitysig", function(w, ml) gobject.main_loop_quit(ml) print("Exit por inactividad") end, main_loop)
+gobject.connect(mainwin, "inactivitysig", function(w, ml)
+      -- (new) en local salir reestableciendo el nivel basico (1) SI nivel mayor
+      if remote==0 and access_level>1 then
+         script = os.getenv("LAUNCH")
+         cmd=[[sed -i -e 's/ACCESS_LEVEL=.*/ACCESS_LEVEL=ZZZ/' ]] .. script
+         cmd = string.gsub(cmd,"ZZZ", 1)
+         print(cmd)
+         os.execute(cmd)
+	 --
+         gobject.main_loop_quit(ml)
+         print("Exit por inactividad")
+         os.exit()  -- mas robustez?
+      elseif remote==1 then
+         gobject.main_loop_quit(ml)
+         print("Exit por inactividad")
+         os.exit()  -- mas robustez?
+      end
+   end, main_loop)
 
 ----------------------------------------------
 -- Gestión de notificaciones ("traps") del SDS
@@ -1145,11 +1214,13 @@ function cambio_idioma(object, sds)  -- i18n
    local val=gobject.get_property(w_edit, "text")
    print(val)
 
-   if val==_g("Español") then
+   if val=="Spanish" then
       --locale="es_ES.utf8"
       locale=""
-   elseif val==_g("Inglés") then
+   elseif val=="English" then
       locale = "en_GB.utf8"
+   elseif val=="Chinese" then
+      locale = "zh_CN.utf8"
    else
       print("seleccion KO")
       return
@@ -1179,3 +1250,390 @@ end
 gobject.connect(w_button_idioma_ok, "clicked", cambio_idioma, sds)
 
 gobject.connect(w_button_idioma_cancel, "clicked", function() gobject.set_property(w_hbuttonbox_menu, "sensitive", true) p_params() end, sds)
+
+----------
+--- GUI keyboard!
+local w_hbtbox1_kb2 = gobject.get_data(ui, "hbtbox1_kb2")
+local w_hbtbox2_kb2 = gobject.get_data(ui, "hbtbox2_kb2")
+
+local function enable_kb2(enable)
+   gobject.set_property(w_hbtbox1_kb2, "visible", enable)
+   gobject.set_property(w_hbtbox2_kb2, "visible", enable)
+end
+enable_kb2(false)
+
+---
+local zkbd
+zkbd=io.open("/dev/kbde", "w")
+---
+
+------------------
+--[[
+-- no funciona siempre bien (?) (usar el child (GtkEntry) en lugar de el GtkComboBoxEntry)
+local function edit_val_press(w, event, data)
+   print(">>>edit_val_press!")
+   enable_kb2(true)
+end
+if remote==0 then  -- mostrar teclado solo en local
+   gobject.connect(w_edit_val, "button-press-event", edit_val_press)
+end
+
+-- no ha funcionado nunca
+local function edit_val_popup(w, event, data)
+   print(">>>edit_val popup!!!")
+   enable_kb2(true)
+end
+if remote==0 then  -- mostrar teclado solo en local
+   gobject.connect(w_edit_val, "popup-menu", edit_val_popup)
+end
+--]]
+
+local function edit_press(w, event, data)
+   --print(">>>edit_press!!!")
+   enable_kb2(true)
+   
+   ----gtk.widget_grab_focus(w)
+   return true  -->> (!)importante: si return TRUE, se para la emision del 'click' para evitar el posterior popup!
+end
+
+------
+local function edit_popup(w, event, data)
+   --print(">>>edit_popup!!!")
+   enable_kb2(true)
+end
+
+------
+local function edit_populate(w, menu, data)
+   print(">>>populate-popup!!!")
+   --KO?--gobject.stop(w, "populate-popup")  -- XXX
+end
+---
+-- pruebas con el child:
+local w_edit = gtk.bin_get_child(w_edit_val)  -- ahora lidiamos con GtkEntry
+--gobject.connect(w_edit, "populate-popup", edit_populate)  -- OK (cuando salta pop-up al mantener el dedo (=click mouse dcho)
+--gobject.connect(w_edit, "popup-menu", edit_popup)  -- KO!
+if remote==0 then  -- mostrar teclado solo en local
+   --gobject.connect(w_edit, "button-press-event", edit_press)  -- OK!
+   gobject.connect(w_edit, "button-release-event", edit_press)  -- OK! (usar release en lugar de press para evitar cortar callbacks de grabar el foco etc!)
+end
+
+--  XXX test
+local function firefox(w, key)
+   print(">>>firefox!")
+   cmd='su - user -c "DISPLAY=:0 firefox -width 1024 -height 600 http://maps.pqube.com"'
+   os.execute(cmd)
+end
+--gobject.connect(w_button_term, "populate-popup", firefox)
+gobject.connect(w_button_test, "clicked", firefox)
+
+------------------
+-- gestion boton mostrar/ocultar teclado edicion
+-- ahora ya hacemos con gestion de 'button-press-event'
+w_btkb2 = gobject.get_data(ui, "btkb2")
+gobject.set_property(w_btkb2, "visible", false)
+--[[
+local toggle=0
+if remote==1 then  -- mostrar teclado solo en local
+   gobject.set_property(w_btkb2, "visible", false)
+else
+   gobject.connect(w_btkb2, "clicked", function()
+	 if toggle==0 then toggle=1 else toggle=0 end
+	 if toggle==1 then enable_kb2(true) else enable_kb2(false) end
+         ----gtk.widget_grab_focus(w_edit_val)
+      end)
+end
+--]]
+------------------
+
+local w_bt1_kb2 = gobject.get_data(ui, "bt1_kb2")
+local w_bt2_kb2 = gobject.get_data(ui, "bt2_kb2")
+local w_bt3_kb2 = gobject.get_data(ui, "bt3_kb2")
+local w_bt4_kb2 = gobject.get_data(ui, "bt4_kb2")
+local w_bt5_kb2 = gobject.get_data(ui, "bt5_kb2")
+local w_bt6_kb2 = gobject.get_data(ui, "bt6_kb2")
+local w_bt7_kb2 = gobject.get_data(ui, "bt7_kb2")
+local w_bt8_kb2 = gobject.get_data(ui, "bt8_kb2")
+local w_bt9_kb2 = gobject.get_data(ui, "bt9_kb2")
+local w_bt0_kb2 = gobject.get_data(ui, "bt0_kb2")
+local w_btDel_kb2 = gobject.get_data(ui, "btDel_kb2")
+local w_btClose_kb2 = gobject.get_data(ui, "btClose_kb2")
+-- mejor ni usar el close:
+--gobject.set_property(w_btClose_kb2, "visible", false)
+
+local scancodes={
+   F1     = string.char(59)..string.char(187),
+   F2     = string.char(60)..string.char(188),
+   F3     = string.char(61)..string.char(189),
+   F4     = string.char(62)..string.char(190),
+   F5     = string.char(63)..string.char(191),
+   F6     = string.char(64)..string.char(192),
+   F7     = string.char(65)..string.char(193),
+   F8     = string.char(66)..string.char(194),
+   F9     = string.char(67)..string.char(195),
+   F10    = string.char(68)..string.char(196),
+   Left   = string.char(224)..string.char(75)..string.char(224)..string.char(203),
+   --Return = string.char(28)..string.char(156),
+}
+
+local function bt_kb2_handler(w, key)
+   --gtk.widget_grab_focus(w_edit_val)   -- parece no hace falta / ojo! tb en propiedades de glade... (Focus on Click & Can Focus...)
+   --gtk.main_iteration_do(FALSE)	-- pensaba para ejecutar keysnooper pero no hace falta
+   zkbd:write(scancodes[key])
+   print(key)  -- dev
+end
+
+
+local function btClose_kb2_handler(w, data)
+   enable_kb2(false)
+end
+
+
+gobject.connect(w_bt1_kb2, "clicked", bt_kb2_handler, "F2")
+gobject.connect(w_bt2_kb2, "clicked", bt_kb2_handler, "F3")
+gobject.connect(w_bt3_kb2, "clicked", bt_kb2_handler, "F4")
+gobject.connect(w_bt4_kb2, "clicked", bt_kb2_handler, "F5")
+gobject.connect(w_bt5_kb2, "clicked", bt_kb2_handler, "F6")
+gobject.connect(w_bt6_kb2, "clicked", bt_kb2_handler, "F7")
+gobject.connect(w_bt7_kb2, "clicked", bt_kb2_handler, "F8")
+gobject.connect(w_bt8_kb2, "clicked", bt_kb2_handler, "F9")
+gobject.connect(w_bt9_kb2, "clicked", bt_kb2_handler, "F10")
+gobject.connect(w_bt0_kb2, "clicked", bt_kb2_handler, "F1")
+gobject.connect(w_btDel_kb2, "clicked", bt_kb2_handler, "Left")
+gobject.connect(w_btClose_kb2, "clicked", btClose_kb2_handler)
+----------
+
+--====================--
+-- login window (XXX) --- de momento solo en local!
+--====================--
+local login_entry =gobject.get_data(loginui2, "login_entry2")
+
+local vbox1 = gobject.get_data(ui, "vbox1")
+local loginwindow = gobject.get_data(loginui2, "window3")
+gobject.set_property(loginwindow, "visible", false)
+
+--local top_id=gtk.statusbar_push(sb, "login", _g("Introduce password"))
+local login_button=gobject.get_data(loginui2, "login_button2")
+--local logo        =gobject.get_data(loginui2, "image_login")
+local sb          =gobject.get_data(loginui2, "statusbar_login")
+local top_id
+
+----------
+-- Mostrar ventana de login de acceso:
+local w_level_params_button = gobject.get_data(ui, "level_params_button")
+if remote==1 then  -- ocultar en modo remoto
+   gobject.set_property(w_level_params_button, "visible", false)
+end
+gobject.connect(w_level_params_button, "clicked", function()
+   print("w_level_params_button")
+   if top_id then
+      gtk.statusbar_pop(sb, "login", top_id)
+   end
+   ----top_id=gtk.statusbar_push(sb, "login", _g("Introduce password"))
+
+   -- intento ocultar cursor en display local (Xfbdev) en pantalla de login (uso xsetroot -cursor)
+   os.execute("/usr/local/zigor/activa/tools/hide_cursor.sh")
+
+   gobject.set_property(vbox1, "visible", false)
+   gobject.set_property(loginwindow, "visible", true)
+
+   --gtk.window_set_keep_above(window2, true)
+   --gobject.set_property(window2, "opacity", 1)
+   --gtk.window_set_opacity(window2, 1) -- need an X11 Composite Window Manager I suppose
+   --zkbd=io.open("/dev/kbde", "w")
+end)
+    
+--gobject.set_property(logo, "pixbuf", gobject.get_data(pixbufs, "logo") )
+    
+----------
+-- Gestion Click en Login!
+local function login_handler()
+   print("login_handler")
+   --gtk.window_set_keep_above(window2, false)
+
+   local tabla_pass_id=gtk.statusbar_push(sb, "login", "cacaaa")
+   print(">>>tabla_pass_id", tabla_pass_id)
+
+   local password=gobject.get_property(login_entry, "text")
+   print("password", password)
+
+   --
+   ----gobject.set_property(sds, "community", password)  -- recorrer tabla de passwords con el nivel introducido!
+   gobject.set_property(sds, "community", "zadmin")
+
+   -- comprobar "password" vÃ¡lido
+   require "oids-parameter"
+   
+   i=1
+   local pass
+   
+   --gtk.statusbar_pop(sb, "login", top_id)
+   --gtk.statusbar_pop(sb, "login")
+   
+   ----local tabla_pass_id=gtk.statusbar_push(sb, "login", _g("Comprobando password..."))
+   ----gtk.main_iteration_do(FALSE);  -- entiendo es para q pase por el bucle y se refresque la statusbar!
+   print("eooo")
+   
+   local pass_key = accessx.getnextkey(sds, zigorSysPasswordPass) -- si no es correcto se da Timeout por community inapropiada
+   while( pass_key and is_substring(pass_key, zigorSysPasswordPass) and pass_key~=zigorSysPasswordPass ) do
+      print("bucle pass")
+      --local get_pass_id=gtk.statusbar_push(sb, "login", _g("Comprobando acceso nivel")..tostring(i).."...")
+      ----gtk.main_iteration_do(FALSE);
+      pass=access.get(sds, pass_key)
+      print("pass", pass)
+      --gtk.statusbar_pop(sb, "login", get_pass_id)
+      ----gtk.main_iteration_do(FALSE);
+      
+      -- Comprobar si es el nuestro
+      if pass and pass==password then
+         print("pass match!")
+	 _,_,access_level=string.find(pass_key, "%.(%d+)$")
+	 access_level_key=pass  -- XXX
+	 access_level=tonumber(access_level)
+     -- new! establecer env variable y salir!
+	 ----gobject.set_property(sds, "community", password)
+	 --gobject.set_property(w_label_level, "label", level_str..": "..tostring(access_level) )
+	 --gobject.set_property(loginwindow, "visible", false)
+	 --gobject.set_property(vbox1, "visible", true)
+	 ----return
+   script = os.getenv("LAUNCH")
+   cmd=[[sed -i -e 's/ACCESS_LEVEL=.*/ACCESS_LEVEL=ZZZ/' ]] .. script
+   cmd = string.gsub(cmd,"ZZZ", access_level)
+   print(cmd)
+   os.execute(cmd)
+   gobject.main_loop_quit(main_loop)
+   print("Exit para reinicio en otro nivel")
+   os.exit()  -- mas robustez?
+	 break
+      end
+      pass_key = accessx.getnextkey(sds, pass_key)
+      i=i+1
+   end  -- while
+   gobject.set_property(login_entry, "text", "")
+   gtk.statusbar_pop(sb, "login", tabla_pass_id)
+   --gtk.statusbar_pop(sb, "login", top_id)
+   if pass~=password then
+      print("pass NOT matched and exit")
+      gobject.set_property(sds, "community", access.get(sds, zigorSysPasswordPass.."."..access_level))  -- reestablecer community
+      --top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce de nuevo el password"))
+      top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce de nuevo"))
+   end
+   -- 
+   print("fin login_handler")
+end
+----------
+
+gobject.connect(login_button, "clicked", login_handler)
+--gobject.connect(login_button, "clicked", btClosekb1_handler)
+
+-----------------
+--- GUI keyboard!
+-----------------
+local w_hbtbox1kb1 = gobject.get_data(loginui2, "hbtbox1kb1-2")
+local w_hbtbox2kb1 = gobject.get_data(loginui2, "hbtbox2kb1-2")
+local w_hbtbox3kb1 = gobject.get_data(loginui2, "hbtbox3kb1-2")
+local w_hbtbox4kb1 = gobject.get_data(loginui2, "hbtbox4kb1-2")
+local function enable_kb1(enable)
+   gobject.set_property(w_hbtbox1kb1, "visible", enable)
+   gobject.set_property(w_hbtbox2kb1, "visible", enable)
+   gobject.set_property(w_hbtbox3kb1, "visible", enable)
+   gobject.set_property(w_hbtbox4kb1, "visible", enable)
+end
+
+--[[ no, mejor en ambos!
+-- Mostrar teclado solo en local
+if remote==1 then
+  enable_kb1(false)
+end
+--]]
+
+--[[ en principio ya no usamos
+local function login_entry_press(w, event, data)
+   print("login_entry_press")
+   --enable_kb1(true)
+end
+
+if remote==0 then  -- mostrar teclado solo en local
+  gobject.connect(login_entry, "button-press-event", login_entry_press)
+end
+--]]
+
+local w_bt1kb1 = gobject.get_data(loginui2, "bt1kb1")
+local w_bt2kb1 = gobject.get_data(loginui2, "bt2kb1")
+local w_bt3kb1 = gobject.get_data(loginui2, "bt3kb1")
+local w_bt4kb1 = gobject.get_data(loginui2, "bt4kb1")
+local w_bt5kb1 = gobject.get_data(loginui2, "bt5kb1")
+local w_bt6kb1 = gobject.get_data(loginui2, "bt6kb1")
+local w_bt7kb1 = gobject.get_data(loginui2, "bt7kb1")
+local w_bt8kb1 = gobject.get_data(loginui2, "bt8kb1")
+local w_bt9kb1 = gobject.get_data(loginui2, "bt9kb1")
+local w_bt0kb1 = gobject.get_data(loginui2, "bt0kb1")
+local w_btDelkb1 = gobject.get_data(loginui2, "btDelkb1")
+local w_btClosekb1 = gobject.get_data(loginui2, "btClosekb1")
+
+local numberkeys={
+   F1     = "0",
+   F2     = "1",
+   F3     = "2",
+   F4     = "3",
+   F5     = "4",
+   F6     = "5",
+   F7     = "6",
+   F8     = "7",
+   F9     = "8",
+   F10    = "9",
+}
+
+local function btkb1_handler(w, key)
+   --[[
+   if key=="Left" then
+     print("Left")
+     gtk.widget_grab_focus(login_entry)	-- al final no hace falta, se gestiona en propiedades de glade
+   end
+   --]]
+   --gtk.main_iteration_do(FALSE)	-- pensaba para ejecutar keysnooper pero no hace falta
+   if remote==1 then
+      if key=="Left" then
+         print("Left")
+         local text = gobject.get_property(login_entry, "text")
+	 if string.len(text) > 0 then
+	    text = string.sub(text, 1, string.len(text)-1)
+	    gobject.set_property(login_entry, "text", text)
+	 end
+      else
+         print(key, numberkeys[key])
+	 local text = gobject.get_property(login_entry, "text")
+	 text = string.format("%s%s", text, numberkeys[key])
+	 --gobject.set_property(login_entry, "text", numberkeys[key])
+	 gobject.set_property(login_entry, "text", text)
+      end
+   else
+      zkbd:write(scancodes[key])
+   end
+end
+
+
+local function btClosekb1_handler(w, data)
+	 --enable_kb1(false)
+	 print("btClosekb1_handler")
+	 gobject.set_property(loginwindow, "visible", false)
+	 gobject.set_property(vbox1, "visible", true)
+	 gobject.set_property(login_entry, "text", "")
+	 --zkbd:close()
+end
+
+
+gobject.connect(w_bt1kb1, "clicked", btkb1_handler, "F2")
+gobject.connect(w_bt2kb1, "clicked", btkb1_handler, "F3")
+gobject.connect(w_bt3kb1, "clicked", btkb1_handler, "F4")
+gobject.connect(w_bt4kb1, "clicked", btkb1_handler, "F5")
+gobject.connect(w_bt5kb1, "clicked", btkb1_handler, "F6")
+gobject.connect(w_bt6kb1, "clicked", btkb1_handler, "F7")
+gobject.connect(w_bt7kb1, "clicked", btkb1_handler, "F8")
+gobject.connect(w_bt8kb1, "clicked", btkb1_handler, "F9")
+gobject.connect(w_bt9kb1, "clicked", btkb1_handler, "F10")
+gobject.connect(w_bt0kb1, "clicked", btkb1_handler, "F1")
+gobject.connect(w_btDelkb1, "clicked", btkb1_handler, "Left")
+--gobject.connect(w_btDelkb1, "clicked", function() os.execute("/usr/local/zigor/activa/drivers/kbde -k ArrowL") end)
+--gobject.connect(w_btDelkb1, "clicked", function() zkbd:write(string.char(224)..string.char(75)..string.char(224)..string.char(203)) end)
+gobject.connect(w_btClosekb1, "clicked", btClosekb1_handler)
+------

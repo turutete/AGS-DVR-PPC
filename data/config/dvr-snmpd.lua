@@ -90,7 +90,7 @@ ags = {
 	 _       = "script",       -- Queremos ser los últimos en conectar al bus de salida. Precarga del resto que conecten.
       },
       -- XXX
-      bus_filename = "/dev/ttyS2",
+      bus_filename = "/dev/ttyS0",
       queue        = true,         -- ¿usar cola de escritura? (sincronizada con el bus)
       da           = byte(x"11"),  -- si queue = true (da del nodo embedded, para permiso de respuesta en caso de no ser arbitro, establecer en cualquier caso)
       da_gestora   = byte(x"03"),  -- si se especifica, se sustituye en tramas PREGUNTA_POLL

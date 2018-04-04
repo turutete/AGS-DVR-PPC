@@ -66,7 +66,7 @@ _("Número 3 para envio SMS")
 _("Número 4 para envio SMS")
 _("Puerto TCP acceso HTTP")
 _("Puerto TCP aplicación a través de HTTP")
-_("Equipo")
+_("DVR")
 _("Tensión de red nominal")
 _("Tensión mínima DVR")
 _("Equipos en paralelo")
@@ -105,149 +105,149 @@ _("Parametros")
 _("Introduce password")
 _("Comprobando password...")
 _("Comprobando acceso nivel")
-_("Error, introduce de nuevo el password")
+_("Error, introduce password")
 _("Inicio sistema")
 
 _("Cambio de password")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("ErrorVInst")
 
 _("Error tensión instantánea")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Error tension instantanea>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("Sobrecarga")
 
 _("Sobrecarga")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Sobrecarga>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("VBusMax")
 
 _("Tensión de bus máxima")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Tension de bus maxima>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("VCondMax")
 
 _("Tensión de condensador máxima")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Tension de condensador maxima>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("VBusMin")
 
 _("Tensión de bus mínima")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Tension de bus minima>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("FalloVRed")
 
 _("Fallo tensión de red")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Fallo tension de red>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("LimitIntVSal")
 
 _("Limitación integrador de tensión de salida")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Limitacion integrador de tension de salida>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("AlarmaDriver")
 
 _("Alarma driver")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Alarma driver>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("ParadoPorError")
 
 _("Parado por error")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Parado por error>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("ErrorDriver")
 
 _("Error driver")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Error driver>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("ErrorTermo")
 
 _("Error termostato")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Error termostato>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("Limitando")
 
 _("Limitando")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Limitando>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("ErrorFusible")
 
 _("Error fusible")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Error fusible>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("AlarmaPLL")
 
 _("Alarma PLL")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Alarma PLL>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("Fallo Com.DSP")
 
 _("Error de comunicación con DSP")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Error de comunicacion con DSP>")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("CambioEstado")
 
 _("Cambio de estado")
 
-/* SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
 _("<Cambio de estado>")
 
-/* Ocupar 11 caracteres! [usar espacios] */
+/* 11 characters wide [use blanks] */
 _("   LEVE    ")
 
-/* Ocupar 11 caracteres! [usar espacios] */
+/* 11 characters wide [use blanks] */
 _("PERSISTENTE")
 
-/* Ocupar 11 caracteres! [usar espacios] */
+/* 11 characters wide [use blanks] */
 _("   GRAVE   ")
 
-/* Ocupar 11 caracteres! [usar espacios] */
+/* 11 characters wide [use blanks] */
 _("   SEVERA  ")
 
 _("?")
@@ -264,117 +264,125 @@ _("OFF")
 
 _("Espera Carga")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Espera Carga_")
 
 _("Espera ON")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Espera ON_")
 
 _("ON")
 
 _("Sobrecarga")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Sobrecarga_")
 
 _("Fallo tensión instantánea")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Fallo V Inst_")
 
 _("Fallo de red")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Fallo Red_")
 
 _("Tensión de bus mínima")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_V Bus Minima_")
 
 _("Hueco máximo")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Hueco Maximo_")
 
 _("Alarma driver")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Alarma Driver_")
 
 _("Espera OFF")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Espera OFF_")
 
 _("Error de precarga")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Error precarga_")
 
 _("Error tensión de condensador")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Error VCond_")
 
 _("Error tensión de bus máxima")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Error VBusMax_")
 
 _("Error termostato")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Error Termo_")
 
 _("Error driver")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Error Driver_")
 
 _("Error fusible")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Error Fusible_")
 
 _("Error temperatura")
 
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("_Error Temp_")
 
 _("Activación")
 
-/* Solo caracteres alfabeto SMS [GSM 03.38] */
-_("Activacion")
+/* SMS characters only [GSM 03.38] */
+_("<Activacion>")
 
 _("Desactivación")
 
-/* Solo caracteres alfabeto SMS [GSM 03.38] */
-_("Desactivacion")
+/* SMS characters only [GSM 03.38] */
+_("<Desactivacion>")
 
 _("Reconocida")
 
-/* Solo caracteres alfabeto SMS [GSM 03.38] */
-_("Reconocida")
+/* SMS characters only [GSM 03.38] */
+_("<Reconocida>")
 
 _("Bloqueada")
 
-/* Solo caracteres alfabeto SMS [GSM 03.38] */
-_("Bloqueada")
+/* SMS characters only [GSM 03.38] */
+_("<Bloqueada>")
 
-/* Solo caracteres alfabeto SMS [GSM 03.38] */
 _("Leve")
 
-/* Solo caracteres alfabeto SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
+_("<Leve>")
+
 _("Persistente")
 
-/* Solo caracteres alfabeto SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
+_("<Persistente>")
+
 _("GRAVE")
 
-/* Solo caracteres alfabeto SMS [GSM 03.38] */
+/* SMS characters only [GSM 03.38] */
+_("<GRAVE>")
+
 _("SEVERA")
+
+/* SMS characters only [GSM 03.38] */
+_("<SEVERA>")
 
 _("?")
 
@@ -458,9 +466,11 @@ _("Fábrica")
 
 _("?")
 
-_("Español")
-
 _("Inglés")
+
+_("Chino")
+
+_("Español")
 
 _("?")
 
@@ -496,13 +506,13 @@ _("Histórico borrado.")
 
 _("Error, no se pudo borrar histórico.")
 
-_("Descargas por acceso FTP")
-
 _("Borrando histórico...")
 
 _("Histórico borrado.")
 
 _("Error, no se pudo borrar histórico.")
+
+_("Descargas por acceso FTP")
 
 _("Reseteando alarma...")
 
@@ -516,9 +526,17 @@ _("Mínimo")
 
 _("Duración")
 
-_("Español")
+_("Introduce password")
 
-_("Inglés")
+_("Introduce password")
+
+_("Comprobando password...")
+
+_("Comprobando acceso nivel")
+
+_("Error, introduce de nuevo el password")
+
+_("Error, introduce de nuevo")
 
 _("Activo")
 
@@ -532,85 +550,79 @@ _("Aceptar")
 
 _("Cancelar")
 
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Password:           \n    %s    ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("PROCESANDO...\nESPERE          ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("ESTADO CONTROL\n%s              ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("EVENTOS        >\n%8s eventos     ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("%s\n%02d %02d/%02d %s")
-/* Ocupar 7 caracteres! [usar espacios] */
+/* 7 characters wide [use blanks] */
 _("Reset? ")
 
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("MEDIDAS        >\n                ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("ENTRADA        >\n                ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Tension Ent.(%s)\n%4s %4s %4s")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("RECTIFICADOR   >\n                ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Tension Bus\n%10s V          ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Bypass\n   %s           ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("SALIDA         >\n                ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Tension Sal.(%s)\n%4s %4s %4s")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Corriente Salida\n%3s %3s %3s  (A)")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Potencia Sal. kW\n%3s %3s %3s")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("CONFIGURACION  >\n                ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Tension Nominal\n%10s V          ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("V minima DVR\n%10s V          ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Frecuencia Nom.\n%10s Hz         ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Num. equipos\n%10s            ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Fecha (aa/mm/dd)\n%s  ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Direccion IP\n%03d.%03d.%03d.%03d ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Mascara de red\n%03d.%03d.%03d.%03d ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Gateway\n%03d.%03d.%03d.%03d ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Idioma\n   %s           ")
-/* Maximo 16 caracteres! Solo ASCII [LCD] */
-_("Castellano")
-
-/* Maximo 16 caracteres! Solo ASCII */
+/* Maximum 16 characters & ASCII only */
 _("Ingles")
 
-/* Maximo 16 caracteres! Solo ASCII */
-_("Frances")
+/* Maximum 16 characters & ASCII only */
+_("Chino")
 
-/* Maximo 16 caracteres! Solo ASCII */
-_("Italiano")
+/* Maximum 16 characters & ASCII only */
+_("Espanol")
 
-/* Maximo 16 caracteres! Solo ASCII */
-_("Aleman")
-
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Firmware\n%s              ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("Cambiar nivel\n  de acceso     ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("ACTUACIONES    >\n                ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("MARCHA\n   %s           ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("PARO\n   %s           ")
-// formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+// format: <Maximum 16 characters>\n<Maximum 16 characters>
 _("RESET\n   %s           ")
 _("Password de usuario basico.")
 
@@ -625,6 +637,8 @@ _("Estableciendo valor...")
 _("Valor establecido.")
 
 _("Error, no se pudo establecer valor.")
+
+_("Estado")
 
 _("Prueba envio email")
 

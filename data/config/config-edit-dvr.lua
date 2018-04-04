@@ -104,10 +104,10 @@ local edit_config_dvr = {
 
    [zigorNetPortVnc] =  {
       check = check_number, 
-      check_args = {min=0, max=1440}, },
+      check_args = {min=0, max=65535}, },
    [zigorNetPortHttp] =  {
       check = check_number, 
-      check_args = {min=0, max=1440}, },
+      check_args = {min=0, max=65535}, },
 
    [zigorNetDNS] = {
       check = check_ip,

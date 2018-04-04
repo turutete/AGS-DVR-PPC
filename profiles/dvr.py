@@ -452,15 +452,16 @@ all_data = {
 						'resolv_conf.lua', 'msmtprc.lua', 
 						'display-timezone.lua',
 						[ 'dvr-modbus.lua', 'config.lua','setup.lua','dvr-modbus.lua' ],
+						'xscreensaver.lua',
 						],
 	},
 	'ui':	{
 		'config_install_dir':	'/share/ui/',
-		'data_fn':			[ 'ui-dvr-1.lxml', 'ui-dvr-2.lxml', 'ui-dvr-3.lxml', 'ui-dvr-4.lxml', 'ui-dvr.glade', ],
+		'data_fn':			[ 'ui-dvr-1.lxml', 'ui-dvr-2.lxml', 'ui-dvr-3.lxml', 'ui-dvr-4.lxml', 'ui-dvr.glade', 'ui-dvr-1024x600.glade', ],
 	},
 	'pixbufs':	{
 		'config_install_dir':	'/share/pixbufs/',
-		'data_fn':			[ 'redball.xpm', 'greenball.xpm', 'grayball.xpm', 'grayball2.xpm', 'zigor_p.xpm', 'tree_sis.xpm', 'redbell.xpm', 'greenbell.xpm', 'orangebell.xpm', 'yellowbell.xpm', 'language.xpm', 'DSP.xpm', 'medidas.xpm', 'graybell.xpm', 'cfg.xpm', 'SinopticoDVR.xpm', ],
+		'data_fn':			[ 'redball.xpm', 'greenball.xpm', 'grayball.xpm', 'grayball2.xpm', 'zigor_p.xpm', 'tree_sis.xpm', 'redbell.xpm', 'greenbell.xpm', 'orangebell.xpm', 'yellowbell.xpm', 'language.xpm', 'DSP.xpm', 'medidas.xpm', 'graybell.xpm', 'cfg.xpm', 'SinopticoDVR.xpm', 'SinopticoDVR-ON.xpm', 'translate-32.xpm', ],
 	},
 	'mibs':	{
 		'config_install_dir':	'/share/mibs/',

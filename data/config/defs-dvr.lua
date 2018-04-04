@@ -77,7 +77,7 @@ tipo_objeto_dsp = {
    Hueco = {
       Minimo               = { start =  0, len = 16, cod = COD_INT, type = G_TYPE_INT,                 },
       Integral             = { start = 16, len = 16, cod = COD_INT, type = G_TYPE_INT,                 },
-      Tiempo               = { start = 32, len = 16, cod = COD_INT, type = G_TYPE_INT,                 },
+      Tiempo               = { start = 32, len = 16, cod = COD_UINT, type = G_TYPE_INT,                },
       Fase                 = { start = 48, len = 16, cod = COD_INT, type = G_TYPE_INT, offset=1        },
    },     
    -- Objetos Consola (nodo embedded)

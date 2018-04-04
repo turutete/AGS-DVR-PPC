@@ -17,12 +17,8 @@ local this  = {
 #
 ###########################################################################
 
-config_eth0=(
-	"$$zigorNetIP.0 netmask $$zigorNetMask.0"
-)
-routes_eth0=(
-	"default gw $$zigorNetGateway.0"
-)
+config_eth0="$$zigorNetIP.0 netmask $$zigorNetMask.0"
+routes_eth0="default gw $$zigorNetGateway.0"
 ]]
 
 }

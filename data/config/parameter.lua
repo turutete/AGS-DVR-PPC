@@ -60,7 +60,7 @@ function save_system_data(sds)
       if(net:save(sds)) then
 	 net:restart()
 	 --os.execute("killall telnetd")  -- XXX: evitar dejar telnet abierto en cambio de IP
-	 os.execute("killall in.telnetd")  -- XXX: evitar dejar telnet abierto en cambio de IP
+	 --os.execute("killall in.telnetd")  -- XXX: evitar dejar telnet abierto en cambio de IP
       end
    end
    -- Puerto del VNC
@@ -93,6 +93,13 @@ function save_system_data(sds)
    local msmtp=require "msmtprc"
    if(msmtp) then
       msmtp:save(sds)
+   end
+   -- Cfg xscreensaver
+   local xscreensaver=require "xscreensaver"
+   if(xscreensaver) then
+      if(xscreensaver:save(sds)) then
+         xscreensaver:restart(sds)
+      end
    end
 end
 

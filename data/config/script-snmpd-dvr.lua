@@ -64,7 +64,7 @@ local function rev_t(itable)
    return t
 end
 
--- jur
+-- jur (deprecated!)
 local function update_gaplog_html(sds)
       package.loaded["gaplog-" .. profile] = nil -- Forzamos recarga desde disco
       local t=require ("gaplog-" .. profile)
@@ -122,8 +122,58 @@ local function update_gaplog_html(sds)
       fd:close()
 end
 
+local function create_log_html()
+      local html = [[
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SAG LOG</title>
+</head>
+<body>
+<style type="text/css">
+.miestilo {
+   border-style: none;
+   background-color: white;
+   font-family: Verdana, Sans-Serif;
+   font-size: 0.8em;
+}
+.miestilo td {
+   padding: 5px;
+}
+/*
+.miestilo .odd {
+   background-color: #ddd;
+}
+.miestilo .even {
+   background-color: white;
+}
+*/
+tbody tr:nth-child(even) {
+  background: #ddd;
+}
+</style>
+<table class="miestilo">
+  <theader>
+    <th>[Date]</th><th>[Minimum(%)]</th><th>[Average(%)]</th><th>[Duration(ms)]</th><th>[Phase]</th>
+  </theader>
+  <tbody>
+  </tbody>
+</table>
+</body>
+</html>
+]]
+   local fd=io.open("/home/user/saglog.html", "w") -- XXX path y sufijo "hardcoded"
+   if fd then
+      fd:write(html)
+      fd:close()
+   end
+   os.execute("cp /home/user/saglog.html /home/user/saglog2.html")
+end
+
 local id=1
 local function insert_log_row(sds,time,minimo,integral,tiempo,fase, init)
+   local LOG_MAX=5000
+   --
    local this_id=id
    access.set(sds, zigorDvrGapLogId          .. "." .. tostring(id), this_id)
    access.set(sds, zigorDvrGapLogTime        .. "." .. tostring(id), time)
@@ -169,7 +219,128 @@ local function insert_log_row(sds,time,minimo,integral,tiempo,fase, init)
       fd:write('return gaplog,'.. tostring(id) ..','.. tostring(queue_wraps) ..'\n')
       fd:close()
       
-      update_gaplog_html(sds)
+      --update_gaplog_html(sds)
+      -- (new) html & csv! (idea sólo en inglés para simplificar)
+      setlocale(sds, "en_GB.utf8")   -- require "functions" required.
+      local displays = dofile("../share/config/displays-dvr.lua")
+      local display_fase = displays.display_hueco
+      local dfase=display_fase[fase]["fase-display"]
+      local date = os.date("%d/%m/%Y/%H:%M:%S", os.time(ZDateAndTime2timetable(time)))
+       
+      -- (new) idea adjuntar tb en otro fichero info adicional del estado (medidas)
+      local vr = access.get(sds, zigorDvrObjVRedR..".0")
+      local vs = access.get(sds, zigorDvrObjVRedS..".0")
+      local vt = access.get(sds, zigorDvrObjVRedT..".0")
+      local vbus = access.get(sds, zigorDvrObjVBus..".0")
+      local voutr = access.get(sds, zigorDvrObjVSecundarioR..".0")
+      local vouts = access.get(sds, zigorDvrObjVSecundarioS..".0")
+      local voutt = access.get(sds, zigorDvrObjVSecundarioT..".0")
+      local ir = access.get(sds, zigorDvrObjISecundarioR..".0")
+      local is = access.get(sds, zigorDvrObjISecundarioS..".0")
+      local it = access.get(sds, zigorDvrObjISecundarioT..".0")
+      local pr = access.get(sds, zigorDvrObjPSalidaR..".0")
+      local ps = access.get(sds, zigorDvrObjPSalidaS..".0")
+      local pt = access.get(sds, zigorDvrObjPSalidaT..".0")
+
+      -- html file
+      print("saglog html file!")
+      local fd=io.open("/var/log/saglog_tmp.html", "w")
+      local lines=0
+      local flag_stop=false
+      local file="/home/user/saglog.html"
+      for line in io.lines(file) do
+         if not flag_stop then
+	    lines=lines+1
+	 end
+         --print(line)
+         --print(lines)
+	 if string.match(line,"<tbody>") then
+	    --print(">>> tbody\n")
+	    fd:write(line) fd:write('\n')
+	    lines=0
+	    --[[
+	    local class
+	    if(toggle==true) then class='class="odd"' toggle=false else class='class="even"' toggle=true end
+	    new='    <tr '..class..'><td>'..date..'</td><td>'..minimo..'</td><td>'..integral..'</td><td>'..tiempo..'</td><td>'..dfase..'</td></tr>\n'
+	    --]]
+	    new='<tr><td>'..date..'</td><td>'..minimo..'</td><td>'..integral..'</td><td>'..tiempo..'</td><td>'..dfase..'</td></tr>\n'
+	    fd:write(new)
+	    print(new)
+	 elseif string.match(line,"</tbody>") then
+	    --print(">>> /tbody\n")
+	    fd:write(line) fd:write('\n')
+	    flag_stop=false
+	 elseif not flag_stop then
+	    --print("write!\n")
+	    fd:write(line) fd:write('\n')
+	 end
+	 if not flag_stop and lines>=LOG_MAX then -- XXX
+	    --print("flag_stop=true")
+	    flag_stop=true
+	    lines=0
+	 end
+      end
+      fd:close()
+      local cmd="cp /var/log/saglog_tmp.html /home/user/saglog.html"
+      print(cmd)
+      os.execute(cmd)
+      
+      --- Nuevo fichero con info extra
+      print("saglog2 html file!")
+      local fd=io.open("/var/log/saglog2_tmp.html", "w")
+      local lines=0
+      local flag_stop=false
+      local file="/home/user/saglog2.html"
+      for line in io.lines(file) do
+         if not flag_stop then
+	    lines=lines+1
+	 end
+         --print(line)
+	 --print(lines)
+	 if string.match(line,"<tbody>") then
+	    --print(">>> tbody\n")
+	    fd:write(line) fd:write('\n')
+	    lines=0
+	    local new
+	    --if vr~=0 and vs~=0 and vt~=0 and voutr~=0 and vouts~=0 and voutt~=0 and vbus~=0 and ir~=0 and is~=0 and it~=0 and pr~=0 and ps~=0 and pt~=0 then
+	    if vr~=nil and vs~=nil and vt~=nil and voutr~=nil and vouts~=nil and voutt~=nil and vbus~=nil and ir~=nil and is~=nil and it~=nil and pr~=nil and ps~=nil and pt~=nil then
+	       local extra = "VInR:"..tostring(vr/10).."V/VInS:"..tostring(vs/10).."V/VInT:"..tostring(vt/10).."V/VBus:"..tostring(vbus/10).."V/VOutR:"..tostring(voutr/10).."V/VOutS:"..tostring(vouts/10).."V/VOutT:"..tostring(voutt/10).."V/IR:"..tostring(ir/10).."A/IS:"..tostring(is/10).."A/IT:"..tostring(it/10).."A/PR:"..tostring(pr/10).."kW/PS:"..tostring(ps/10).."kW/PT:"..tostring(pt/10).."kW"
+	       new='<tr><td>'..date..'</td><td>'..minimo..'</td><td>'..integral..'</td><td>'..tiempo..'</td><td>'..dfase..'</td><td>'..extra..'</td></tr>\n'
+	    else
+	       new='<tr><td>'..date..'</td><td>'..minimo..'</td><td>'..integral..'</td><td>'..tiempo..'</td><td>'..dfase..'</td></tr>\n'
+	    end
+	    fd:write(new)
+	    print(new)
+	 elseif string.match(line,"</tbody>") then
+	    --print(">>> /tbody\n")
+	    fd:write(line) fd:write('\n')
+	    flag_stop=false
+	 elseif not flag_stop then
+	    --print("write!\n")
+	    fd:write(line) fd:write('\n')
+	 end
+	 if not flag_stop and lines>=LOG_MAX then -- XXX
+	    --print("flag_stop=true")
+	    flag_stop=true
+	    lines=0
+	 end
+      end
+      fd:close()
+      local cmd="cp /var/log/saglog2_tmp.html /home/user/saglog2.html"
+      --print(cmd)
+      os.execute(cmd)
+
+      -- csv file
+      print("saglog csv file!")
+      fd=io.open("/var/log/saglog_tmp.csv", "w")
+      new = date..','..minimo..','..integral..','..tiempo..','..dfase..'\n'
+      fd:write(new)
+      print(new)
+      fd:close()
+      cmd='head -n '..tostring(LOG_MAX-1)..' /home/user/saglog.csv >>/var/log/saglog_tmp.csv; cp /var/log/saglog_tmp.csv /home/user/saglog.csv'
+      print(cmd)
+      os.execute(cmd)
+      ----------
 
       -- Emitir notificación de nueva fila insertada en histórico
       access.set(sds, zigorTrapDvrGapLogEntryAdded, this_id)
@@ -227,21 +398,27 @@ local function gaplog_del_log(sds)
 		      id=1
 		      -- XXX añadir un evento "borrado de histórico"
 		      
-		      update_gaplog_html(sds)
+		      --update_gaplog_html(sds)
+		      --cmd = [[sed -i '/tbody/,/\/tbody/d' /home/user/saglog.html; echo >/home/user/saglog.csv]]
+		      create_log_html()
+		      cmd = [[echo >/home/user/saglog.csv]]
+		      print(cmd)
+		      os.execute(cmd)
 		   end
 
 
 ----------------------------------------
 local function make_demo_handler()
  local count=0  -- static variables
- local COUNT_MAX = 180
+ local COUNT_MAX = 300
+ --local COUNT_MAX = 60
  local update = math.random(1+COUNT_MAX/4,COUNT_MAX-COUNT_MAX/4)
  local valor=0
  ---
  return function(data)
    -- Ejemplo de que cada COUNT_MAX segundos se genera una alarma aleatoriamente (de la tabla t) e igualmente se resetea. Además baile random de tensiones etc.
    
-   --print("demo>> demo_handler", count)
+   print("demo>> demo_handler", count)
 
    t={
       { oid=zigorDvrObjErrorVInst..".0",	estado=6  },
@@ -266,9 +443,12 @@ local function make_demo_handler()
 
    if math.fmod(count,3)==0 then  -- random de temperaturas etc (tener en cuenta cfg de timeout de refresco de UI)
       --print("demo: random de temperaturas etc")
-      access.set(sdscoreglib, zigorDvrObjVRedR..".0",    math.random(2250,2350))  -- 230
-      access.set(sdscoreglib, zigorDvrObjVRedS..".0",    math.random(2250,2350))
-      access.set(sdscoreglib, zigorDvrObjVRedT..".0",    math.random(2250,2350))
+      --access.set(sdscoreglib, zigorDvrObjVRedR..".0",    math.random(2250,2350))  -- 230
+      --access.set(sdscoreglib, zigorDvrObjVRedS..".0",    math.random(2250,2350))
+      --access.set(sdscoreglib, zigorDvrObjVRedT..".0",    math.random(2250,2350))
+      access.set(sdscoreglib, zigorDvrObjVRedR..".0",    math.random(3900,4100))  -- 400 +-2.5%
+      access.set(sdscoreglib, zigorDvrObjVRedS..".0",    math.random(3900,4100))
+      access.set(sdscoreglib, zigorDvrObjVRedT..".0",    math.random(3900,4100))
 
       estado = access.get(sdscoreglib, zigorDvrObjEstadoControl..".0")
       if estado == 4 then
@@ -277,17 +457,32 @@ local function make_demo_handler()
          access.set(sdscoreglib, zigorDvrObjVBus..".0",  math.random(5370,5430))  -- 540 en no On
       end
 
-      access.set(sdscoreglib, zigorDvrObjVSecundarioR..".0", math.random(2250,2350))
-      access.set(sdscoreglib, zigorDvrObjVSecundarioS..".0", math.random(2250,2350))
-      access.set(sdscoreglib, zigorDvrObjVSecundarioT..".0", math.random(2250,2350))
+      --access.set(sdscoreglib, zigorDvrObjVSecundarioR..".0", math.random(2250,2350))
+      --access.set(sdscoreglib, zigorDvrObjVSecundarioS..".0", math.random(2250,2350))
+      --access.set(sdscoreglib, zigorDvrObjVSecundarioT..".0", math.random(2250,2350))
+      VSR=math.random(3980,4020)
+      VSS=math.random(3980,4020)
+      VST=math.random(3980,4020)
+      access.set(sdscoreglib, zigorDvrObjVSecundarioR..".0", VSR)  -- 400 +-0.5%
+      access.set(sdscoreglib, zigorDvrObjVSecundarioS..".0", VSS)
+      access.set(sdscoreglib, zigorDvrObjVSecundarioT..".0", VST)
 
-      access.set(sdscoreglib, zigorDvrObjISecundarioR..".0", math.random(100,4520))  -- 0..450
-      access.set(sdscoreglib, zigorDvrObjISecundarioS..".0", math.random(100,4520))
-      access.set(sdscoreglib, zigorDvrObjISecundarioT..".0", math.random(100,4520))
+      ISR=math.random(800,950)
+      ISS=math.random(ISR-50,ISR+50)
+      IST=math.random(ISR-50,ISR+50)
+      access.set(sdscoreglib, zigorDvrObjISecundarioR..".0", ISR)  -- 50..125 A
+      access.set(sdscoreglib, zigorDvrObjISecundarioS..".0", ISS)
+      access.set(sdscoreglib, zigorDvrObjISecundarioT..".0", IST)
 
-      access.set(sdscoreglib, zigorDvrObjPSalidaR..".0",     math.random(100,1000))  -- 0..100
-      access.set(sdscoreglib, zigorDvrObjPSalidaS..".0",     math.random(100,1000))
-      access.set(sdscoreglib, zigorDvrObjPSalidaT..".0",     math.random(100,1000))
+      --access.set(sdscoreglib, zigorDvrObjPSalidaR..".0",     math.random(100,1000))  -- 0..100
+      --access.set(sdscoreglib, zigorDvrObjPSalidaS..".0",     math.random(100,1000))
+      --access.set(sdscoreglib, zigorDvrObjPSalidaT..".0",     math.random(100,1000))
+      PSR=VSR*ISR/10/1000 --print(PSR) -- decimas de kVA
+      PSS=VSS*ISS/10/1000 --print(PSS)
+      PST=VST*IST/10/1000 --print(PST)
+      access.set(sdscoreglib, zigorDvrObjPSalidaR..".0", PSR)
+      access.set(sdscoreglib, zigorDvrObjPSalidaS..".0", PSS)
+      access.set(sdscoreglib, zigorDvrObjPSalidaT..".0", PST)
    end
    
    if count==update then
@@ -611,7 +806,7 @@ local function setsig_handler(sds, k, v, data)
       res=true -- no hacer el set, ya hecho
    end
 
-   -- Actualizar fichero de log html si cambio de idioma de notificaciones con el idioma elegido
+   --[[ Actualizar fichero de log html si cambio de idioma de notificaciones con el idioma elegido
    if (k == zigorSysNotificationLang .. ".0") then
       if log_init==1 then
          log_init=0
@@ -624,14 +819,20 @@ local function setsig_handler(sds, k, v, data)
         gobject.unblock(sds, set_handler_id)
         gobject.stop(sds, "setsig")  --XXX
         ---
-        alt.update_html_log(sds)
+        ----alt.update_html_log(sds)
 	--update_gaplog_html(sds)  -- XXX (solo de test porque no es necesario multi-idioma)
+	-- XXX
+	setlocale(sdscoreglib)
+	print("Test locale (Estado):" .. _g("Estado"))
+	---	
       end
    end
+   --]]
 
+   --[[ ya no se usa char2scancode asociado a pulsaciones de tecla desde linea serie
    -- New: Tratamiento Backlight Timeout (informar proceso char2scancode2 via signal):
    if k==zigorSysBacklightTimeout .. ".0" then
-      --print("Captura set de zigorSysBacklightTimeout")
+      print("Captura set de zigorSysBacklightTimeout")
       
       --forzar el set:
       gobject.block(sds, set_handler_id)
@@ -639,16 +840,9 @@ local function setsig_handler(sds, k, v, data)
       gobject.unblock(sds, set_handler_id)
       res=true  -- no hacer el set, ya hecho
       
-      --[[
-      local cmd = "ps x | grep sepec-snmpd | grep -v grep | cut -b 1-5"
-      local fd = popen(cmd, "r")
-      local pid = fd:read()
-      fp:close()
-      print("pid:", pid)
-      os.execute("kill -SIGUSR1 "..pid)
-      --]]
       os.execute("killall -SIGUSR1 char2scancode2")
    end
+   --]]
 
    -- Test de envio email
    if (k == zigorNetSmtpTest .. ".0") then
@@ -1242,7 +1436,7 @@ local function sms_handler(data)
 	       local cond = displays.display_condicion[tsms[tsms_index_r].cond]["display_sms"]
 	       local date = os.date("%d/%m/%Y %H:%M:%S", os.time(ZDateAndTime2timetable(tsms[tsms_index_r].date)))
 	       --local sev = Severidad[tsms[tsms_index_r].sev]
-	       local sev = displays.display_severidad[tsms[tsms_index_r].sev]["display"]
+	       local sev = displays.display_severidad[tsms[tsms_index_r].sev]["display_sms"]
 	       local cod = display_descr[tsms[tsms_index_r].descr]["codigo"]
 	       local elements = tsms[tsms_index_r].elements
 	       --print("sms>>>envio: ",descr,cond,date,sev,cod,elements)

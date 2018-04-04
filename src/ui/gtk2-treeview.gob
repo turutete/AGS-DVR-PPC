@@ -475,6 +475,17 @@ new (char *tv_name, AgsCf *cf, CfTable cft) {
 
   /* para actualizar visibilidad */
   g_signal_connect_after(G_OBJECT(tree_store), "row-inserted", (GCallback) self_visible, ret);
+  
+  /* XXX (jur) intento seleccion primeras filas de arboles de estado y parametros */
+  if(master) {
+     selection=gtk_tree_view_get_selection(GTK_TREE_VIEW(master));
+     GtkTreeModel *model = gtk_tree_view_get_model (GTK_TREE_VIEW(master));
+     GtkTreeIter iter;
+     gtk_tree_model_get_iter_first(model, &iter);
+     gtk_tree_selection_select_iter(selection, &iter);
+     self_view_selection_func(selection, ret);
+  }
+  /* fin */
 
   gtk_widget_show_all(GTK_WIDGET(ret));
 

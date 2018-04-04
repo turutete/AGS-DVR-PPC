@@ -264,16 +264,22 @@ end
 --
 -- setlocale
 --
-function setlocale(sds)
-   local v = access.get(sds, zigorSysNotificationLang..".0")
+function setlocale(sds, language)
    local lang="en_GB.utf8"
    
-   -- new XXX
-   local profilel = profile_lang or profile
-   --displays = require "displays-"..profile
-   local displays = dofile("/usr/local/zigor/activa/ags-"..profilel.."/share/config/displays-"..profilel..".lua")  -- a ver si funciona 'profile'
-   --print("test: profilel", profilel, displays)
-   lang = displays.display_NotificationLang[v].locale
+   if language==nil then
+      local v = access.get(sds, zigorSysNotificationLang..".0")
+      if v then
+         -- new XXX
+         local profilel = profile_lang or profile
+         --displays = require "displays-"..profile
+         local displays = dofile("/usr/local/zigor/activa/ags-"..profilel.."/share/config/displays-"..profilel..".lua")  -- a ver si funciona 'profile'
+         --print("test: profilel", profilel, displays)
+         lang = displays.display_NotificationLang[v].locale
+      end
+   else
+      lang=language
+   end
    
    print(">>>setlocale:",lang)
    i18n.setlocale(lang)

@@ -48,7 +48,7 @@ end
 ----
 -- "helpers"
 ----
--- jur
+-- jur (deprecated!)
 local function update_log_html(sds)
       package.loaded["alarmlog-" .. profile] = nil -- Forzamos recarga desde disco
       local t=require ("alarmlog-" .. profile)
@@ -85,7 +85,7 @@ local function update_log_html(sds)
 </theader>
 <tbody>
 ]]
-      local descr, dcond, date, cod, element
+      local ddescr, dcond, date, cod, element, sev, dsev
       local alarms_config=get_alarm_config_index(sds)
 
       local fd=io.open("/home/user/alarmlog.html", "w") -- XXX path y sufijo "hardcoded"
@@ -109,8 +109,58 @@ local function update_log_html(sds)
       fd:close()
 end
 
+local function create_log_html()
+      local html = [[
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ALARM LOG</title>
+</head>
+<body>
+<style type="text/css">
+.miestilo {
+   border-style: none;
+   background-color: white;
+   font-family: Verdana, Sans-Serif;
+   font-size: 0.8em;
+}
+.miestilo td {
+   padding: 5px;
+}
+/*
+.miestilo .odd {
+   background-color: #ddd;
+}
+.miestilo .even {
+   background-color: white;
+}
+*/
+tbody tr:nth-child(even) {
+  background: #ddd;
+}
+</style>
+<table class="miestilo">
+  <theader>
+    <th>[Date]</th><th>[Description]</th><th>[Code]</th><th>[Status]</th><th>[Severity]</th><th>[Elements]</th>
+  </theader>
+  <tbody>
+  </tbody>
+</table>
+</body>
+</html>
+]]
+   local fd=io.open("/home/user/alarmlog.html", "w") -- XXX path y sufijo "hardcoded"
+   if fd then
+      fd:write(html)
+      fd:close()
+   end
+   os.execute("cp /home/user/alarmlog.html /home/user/alarmlog2.html")
+end
+
 local id=1
 local function insert_log_row(sds,descr,time,element,cond, init)
+   local LOG_MAX=5000
+   --
    local this_id=id
    access.set(sds, zigorAlarmLogId          .. "." .. tostring(id), this_id)
    access.set(sds, zigorAlarmLogDescr       .. "." .. tostring(id), descr)
@@ -154,8 +204,136 @@ local function insert_log_row(sds,descr,time,element,cond, init)
       fd:write('return alarmlog,'.. tostring(id) ..','.. tostring(queue_wraps) ..'\n')
       fd:close()
       
-      update_log_html(sds)
+      -- update_log_html(sds)
+      -------------
+      -- (new) html & csv! (idea sólo en inglés para simplificar)
+      setlocale(sds, "en_GB.utf8")   -- require "functions" required.
+      local displays = dofile("../share/config/displays-dvr.lua")
+      local display_descr = displays.display_descr
+      local alarms_config=get_alarm_config_index(sds)
+
+      local ddescr = display_descr[descr]["display"]
+      local dcond = displays.display_condicion[cond]["display"]
+      local date = os.date("%d/%m/%Y/%H:%M:%S", os.time(ZDateAndTime2timetable(time)))
+      local cod = display_descr[descr]["codigo"]
+      local sev=access.get(sds, zigorAlarmCfgSeverity ..".".. tostring(alarms_config[descr]))
+      local dsev = displays.display_severidad[sev]["display"]
+       
+      -- (new) idea adjuntar tb en otro fichero info adicional del estado (medidas)
+      local vr = access.get(sds, zigorDvrObjVRedR..".0")
+      local vs = access.get(sds, zigorDvrObjVRedS..".0")
+      local vt = access.get(sds, zigorDvrObjVRedT..".0")
+      local vbus = access.get(sds, zigorDvrObjVBus..".0")
+      local voutr = access.get(sds, zigorDvrObjVSecundarioR..".0")
+      local vouts = access.get(sds, zigorDvrObjVSecundarioS..".0")
+      local voutt = access.get(sds, zigorDvrObjVSecundarioT..".0")
+      local ir = access.get(sds, zigorDvrObjISecundarioR..".0")
+      local is = access.get(sds, zigorDvrObjISecundarioS..".0")
+      local it = access.get(sds, zigorDvrObjISecundarioT..".0")
+      local pr = access.get(sds, zigorDvrObjPSalidaR..".0")
+      local ps = access.get(sds, zigorDvrObjPSalidaS..".0")
+      local pt = access.get(sds, zigorDvrObjPSalidaT..".0")
       
+      -- html file
+      print("alarmlog html file!")
+      local fd=io.open("/var/log/alarmlog_tmp.html", "w")
+      local lines=0
+      local flag_stop=false
+      local file="/home/user/alarmlog.html"
+      for line in io.lines(file) do
+         if not flag_stop then
+	    lines=lines+1
+	 end
+         --print(line)
+	 --print(lines)
+	 if string.match(line,"<tbody>") then
+	    --print(">>> tbody\n")
+	    fd:write(line) fd:write('\n')
+	    lines=0
+	    --[[
+	    local class
+	    if(toggle==true) then class='class="odd"' toggle=false else class='class="even"' toggle=true end
+	    new='    <tr '..class..'><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..dsev..'</td><td>'..element..'</td></tr>\n'
+	    --]]
+	    new='<tr><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..dsev..'</td><td>'..element..'</td></tr>\n'
+	    fd:write(new)
+	    print(new)
+	 elseif string.match(line,"</tbody>") then
+	    --print(">>> /tbody\n")
+	    fd:write(line) fd:write('\n')
+	    flag_stop=false
+	 elseif not flag_stop then
+	    --print("write!\n")
+	    fd:write(line) fd:write('\n')
+	 end
+	 if not flag_stop and lines>=LOG_MAX then -- XXX
+	    --print("flag_stop=true")
+	    flag_stop=true
+	    lines=0
+	 end
+      end
+      fd:close()
+      local cmd="cp /var/log/alarmlog_tmp.html /home/user/alarmlog.html"
+      --print(cmd)
+      os.execute(cmd)
+
+      --- Nuevo fichero con info extra
+      print("alarmlog2 html file!")
+      local fd=io.open("/var/log/alarmlog2_tmp.html", "w")
+      local lines=0
+      local flag_stop=false
+      local file="/home/user/alarmlog2.html"
+      for line in io.lines(file) do
+         if not flag_stop then
+	    lines=lines+1
+	 end
+         --print(line)
+	 --print(lines)
+	 if string.match(line,"<tbody>") then
+	    --print(">>> tbody\n")
+	    fd:write(line) fd:write('\n')
+	    lines=0
+	    local new
+	    --if vr~=0 and vs~=0 and vt~=0 and voutr~=0 and vouts~=0 and voutt~=0 and vbus~=0 and ir~=0 and is~=0 and it~=0 and pr~=0 and ps~=0 and pt~=0 then
+	    if vr~=nil and vs~=nil and vt~=nil and voutr~=nil and vouts~=nil and voutt~=nil and vbus~=nil and ir~=nil and is~=nil and it~=nil and pr~=nil and ps~=nil and pt~=nil then
+	       local extra = "VInR:"..tostring(vr/10).."V/VInS:"..tostring(vs/10).."V/VInT:"..tostring(vt/10).."V/VBus:"..tostring(vbus/10).."V/VOutR:"..tostring(voutr/10).."V/VOutS:"..tostring(vouts/10).."V/VOutT:"..tostring(voutt/10).."V/IR:"..tostring(ir/10).."A/IS:"..tostring(is/10).."A/IT:"..tostring(it/10).."A/PR:"..tostring(pr/10).."kW/PS:"..tostring(ps/10).."kW/PT:"..tostring(pt/10).."kW"
+	       new='<tr><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..dsev..'</td><td>'..element..'</td><td>'..extra..'</td></tr>\n'
+	    else
+	       new='<tr><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..dsev..'</td><td>'..element..'</td></tr>\n'
+	    end
+	    fd:write(new)
+	    print(new)
+	 elseif string.match(line,"</tbody>") then
+	    --print(">>> /tbody\n")
+	    fd:write(line) fd:write('\n')
+	    flag_stop=false
+	 elseif not flag_stop then
+	    --print("write!\n")
+	    fd:write(line) fd:write('\n')
+	 end
+	 if not flag_stop and lines>=LOG_MAX then -- XXX
+	    --print("flag_stop=true")
+	    flag_stop=true
+	    lines=0
+	 end
+      end
+      fd:close()
+      local cmd="cp /var/log/alarmlog2_tmp.html /home/user/alarmlog2.html"
+      --print(cmd)
+      os.execute(cmd)
+      
+      -- csv file
+      --print("csv file!")
+      fd=io.open("/var/log/alarmlog_tmp.csv", "w")
+      new = date..','..ddescr..','..cod..','..dcond..','..dsev..','..element..'\n'
+      fd:write(new)
+      print(new)
+      fd:close()
+      cmd='head -n '..tostring(LOG_MAX-1)..' /home/user/alarmlog.csv >>/var/log/alarmlog_tmp.csv; cp /var/log/alarmlog_tmp.csv /home/user/alarmlog.csv'
+      --print(cmd)
+      os.execute(cmd)
+      ----------
+
       -- Emitir notificación de nueva fila insertada en histórico
       access.set(sds, zigorTrapAlarmLogEntryAdded, this_id)
    end
@@ -185,6 +363,8 @@ function alarmlogtable_new(params)
    local sds=unpack(params)
    local log = {}
    local log_cond = {}
+   --
+   local toggle=false
 
    local set = function(descr, cond, elements, date)
 		  -- Pasamos ElementsList a tabla
@@ -264,12 +444,19 @@ function alarmlogtable_new(params)
 		      id=1
 		      -- XXX añadir un evento "borrado de histórico"
 		      
-		      update_log_html(sds)
+		      --update_log_html(sds)
+		      --cmd = [[sed -i '/tbody/,/\/tbody/d' /home/user/alarmlog.html; echo >/home/user/alarmlog.csv]]
+		      create_log_html()
+		      cmd = [[echo >/home/user/alarmlog.csv]]
+		      print(cmd)
+		      os.execute(cmd)
 		   end
 
+   --[[
    local update_html_log = function()
 			    update_log_html(sds)
 			 end
+   --]]
    --
    init()
    return {
@@ -277,7 +464,7 @@ function alarmlogtable_new(params)
       del_log=del_log,
       -- exportamos función para insertar una fila sin control de estado
       insert=insert,
-      update_html_log=update_html_log,
+      --update_html_log=update_html_log,
    }
 end
 ------------------------

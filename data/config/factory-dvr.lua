@@ -33,11 +33,11 @@ local param = {
    --
    [ zigorSysCode .. ".0"           ] = "000000",
    [ zigorSysTimeZone .. ".0"       ] = 354,  -- Europe/Madrid
-   [ zigorSysVersion .. ".0"        ] = "dvr-1.1.7",
+   [ zigorSysVersion .. ".0"        ] = "dvr-1.2.0",
    [ zigorSysNotificationLang .. ".0" ] = 2,  -- en
    --
-   [ zigorSysBacklightTimeout .. ".0" ] = 10,  -- minutes
-   [ zigorSysLogoutTimeout .. ".0"  ] = 10,  -- minutes
+   [ zigorSysBacklightTimeout .. ".0" ] = 5,  -- minutes
+   [ zigorSysLogoutTimeout .. ".0"  ] = 5,  -- minutes
    ---
    -- ParamNet
    [ zigorNetIP .. ".0"             ] = "192.168.3.1",
@@ -154,7 +154,7 @@ local param = {
    [ zigorAlarmCfgNotification .. ".16"   ] = AlarmNotificationNOSMS,
    [ zigorAlarmCfgId .. ".17"             ] = 17,
    [ zigorAlarmCfgDescr .. ".17"          ] = zigorAlarmaStatusChange,
-   [ zigorAlarmCfgSeverity .. ".17"       ] = AlarmSeverityGRAVE,
+   [ zigorAlarmCfgSeverity .. ".17"       ] = AlarmSeverityLEVE,
    [ zigorAlarmCfgNotification .. ".17"   ] = AlarmNotificationNOSMS,
    [ zigorAlarmCfgId .. ".18"             ] = 18,
    [ zigorAlarmCfgDescr .. ".18"          ] = zigorAlarmaPasswdChange,

@@ -143,6 +143,74 @@ static int lgtk_colorize(lua_State *L)
 
   return 0;
 }
+
+/**/
+
+/* widget_grab_focus(widget) (XXX jur) */
+static int lgtk_widget_grab_focus(lua_State *L)
+{
+  CHECK_UDATA(L, 1);
+  GtkWidget* w = GET_UDATA(L, 1);
+
+  if(w) 
+    gtk_widget_grab_focus(w);
+
+  return 0;
+}
+
+/**/
+
+/* window_set_keep_above(window, setting) (XXX jur) */
+static int lgtk_window_set_keep_above(lua_State *L)
+{
+  CHECK_UDATA(L, 1);
+  //GtkWindow* w = GET_UDATA(L, 1);
+  GtkWidget* w = GET_UDATA(L, 1);
+  gboolean setting=lua_toboolean(L, 2);
+  
+  /*if(w && setting) */
+    gtk_window_set_keep_above( GTK_WINDOW(w), setting );
+
+  return 0;
+}
+
+/**/
+
+/* window_set_transient_for(window, (parent)) (XXX jur) */
+static int lgtk_window_set_transient_for(lua_State *L)
+{
+  CHECK_UDATA(L, 1);
+  //GtkWindow* w = GET_UDATA(L, 1);
+  GtkWidget* w = GET_UDATA(L, 1);
+
+  GdkScreen *screen;
+  GdkWindow *root;
+  
+  screen = gdk_screen_get_default();
+  root = gdk_screen_get_root_window(screen);
+
+  //gtk_window_set_transient_for(w->window, root);
+  //gtk_window_set_transient_for(GTK_WINDOW(w->window), GTK_WINDOW(root));
+  gdk_window_set_transient_for(w->window, root);
+
+  return 0;
+}
+
+/**/
+
+/* window_set_opacity(GtkWindow *window, gdouble opacity) (XXX jur) */
+static int lgtk_window_set_opacity(lua_State *L)
+{
+  CHECK_UDATA(L, 1);
+  //GtkWindow* w = GET_UDATA(L, 1);
+  GtkWidget* w = GET_UDATA(L, 1);
+  gdouble opacity=lua_tonumber(L, 2);
+
+  gtk_window_set_opacity(GTK_WINDOW(w), opacity);
+
+  return 0;
+}
+
 /**/
 
 static const luaL_reg gtk[] = {
@@ -153,6 +221,10 @@ static const luaL_reg gtk[] = {
   { "statusbar_remove",    lgtk_statusbar_remove },
   { "main_iteration_do",   lgtk_main_iteration_do },
   { "colorize",            lgtk_colorize },
+  { "widget_grab_focus",   lgtk_widget_grab_focus },
+  { "window_set_keep_above",    lgtk_window_set_keep_above },
+  { "window_set_transient_for", lgtk_window_set_transient_for },
+  { "window_set_opacity", lgtk_window_set_opacity },
   { NULL, NULL }
 };
 

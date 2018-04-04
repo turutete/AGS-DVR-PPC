@@ -12,64 +12,47 @@ local this  = {
 --   _service = "snmpd",
    tmpl     = [[
 <!-- NO EDITAR ESTE FICHERO. Created by AGS. -->
+<!DOCTYPE html>
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-	<title>Remote Control</title>
+	<title>AVC SET DVR</title>
+	<link rel="stylesheet" href="main.css">	
 </head>
 
-<style type="text/css">
-body {
-  background-image: url("/images/tile.png");
-  background-color: #A0A0A0;
-  background-repeat: repeat-x;
-}
-.rounded-borders {
-  border-radius: 10px;
-  -ms-border-radius: 10px;
-  -moz-border-radius: 10px;
-  -webkit-border-radius: 10px;
-  -khtml-border-radius: 10px;
-}
-
-.title {
-  color: #ffffff;
-  font-family: Arial;
-  font-size: 40px;
-  font-weight: bold;
-  text-shadow: 3px 3px 3px #000000;
-  text-align: center;
-  padding: 20px 0px 10px 0px;
-}
-</style>
-
 <body>
-	<div class="title">AVC SET DVR</div>
-	<table class="rounded-borders" border="8" bordercolor="#202020" cellspacing="0" align="center"><tr><td>
-	<APPLET CODE="com.glavsoft.viewer.Viewer" ARCHIVE="tightvnc-jviewer.jar" WIDTH=643 HEIGHT=483>
+	<div class="container header">
+		<p class="title-text">AVC SET DVR</p>
+	</div>
+
+	<div class="applet">
+	<APPLET CODE="com.glavsoft.viewer.Viewer" ARCHIVE="tightvnc-jviewer.jar" WIDTH=1027 HEIGHT=603>
 		<param name="Port" value="$$zigorNetPortVnc.0">
 		<param name="OpenNewWindow" value="no">
 		<param name="ShowControls" value="no">
 
 		<param name="Encoding" value="Tight">
 		<param name="CompressionLevel" value="3">
-        <!--param name="JpegImageQuality" value=""/-->
+		<!--param name="JpegImageQuality" value=""/-->
 
 		<!--param name="LocalPointer" value="On"-->
 		<!--param name="ScalingFactor" value="100"-->
 	</APPLET>
-	</td></tr></table>
+	</div>
 
-	<table cellspacing="10" width="640" align="center"><tr>
-	<td><img border=0 src="/images/logo_zigor.png"></td>
-	<td>
-	 <div style="font-size:10px; color:#FFFFFF; font-family: Verdana, Arial, Helvetica, sans-serif; text-align:right; line-height:150%;">
-	    ZIGOR CORPORACIÓN S.A.<br>
-	    E-mail: zigor@zigor.com<br>
-	    Web: www.zigor.com<br>
-	 </div>
-	</td>
-	</tr></table>
+	<div class="container footer">
+	  <div class="footer-cols">
+	    <img src="images/logo_zigor.png">
+	  </div>
+	  <div class="footer-cols">
+	    <a href="downloads.html"><img class="center" src="images/down48.png"></a>
+	  </div>
+	  <div class="footer-cols">
+	    <p class="footer-text">ZIGOR CORPORACIÓN S.A.</p>
+	    <p class="footer-text">E-mail: zigor@zigor.com</p>
+	    <p class="footer-text">Web: www.zigor.com</p>
+	  </div>
+	</div>
 </body>
 </html>
 

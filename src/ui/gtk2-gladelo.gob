@@ -85,6 +85,13 @@ register_widgets(self, GladeXML *layout) {
   g_list_foreach(lista, self_register_widget, self);
 }
 
+private
+void
+test(GtkEntry *entry, GtkMenu  *menu, gpointer  user_data) {
+   printf(">>>eooo\n");
+   g_signal_stop_emission_by_name(entry, "populate-popup");
+}
+
 public
 GObject *
 new (char *lo_name, AgsCf *cf, CfTable cft) {
@@ -150,6 +157,14 @@ new (char *lo_name, AgsCf *cf, CfTable cft) {
   if(widget)
     gtk_container_add(GTK_CONTAINER(widget), lo_widget);
 
+  /* XXX (jur) */
+  GtkWidget *mi_widget;
+  mi_widget = glade_xml_get_widget(layout, "edit_val");
+  mi_widget = gtk_bin_get_child(mi_widget);
+  //printf(">>>widget: %d\n", widget);
+  g_signal_connect(mi_widget, "populate-popup", (GCallback) self_test, ret);
+  /* fin */
+  
   gtk_widget_show_all(lo_widget);
 
   g_object_unref(G_OBJECT(layout));

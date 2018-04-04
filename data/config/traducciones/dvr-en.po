@@ -8,7 +8,7 @@ msgid "XXX"
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-07-16 09:09+0200\n"
+"POT-Creation-Date: 2015-03-25 13:20+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,14 +19,74 @@ msgstr ""
 msgid "-"
 msgstr ""
 
+msgid "0"
+msgstr ""
+
+msgid "0 _.,"
+msgstr ""
+
 msgid "00:00"
+msgstr ""
+
+msgid "1"
+msgstr ""
+
+msgid "1 abc"
+msgstr ""
+
+msgid "2"
+msgstr ""
+
+msgid "2 def"
+msgstr ""
+
+msgid "3"
+msgstr ""
+
+msgid "3 ghi"
+msgstr ""
+
+msgid "4"
+msgstr ""
+
+msgid "4 jkl"
+msgstr ""
+
+msgid "5"
+msgstr ""
+
+msgid "5 mnñ"
+msgstr ""
+
+msgid "6"
+msgstr ""
+
+msgid "6 opq"
+msgstr ""
+
+msgid "7"
+msgstr ""
+
+msgid "7 rst"
+msgstr ""
+
+msgid "8"
+msgstr ""
+
+msgid "8 uvw"
+msgstr ""
+
+msgid "9"
+msgstr ""
+
+msgid "9 xyz"
 msgstr ""
 
 msgid "Borrar histórico de eventos"
 msgstr "Delete Event Log"
 
 msgid "Borrar histórico de huecos"
-msgstr "Delete Gap Log"
+msgstr "Delete Sag Log"
 
 msgid "Cancelar"
 msgstr "Cancel"
@@ -35,11 +95,10 @@ msgid "Descargas FTP"
 msgstr "FTP Downloads"
 
 msgid ""
-"Español\n"
-"Inglés\n"
-msgstr ""
-"Spanish\n"
 "English\n"
+"Chinese\n"
+"Spanish\n"
+msgstr ""
 
 msgid "Estado"
 msgstr "Status"
@@ -60,16 +119,16 @@ msgid "Histórico de EVENTOS"
 msgstr "Event Log"
 
 msgid "Histórico de HUECOS"
-msgstr "Gap Log"
-
-msgid "Idioma"
-msgstr "Language"
+msgstr "SAG Log"
 
 msgid "LOGIN"
 msgstr ""
 
 msgid "La acción solicitada requiere confirmación"
 msgstr "The requested action requires confirmation"
+
+msgid "Logout"
+msgstr ""
 
 msgid "Marcha"
 msgstr "Start"
@@ -92,16 +151,13 @@ msgstr "Console Reboot"
 msgid "Reset"
 msgstr ""
 
-msgid "Salir"
-msgstr "Exit"
-
 msgid "Selecciona idioma"
 msgstr "Language selection"
 
 msgid "Sinóptico"
 msgstr "Home"
 
-msgid "label14"
+msgid "Test"
 msgstr ""
 
 msgid "DVR"
@@ -287,9 +343,6 @@ msgstr "TCP Port for HTTP access"
 msgid "Puerto TCP aplicación a través de HTTP"
 msgstr "TCP Port for application through HTTP"
 
-msgid "Equipo"
-msgstr "System"
-
 msgid "Tensión de red nominal"
 msgstr "Nominal AC Voltage"
 
@@ -365,8 +418,8 @@ msgstr "Checking password..."
 msgid "Comprobando acceso nivel"
 msgstr "Checking Level Access"
 
-msgid "Error, introduce de nuevo el password"
-msgstr "Error, enter password again"
+msgid "Error, introduce password"
+msgstr "Failure, enter password"
 
 msgid "Inicio sistema"
 msgstr "System Start"
@@ -374,189 +427,189 @@ msgstr "System Start"
 msgid "Cambio de password"
 msgstr "Password change"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "ErrorVInst"
 msgstr "InstVFailure"
 
 msgid "Error tensión instantánea"
 msgstr "Instantaneous voltage failure"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Error tension instantanea>"
 msgstr "Instantaneous voltage failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "Sobrecarga"
 msgstr "Overload"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Sobrecarga>"
 msgstr "Overload"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "VBusMax"
 msgstr "MaxBusV"
 
 msgid "Tensión de bus máxima"
 msgstr "Maximum bus voltage"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Tension de bus maxima>"
 msgstr "Maximum bus voltage"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "VCondMax"
 msgstr "MaxCapV"
 
 msgid "Tensión de condensador máxima"
 msgstr "Maximum capacitor voltage"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Tension de condensador maxima>"
 msgstr "Maximum capacitor voltage"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "VBusMin"
 msgstr "MinBusV"
 
 msgid "Tensión de bus mínima"
 msgstr "Minimum bus voltage"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Tension de bus minima>"
 msgstr "Minimum bus voltage"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "FalloVRed"
 msgstr "MainsVFailure"
 
 msgid "Fallo tensión de red"
 msgstr "Mains voltage failure"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Fallo tension de red>"
 msgstr "Mains voltage failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "LimitIntVSal"
 msgstr "IntVLimit"
 
 msgid "Limitación integrador de tensión de salida"
 msgstr "Output voltage integrator limitation"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Limitacion integrador de tension de salida>"
 msgstr "Output voltage integrator limitation"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "AlarmaDriver"
 msgstr "DriverAlarm"
 
 msgid "Alarma driver"
 msgstr "Driver alarm"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Alarma driver>"
 msgstr "Driver alarm"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "ParadoPorError"
 msgstr "StopByFailure"
 
 msgid "Parado por error"
 msgstr "Stop by failure"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Parado por error>"
 msgstr "Stop by failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "ErrorDriver"
 msgstr "DriverFailure"
 
 msgid "Error driver"
 msgstr "Driver failure"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Error driver>"
 msgstr "Driver failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "ErrorTermo"
 msgstr "TermoFailure"
 
 msgid "Error termostato"
 msgstr "Thermostat failure"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Error termostato>"
 msgstr "Thermostat failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "Limitando"
 msgstr "Pre-Overload"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Limitando>"
 msgstr "Pre-Overload"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "ErrorFusible"
 msgstr "FuseFailure"
 
 msgid "Error fusible"
 msgstr "Fuse failure"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Error fusible>"
 msgstr "Fuse failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "AlarmaPLL"
 msgstr "PLLFailure"
 
 msgid "Alarma PLL"
 msgstr "PLL failure"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Alarma PLL>"
 msgstr "PLL failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "Fallo Com.DSP"
 msgstr "DSP Comm. Error"
 
 msgid "Error de comunicación con DSP"
 msgstr "DSP Communication Failure"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Error de comunicacion con DSP>"
 msgstr "DSP Communication Failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "CambioEstado"
 msgstr "Status Change"
 
 msgid "Cambio de estado"
 msgstr "Change of Status"
 
-#. SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
 msgid "<Cambio de estado>"
 msgstr "Change of Status"
 
-#. Ocupar 11 caracteres! [usar espacios]
+#. 11 characters wide [use blanks]
 msgid "   LEVE    "
 msgstr "  MINOR    "
 
-#. Ocupar 11 caracteres! [usar espacios]
+#. 11 characters wide [use blanks]
 msgid "PERSISTENTE"
 msgstr "PERSISTENT "
 
-#. Ocupar 11 caracteres! [usar espacios]
+#. 11 characters wide [use blanks]
 msgid "   GRAVE   "
 msgstr "  SERIOUS  "
 
-#. Ocupar 11 caracteres! [usar espacios]
+#. 11 characters wide [use blanks]
 msgid "   SEVERA  "
 msgstr "  SEVERE   "
 
@@ -566,11 +619,9 @@ msgstr ""
 msgid "LEVE"
 msgstr "MINOR"
 
-#. Solo caracteres alfabeto SMS [GSM 03.38]
 msgid "GRAVE"
 msgstr "SERIOUS"
 
-#. Solo caracteres alfabeto SMS [GSM 03.38]
 msgid "SEVERA"
 msgstr "SEVERE"
 
@@ -580,129 +631,149 @@ msgstr ""
 msgid "Espera Carga"
 msgstr "Pre-Charging"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Espera Carga_"
 msgstr "Pre-Charging"
 
 msgid "Espera ON"
 msgstr "Pre-ON"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Espera ON_"
 msgstr "Pre-ON"
 
 msgid "ON"
 msgstr ""
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Sobrecarga_"
 msgstr "Overload"
 
 msgid "Fallo tensión instantánea"
 msgstr "Instantaneous voltage failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Fallo V Inst_"
 msgstr "InstVFailure"
 
 msgid "Fallo de red"
 msgstr "Mains failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Fallo Red_"
 msgstr "Mains failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_V Bus Minima_"
 msgstr "Minimum Bus V"
 
 msgid "Hueco máximo"
-msgstr "Maximum Gap"
+msgstr "Maximum Sag"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Hueco Maximo_"
-msgstr "Maximum Gap"
+msgstr "Maximum Sag"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Alarma Driver_"
 msgstr "Driver Alarm"
 
 msgid "Espera OFF"
 msgstr "Pre-OFF"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Espera OFF_"
 msgstr "Pre-OFF"
 
 msgid "Error de precarga"
 msgstr "Pre-Charging failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Error precarga_"
 msgstr "Pre-Charging failure"
 
 msgid "Error tensión de condensador"
 msgstr "Capacitor voltage failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Error VCond_"
 msgstr "Cap V Failure"
 
 msgid "Error tensión de bus máxima"
 msgstr "Maximum bus voltage failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Error VBusMax_"
 msgstr "MaxBusV Failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Error Termo_"
 msgstr "Termo Failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Error Driver_"
 msgstr "Driver Failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Error Fusible_"
 msgstr "Fuse Failure"
 
 msgid "Error temperatura"
 msgstr "Temperature failure"
 
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "_Error Temp_"
 msgstr "Temp. Failure"
 
 msgid "Activación"
 msgstr "Activation"
 
-#. Solo caracteres alfabeto SMS [GSM 03.38]
-msgid "Activacion"
+#. SMS characters only [GSM 03.38]
+msgid "<Activacion>"
 msgstr "Activation"
 
 msgid "Desactivación"
 msgstr "Deactivation"
 
-#. Solo caracteres alfabeto SMS [GSM 03.38]
-msgid "Desactivacion"
+#. SMS characters only [GSM 03.38]
+msgid "<Desactivacion>"
 msgstr "Deactivation"
 
-#. Solo caracteres alfabeto SMS [GSM 03.38]
 msgid "Reconocida"
 msgstr "Recognised"
 
-#. Solo caracteres alfabeto SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
+msgid "<Reconocida>"
+msgstr "Recognised"
+
 msgid "Bloqueada"
 msgstr "Blocked"
 
-#. Solo caracteres alfabeto SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
+msgid "<Bloqueada>"
+msgstr "Blocked"
+
 msgid "Leve"
 msgstr "Minor"
 
-#. Solo caracteres alfabeto SMS [GSM 03.38]
+#. SMS characters only [GSM 03.38]
+msgid "<Leve>"
+msgstr "Minor"
+
 msgid "Persistente"
 msgstr "Persistent"
+
+#. SMS characters only [GSM 03.38]
+msgid "<Persistente>"
+msgstr "Persistent"
+
+#. SMS characters only [GSM 03.38]
+msgid "<GRAVE>"
+msgstr "SERIOUS"
+
+#. SMS characters only [GSM 03.38]
+msgid "<SEVERA>"
+msgstr "SEVERE"
 
 msgid "SI"
 msgstr "YES"
@@ -740,11 +811,15 @@ msgstr "Temporary"
 msgid "Trabajo"
 msgstr "Active"
 
-msgid "Español"
-msgstr "Spanish"
-
 msgid "Inglés"
 msgstr "English"
+
+#. Maximum 16 characters & ASCII only
+msgid "Chino"
+msgstr "Chinese"
+
+msgid "Español"
+msgstr "Spanish"
 
 msgid "OCUPADO"
 msgstr "BUSY"
@@ -801,7 +876,7 @@ msgid "Error, no se pudo resetear alarma."
 msgstr "Alarm Reset error."
 
 msgid "Ultimo Hueco"
-msgstr "Last Gap"
+msgstr "Last Sag"
 
 msgid "Mínimo"
 msgstr "Minimum"
@@ -809,17 +884,23 @@ msgstr "Minimum"
 msgid "Duración"
 msgstr "Duration"
 
+msgid "Error, introduce de nuevo el password"
+msgstr "Failure, enter password again"
+
+msgid "Error, introduce de nuevo"
+msgstr "Failure, enter again"
+
 msgid "Aceptar"
 msgstr "Accept"
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Password:           \n"
 "    %s    "
 msgstr ""
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 msgid ""
 "PROCESANDO...\n"
 "ESPERE          "
@@ -827,7 +908,7 @@ msgstr ""
 "PROCESSING...\n"
 "PLEASE WAIT     "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "ESTADO CONTROL\n"
@@ -836,7 +917,7 @@ msgstr ""
 "CONTROL STATUS\n"
 "   %s           "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "EVENTOS        >\n"
@@ -845,18 +926,18 @@ msgstr ""
 "EVENTS         >\n"
 "%8s events      "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "%s\n"
 "%02d %02d/%02d %s"
 msgstr ""
 
-#. Ocupar 7 caracteres! [usar espacios]
+#. 7 characters wide [use blanks]
 msgid "Reset? "
 msgstr ""
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 msgid ""
 "MEDIDAS        >\n"
 "                "
@@ -864,7 +945,7 @@ msgstr ""
 "MEASURES       >\n"
 "                "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 msgid ""
 "ENTRADA        >\n"
 "                "
@@ -872,7 +953,7 @@ msgstr ""
 "INPUT          >\n"
 "                "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Tension Ent.(%s)\n"
@@ -881,7 +962,7 @@ msgstr ""
 "In. Voltage (%s)\n"
 "%4s %4s %4s"
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 msgid ""
 "RECTIFICADOR   >\n"
 "                "
@@ -889,7 +970,7 @@ msgstr ""
 "RECTIFIER      >\n"
 "                "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Tension Bus\n"
@@ -898,14 +979,14 @@ msgstr ""
 "Bus Voltage\n"
 "%10s V          "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Bypass\n"
 "   %s           "
 msgstr ""
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 msgid ""
 "SALIDA         >\n"
 "                "
@@ -913,7 +994,7 @@ msgstr ""
 "OUTPUT         >\n"
 "                "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Tension Sal.(%s)\n"
@@ -922,7 +1003,7 @@ msgstr ""
 "Out. Voltage(%s)\n"
 "%4s %4s %4s"
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Corriente Salida\n"
@@ -931,7 +1012,7 @@ msgstr ""
 "Output Current\n"
 "%3s %3s %3s  (A)"
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Potencia Sal. kW\n"
@@ -940,7 +1021,7 @@ msgstr ""
 "Output Power kW\n"
 "%3s %3s %3s"
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 msgid ""
 "CONFIGURACION  >\n"
 "                "
@@ -948,7 +1029,7 @@ msgstr ""
 "CONFIGURATION  >\n"
 "                "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Tension Nominal\n"
@@ -957,7 +1038,7 @@ msgstr ""
 "Nominal Voltage\n"
 "%10s V          "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "V minima DVR\n"
@@ -966,7 +1047,7 @@ msgstr ""
 "Min. DVR Voltage\n"
 "%10s V          "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Frecuencia Nom.\n"
@@ -975,7 +1056,7 @@ msgstr ""
 "Nom. Frequency\n"
 "%10s Hz         "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Num. equipos\n"
@@ -984,7 +1065,7 @@ msgstr ""
 "Unit Number\n"
 "%10s            "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Fecha (aa/mm/dd)\n"
@@ -993,7 +1074,7 @@ msgstr ""
 "Date  (yy/mm/dd)\n"
 "%s  "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Direccion IP\n"
@@ -1002,7 +1083,7 @@ msgstr ""
 "IP Address\n"
 "%03d.%03d.%03d.%03d "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Mascara de red\n"
@@ -1011,14 +1092,14 @@ msgstr ""
 "Network Mask\n"
 "%03d.%03d.%03d.%03d "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Gateway\n"
 "%03d.%03d.%03d.%03d "
 msgstr ""
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Idioma\n"
@@ -1027,34 +1108,22 @@ msgstr ""
 "Language\n"
 "   %s           "
 
-#. Maximo 16 caracteres! Solo ASCII [LCD]
-msgid "Castellano"
-msgstr "Spanish"
-
-#. Maximo 16 caracteres! Solo ASCII
+#. Maximum 16 characters & ASCII only
 msgid "Ingles"
 msgstr "English"
 
-#. Maximo 16 caracteres! Solo ASCII
-msgid "Frances"
-msgstr "French"
+#. Maximum 16 characters & ASCII only
+msgid "Espanol"
+msgstr "Spanish"
 
-#. Maximo 16 caracteres! Solo ASCII
-msgid "Italiano"
-msgstr "Italian"
-
-#. Maximo 16 caracteres! Solo ASCII
-msgid "Aleman"
-msgstr "German"
-
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "Firmware\n"
 "%s              "
 msgstr ""
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 msgid ""
 "Cambiar nivel\n"
 "  de acceso     "
@@ -1062,7 +1131,7 @@ msgstr ""
 "Change Access\n"
 "   Level        "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 msgid ""
 "ACTUACIONES    >\n"
 "                "
@@ -1070,7 +1139,7 @@ msgstr ""
 "SETTINGS       >\n"
 "                "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "MARCHA\n"
@@ -1079,7 +1148,7 @@ msgstr ""
 "START\n"
 "   %s           "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "PARO\n"
@@ -1088,7 +1157,7 @@ msgstr ""
 "STOP\n"
 "   %s           "
 
-#. formato: <Maximo 16 caracteres!>\n<Maximo 16 caracteres!>
+#. format: <Maximum 16 characters>\n<Maximum 16 characters>
 #, c-format
 msgid ""
 "RESET\n"
@@ -1138,8 +1207,14 @@ msgstr "Condition"
 msgid "Severidad"
 msgstr "Severity"
 
-# Traducciones a mano
-#####################
+msgid "Activacion"
+msgstr "Activation"
+
+msgid "Desactivacion"
+msgstr "Deactivation"
+
+# Manual translation texts
+##########################
 
 msgid "minutos"
 msgstr "minutes"

@@ -2701,6 +2701,7 @@ Inglés
 
 <widget class="GtkWindow" id="window2">
   <property name="visible">True</property>
+  <property name="events">GDK_BUTTON_PRESS_MASK</property>
   <property name="title" translatable="yes">LOGIN</property>
   <property name="type">GTK_WINDOW_TOPLEVEL</property>
   <property name="window_position">GTK_WIN_POS_CENTER_ALWAYS</property>
@@ -2829,6 +2830,8 @@ Inglés
 			  <property name="can_default">True</property>
 			  <property name="can_focus">True</property>
 			  <property name="has_focus">True</property>
+			  <property name="events">GDK_BUTTON_PRESS_MASK</property>
+			  <property name="extension_events">GDK_EXTENSION_EVENTS_ALL</property>
 			  <property name="editable">True</property>
 			  <property name="visibility">False</property>
 			  <property name="max_length">10</property>
@@ -2846,6 +2849,34 @@ Inglés
 		      </child>
 
 		      <child>
+			<widget class="GtkToggleButton" id="tbtkb1">
+			  <property name="visible">True</property>
+			  <property name="can_focus">True</property>
+			  <property name="relief">GTK_RELIEF_NORMAL</property>
+			  <property name="focus_on_click">False</property>
+			  <property name="active">False</property>
+			  <property name="inconsistent">False</property>
+
+			  <child>
+			    <widget class="GtkImage" id="image24">
+			      <property name="visible">True</property>
+			      <property name="stock">gtk-index</property>
+			      <property name="icon_size">4</property>
+			      <property name="xalign">0.5</property>
+			      <property name="yalign">0.5</property>
+			      <property name="xpad">0</property>
+			      <property name="ypad">0</property>
+			    </widget>
+			  </child>
+			</widget>
+			<packing>
+			  <property name="padding">0</property>
+			  <property name="expand">False</property>
+			  <property name="fill">False</property>
+			</packing>
+		      </child>
+
+		      <child>
 			<widget class="GtkButton" id="login_button">
 			  <property name="visible">True</property>
 			  <property name="can_default">True</property>
@@ -2854,7 +2885,7 @@ Inglés
 			  <property name="label">gtk-ok</property>
 			  <property name="use_stock">True</property>
 			  <property name="relief">GTK_RELIEF_NORMAL</property>
-			  <property name="focus_on_click">True</property>
+			  <property name="focus_on_click">False</property>
 			</widget>
 			<packing>
 			  <property name="padding">0</property>
@@ -2869,6 +2900,228 @@ Inglés
 		  <property name="padding">0</property>
 		  <property name="expand">True</property>
 		  <property name="fill">False</property>
+		</packing>
+	      </child>
+
+	      <child>
+		<widget class="GtkHButtonBox" id="hbtbox1kb1">
+		  <property name="visible">True</property>
+		  <property name="layout_style">GTK_BUTTONBOX_DEFAULT_STYLE</property>
+		  <property name="spacing">0</property>
+
+		  <child>
+		    <widget class="GtkButton" id="bt1kb1">
+		      <property name="width_request">12</property>
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="label" translatable="yes">1</property>
+		      <property name="use_underline">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkButton" id="bt2kb1">
+		      <property name="width_request">12</property>
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="label" translatable="yes">2</property>
+		      <property name="use_underline">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkButton" id="bt3kb1">
+		      <property name="width_request">12</property>
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="label" translatable="yes">3</property>
+		      <property name="use_underline">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+		    </widget>
+		  </child>
+		</widget>
+		<packing>
+		  <property name="padding">0</property>
+		  <property name="expand">True</property>
+		  <property name="fill">True</property>
+		</packing>
+	      </child>
+
+	      <child>
+		<widget class="GtkHButtonBox" id="hbtbox2kb1">
+		  <property name="visible">True</property>
+		  <property name="layout_style">GTK_BUTTONBOX_DEFAULT_STYLE</property>
+		  <property name="spacing">0</property>
+
+		  <child>
+		    <widget class="GtkButton" id="bt4kb1">
+		      <property name="width_request">12</property>
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="label" translatable="yes">4</property>
+		      <property name="use_underline">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkButton" id="bt5kb1">
+		      <property name="width_request">12</property>
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="label" translatable="yes">5</property>
+		      <property name="use_underline">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkButton" id="bt6kb1">
+		      <property name="width_request">12</property>
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="label" translatable="yes">6</property>
+		      <property name="use_underline">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+		    </widget>
+		  </child>
+		</widget>
+		<packing>
+		  <property name="padding">0</property>
+		  <property name="expand">True</property>
+		  <property name="fill">True</property>
+		</packing>
+	      </child>
+
+	      <child>
+		<widget class="GtkHButtonBox" id="hbtbox3kb1">
+		  <property name="visible">True</property>
+		  <property name="layout_style">GTK_BUTTONBOX_DEFAULT_STYLE</property>
+		  <property name="spacing">0</property>
+
+		  <child>
+		    <widget class="GtkButton" id="bt7kb1">
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="label" translatable="yes">7</property>
+		      <property name="use_underline">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkButton" id="bt8kb1">
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="label" translatable="yes">8</property>
+		      <property name="use_underline">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkButton" id="bt9kb1">
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="label" translatable="yes">9</property>
+		      <property name="use_underline">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+		    </widget>
+		  </child>
+		</widget>
+		<packing>
+		  <property name="padding">0</property>
+		  <property name="expand">True</property>
+		  <property name="fill">True</property>
+		</packing>
+	      </child>
+
+	      <child>
+		<widget class="GtkHButtonBox" id="hbtbox4kb1">
+		  <property name="visible">True</property>
+		  <property name="layout_style">GTK_BUTTONBOX_DEFAULT_STYLE</property>
+		  <property name="spacing">0</property>
+
+		  <child>
+		    <widget class="GtkButton" id="btClosekb1">
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+
+		      <child>
+			<widget class="GtkImage" id="image26">
+			  <property name="visible">True</property>
+			  <property name="stock">gtk-close</property>
+			  <property name="icon_size">4</property>
+			  <property name="xalign">0.5</property>
+			  <property name="yalign">0.5</property>
+			  <property name="xpad">0</property>
+			  <property name="ypad">0</property>
+			</widget>
+		      </child>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkButton" id="bt0kb1">
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="label" translatable="yes">0</property>
+		      <property name="use_underline">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkButton" id="btDelkb1">
+		      <property name="visible">True</property>
+		      <property name="can_default">True</property>
+		      <property name="can_focus">True</property>
+		      <property name="relief">GTK_RELIEF_NORMAL</property>
+		      <property name="focus_on_click">False</property>
+
+		      <child>
+			<widget class="GtkImage" id="image25">
+			  <property name="visible">True</property>
+			  <property name="stock">gtk-go-back</property>
+			  <property name="icon_size">4</property>
+			  <property name="xalign">0.5</property>
+			  <property name="yalign">0.5</property>
+			  <property name="xpad">0</property>
+			  <property name="ypad">0</property>
+			</widget>
+		      </child>
+		    </widget>
+		  </child>
+		</widget>
+		<packing>
+		  <property name="padding">0</property>
+		  <property name="expand">True</property>
+		  <property name="fill">True</property>
 		</packing>
 	      </child>
 

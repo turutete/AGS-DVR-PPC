@@ -35,7 +35,8 @@ PATH_ACTIVA_TOOLS="${PATH_ACTIVA}/tools"
 #Xvnc :1 -depth 16 -geometry 640x480 -nocursor -alwaysshared -desktop zigor &
 #Xvnc :1 -dpi 96 -depth 16 -geometry 640x480 -nocursor -alwaysshared -desktop zigor &
 ###Xvnc :1 -dpi 88 -depth 16 -geometry 640x480 -nocursor -alwaysshared -desktop zigor &
-Xvnc :1 -rfbport $$zigorNetPortVnc.0 -dpi 88 -depth 16 -geometry 640x480 -nocursor -alwaysshared -desktop zigor &
+#Xvnc :1 -rfbport $$zigorNetPortVnc.0 -dpi 88 -depth 16 -geometry 640x480 -nocursor -alwaysshared -desktop zigor &
+Xvnc :1 -rfbport $$zigorNetPortVnc.0 -dpi 88 -depth 16 -geometry 1024x600 -nocursor -alwaysshared -desktop zigor -fp /usr/share/fonts/misc &
 
 sleep 1
 
@@ -43,7 +44,7 @@ sleep 1
 #vease /usr/X11R6/lib/X11/rgb.txt
 #${PATH_ACTIVA_TOOLS}/xsetroot -d :1 -solid "light steel blue"
 #${PATH_ACTIVA_TOOLS}/xsetroot -d :1 -solid "sky blue"
-Fondo para DVR:
+#Fondo para DVR:
 ${PATH_ACTIVA_TOOLS}/xsetroot -d :1 -solid "rgb:20/20/20"
 
 ]]
