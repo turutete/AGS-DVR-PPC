@@ -1,8 +1,26 @@
 require "functions"
 
+function snmpd_conf_get(this, sds, oids)
+   if not oids then oids = _G end -- Si no se especifica tabla de OIDs se supone global
+
+   -- Sustituimos subidentificadores por OIDs
+   local t=string.gsub(this.tmpl, "%$(%w+)", function (k) return oids[k] or "$" .. k end)
+   -- Sustituimos OIDs por valor
+   t=string.gsub(t, "%$([%.%d]+)", function (k) local v=access.get(sds, k) return v end)
+
+   t=string.gsub(t, "_DISABLE_SNMP_", function (k)
+                                         if access.get(sds, zigorNetEnableSnmp .. ".0")==2 then
+                                            return "agentaddress localhost:161"
+                                         else
+                                            return ""
+                                         end
+                                      end)
+   return t
+end
+
 local this  = {
    file     = "/etc/snmp/snmpd.conf",
-   get      = tmpl_get,
+   get      = snmpd_conf_get,
    save     = tmpl_save,   
    restart  = tmpl_service_restart,
    _service = "snmpd",
@@ -261,6 +279,7 @@ master  yes
 # por "broken pipe" (SIGPIPE)
 AgentXTimeout 90
 
+_DISABLE_SNMP_
 ]]
 
 }

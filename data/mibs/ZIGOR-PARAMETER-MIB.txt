@@ -892,6 +892,22 @@ zigorNetSmtpTest OBJECT-TYPE
 		"SMTP email for test. (Only in firmware >=1.1.2)"
 	::= { zigorParamNet 16 }
 
+zigorNetVncPassword OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Password for incoming VNC connections."
+	::= { zigorParamNet 17 }
+
+zigorNetEnableSnmp OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Enable the SNMP server external connections."
+	::= { zigorParamNet 18 }
+
 -- Control
 zigorCtrlParamState OBJECT-TYPE
 	SYNTAX		ParamState

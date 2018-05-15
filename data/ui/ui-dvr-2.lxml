@@ -85,6 +85,8 @@ $passwords
         <var key="$zigorDialUpSmsNum4.0" name="Número 4 para envio SMS" />
         <var key="$zigorNetPortHttp.0" name="Puerto TCP acceso HTTP" />
         <var key="$zigorNetPortVnc.0"  name="Puerto TCP aplicación a través de HTTP" />
+        <var key="$zigorNetVncPassword.0"  name="VNC Server password" />
+        <var key="$zigorNetEnableSnmp.0"  enum="enum_SiNo" name="Habilitar Servidor SNMP" />
       </node>
     </node>
     <node pic="cfg" name="DVR" >

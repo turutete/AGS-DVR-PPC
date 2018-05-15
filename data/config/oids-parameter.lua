@@ -38,6 +38,8 @@ zigorNetSmtpPass = zigorParamNet .. ".13"
 zigorNetSmtpEmail = zigorParamNet .. ".14"
 zigorNetSmtpAuth = zigorParamNet .. ".15"
 zigorNetSmtpTest = zigorParamNet .. ".16"
+zigorNetVncPassword = zigorParamNet .. ".17"
+zigorNetEnableSnmp = zigorParamNet .. ".18"
 --
 zigorParamDialUp = zigorParameter .. ".3"
 zigorDialUpPin = zigorParamDialUp .. ".1"

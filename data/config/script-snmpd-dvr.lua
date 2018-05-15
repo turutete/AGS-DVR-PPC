@@ -558,6 +558,11 @@ local function setsig_handler(sds, k, v, data)
 		  end
 	       end
 	    end
+
+	    if changes[zigorNetVncPassword] then
+	       password = access.get(sds, zigorNetVncPassword .. ".0")
+	       os.execute("echo " .. password .. " | vncpasswd -f > /etc/.vncpasswd")
+	    end
 	    --
 	    changes={}
 	    -- grabar configuración sistema y reiniciar servicios en la próxima iteración del "mainloop"

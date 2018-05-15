@@ -479,6 +479,8 @@ local displays = {
    [ zigorModbusMode .. ".0"     ] = displays_dvr.display_MBMode,
    ---
    [ zigorCtrlParamDemo .. ".0"            ] = displays_dvr.display_SiNo_GR,
+   [ zigorNetEnableSnmp .. ".0"            ] = displays_dvr.display_SiNo_GR,
+   [ zigorNetVncPassword .. ".0"           ] = displays_dvr.display_PasswordPass,
 }
 
 --- Actualizar la info de 'pic' si tabla de displays en otro fichero (y en ese fichero ahora el valor de pic convertir a texto)
