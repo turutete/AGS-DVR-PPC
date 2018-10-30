@@ -284,3 +284,10 @@ function setlocale(sds, language)
    print(">>>setlocale:",lang)
    i18n.setlocale(lang)
 end
+
+--
+-- Lee un archivo con dofile, se usa para poder usar pcall() y detectar errores 
+--
+function dofile_protected(filename)
+   return dofile(filename)
+end
