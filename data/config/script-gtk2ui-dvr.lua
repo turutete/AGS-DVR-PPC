@@ -56,6 +56,8 @@ local w_button_ok     = gobject.get_data(ui, "button_ok")
 local w_button_cancel = gobject.get_data(ui, "button_cancel")
 
 local w_image_heartbeat   = gobject.get_data(ui, "image_heartbeat")
+local w_event_alarm_state_img = gobject.get_data(ui, "event_alarm_state_img")
+local w_event_level = gobject.get_data(ui, "event_label_level")
 
 -- sinoptico
 local pb_sin = gobject.get_data(pixbufs, "sinoptico")
@@ -596,6 +598,7 @@ gobject.connect(w_button_alarms, "clicked", p_alarms )
 gobject.connect(w_button_hevent, "clicked", p_hevent )
 gobject.connect(w_button_huecos_heventos, "clicked", p_hevent )
 gobject.connect(w_button_huecos, "clicked", p_huecos )
+gobject.connect(w_event_alarm_state_img, "button_press_event", p_alarms)
 gobject.connect(w_button_term,   "clicked",
 	function(w, ml)
 		--if remote==0 then
@@ -1421,28 +1424,28 @@ local top_id
 ----------
 -- Mostrar ventana de login de acceso:
 local w_level_params_button = gobject.get_data(ui, "level_params_button")
-if remote==1 then  -- ocultar en modo remoto
-   gobject.set_property(w_level_params_button, "visible", false)
-end
-gobject.connect(w_level_params_button, "clicked", function()
+function mostrar_login()
    print("w_level_params_button")
    if top_id then
       gtk.statusbar_pop(sb, "login", top_id)
    end
-   ----top_id=gtk.statusbar_push(sb, "login", _g("Introduce password"))
 
    -- intento ocultar cursor en display local (Xfbdev) en pantalla de login (uso xsetroot -cursor)
    os.execute("/usr/local/zigor/activa/tools/hide_cursor.sh")
 
    gobject.set_property(vbox1, "visible", false)
    gobject.set_property(loginwindow, "visible", true)
+end
 
-   --gtk.window_set_keep_above(window2, true)
-   --gobject.set_property(window2, "opacity", 1)
-   --gtk.window_set_opacity(window2, 1) -- need an X11 Composite Window Manager I suppose
-   --zkbd=io.open("/dev/kbde", "w")
-end)
-    
+----------
+-- Mostrar ventana de login de acceso:
+if remote==1 then  -- ocultar en modo remoto
+   gobject.set_property(w_level_params_button, "visible", false)
+end
+
+gobject.connect(w_level_params_button, "clicked", mostrar_login)
+gobject.connect(w_event_level, "button_press_event", mostrar_login)
+
 --gobject.set_property(logo, "pixbuf", gobject.get_data(pixbufs, "logo") )
     
 ----------
