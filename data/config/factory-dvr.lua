@@ -40,7 +40,7 @@ local param = {
    [ zigorSysLogoutTimeout .. ".0"  ] = 5,  -- minutes
    ---
    -- ParamNet
-   [ zigorNetIP .. ".0"             ] = "192.168.3.1",
+   [ zigorNetIP .. ".0"             ] = "192.168.4.13",
    [ zigorNetMask .. ".0"           ] = "255.255.0.0",
    [ zigorNetGateway .. ".0"        ] = "192.168.3.254",
 --   [ zigorNetPortVnc .. ".0"        ] = "5901",
