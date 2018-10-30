@@ -107,6 +107,7 @@ local function update_log_html(sds)
       end
       fd:write("</tbody></table>\n</body>\n</html>\n")
       fd:close()
+      os.execute("sync")
 end
 
 local function create_log_html()
@@ -156,6 +157,7 @@ tbody tr:nth-child(even) {
       fd:close()
    end
    os.execute("cp /home/user/alarmlog.html /home/user/alarmlog2.html")
+   os.execute("sync")
 end
 
 local id=1
@@ -198,13 +200,16 @@ local function insert_log_row(sds,descr,time,element,cond, init)
 	 cond    = cond,
       }
       local serial_t=serialize(t)
-      local fd=io.open("../share/config/alarmlog-" .. profile .. ".lua", "w+") -- XXX path y sufijo "hardcoded"
+      local filename = "../share/config/alarmlog-" .. profile .. ".lua"
+      local filename_tmp = filename .. "_tmp"
+      local fd=io.open(filename_tmp, "w+") -- XXX path y sufijo "hardcoded"
       fd:write('local alarmlog = ')
       fd:write( serial_t )
       fd:write('\n\n')
       fd:write('return alarmlog,'.. tostring(id) ..','.. tostring(queue_wraps) ..'\n')
       fd:close()
-      
+      os.execute("mv " .. filename_tmp .. " " .. filename)
+      os.execute("sync")
       -- update_log_html(sds)
       -------------
       -- (new) html & csv! (idea sólo en inglés para simplificar)
@@ -277,7 +282,7 @@ local function insert_log_row(sds,descr,time,element,cond, init)
       local cmd="cp /var/log/alarmlog_tmp.html /home/user/alarmlog.html"
       --print(cmd)
       os.execute(cmd)
-
+      os.execute("sync")
       --- Nuevo fichero con info extra
       print("alarmlog2 html file!")
       local fd=io.open("/var/log/alarmlog2_tmp.html", "w")
@@ -322,7 +327,7 @@ local function insert_log_row(sds,descr,time,element,cond, init)
       local cmd="cp /var/log/alarmlog2_tmp.html /home/user/alarmlog2.html"
       --print(cmd)
       os.execute(cmd)
-      
+      os.execute("sync")
       -- csv file
       --print("csv file!")
       fd=io.open("/var/log/alarmlog_tmp.csv", "w")
@@ -333,6 +338,7 @@ local function insert_log_row(sds,descr,time,element,cond, init)
       cmd='head -n '..tostring(LOG_MAX-1)..' /home/user/alarmlog.csv >>/var/log/alarmlog_tmp.csv; cp /var/log/alarmlog_tmp.csv /home/user/alarmlog.csv'
       --print(cmd)
       os.execute(cmd)
+      os.execute("sync")
       ----------
 
       -- Emitir notificación de nueva fila insertada en histórico
@@ -410,7 +416,18 @@ function alarmlogtable_new(params)
 		  end
 
    local init = function()
-		   local t,last_id,last_queue_wraps=dofile("../share/config/alarmlog-" .. profile .. ".lua") -- XXX path y sufijo "hardcoded"
+                   local t,last_id, last_queue_wraps
+                   local filename = "../share/config/alarmlog-" .. profile .. ".lua"
+                   if (pcall(dofile_protected, filename)) then
+                      t,last_id,last_queue_wraps=dofile_protected(filename)
+                   else
+                      t = {}
+                      fd=io.open(filename, "w+")
+                      fd:write('return {}\n')
+                      fd:close()
+                      os.execute("sync")
+                      print("Fallo al leer archivo " .. filename)
+                   end
 		   -- (new) seguridad!
 		   if t~=nil then
 		    for i,v in pairs(t) do
@@ -454,6 +471,7 @@ function alarmlogtable_new(params)
 		      cmd = [[echo >/home/user/alarmlog.csv]]
 		      print(cmd)
 		      os.execute(cmd)
+		      os.execute("sync")
 		   end
 
    --[[
