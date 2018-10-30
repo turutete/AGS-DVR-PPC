@@ -169,6 +169,7 @@ tbody tr:nth-child(even) {
       fd:close()
    end
    os.execute("cp /home/user/saglog.html /home/user/saglog2.html")
+   os.execute("sync")
 end
 
 local id=1
@@ -213,13 +214,17 @@ local function insert_log_row(sds,time,minimo,integral,tiempo,fase, init)
 	 fase    = fase,
       }
       local serial_t=serialize(t)
-      local fd=io.open("../share/config/gaplog-" .. profile .. ".lua", "w+") -- XXX path y sufijo "hardcoded"
+      local filename = "../share/config/gaplog-" .. profile .. ".lua"
+      local filename_tmp = filename .. "_tmp"
+      local fd=io.open(filename_tmp, "w+") -- XXX path y sufijo "hardcoded"
       fd:write('local gaplog = ')
       fd:write( serial_t )
       fd:write('\n\n')
       fd:write('return gaplog,'.. tostring(id) ..','.. tostring(queue_wraps) ..'\n')
       fd:close()
-      
+      os.execute("mv " .. filename_tmp .. " " .. filename)
+      os.execute("sync")
+
       --update_gaplog_html(sds)
       -- (new) html & csv! (idea sólo en inglés para simplificar)
       setlocale(sds, "en_GB.utf8")   -- require "functions" required.
@@ -285,7 +290,7 @@ local function insert_log_row(sds,time,minimo,integral,tiempo,fase, init)
       local cmd="cp /var/log/saglog_tmp.html /home/user/saglog.html"
       print(cmd)
       os.execute(cmd)
-      
+      os.execute("sync")
       --- Nuevo fichero con info extra
       print("saglog2 html file!")
       local fd=io.open("/var/log/saglog2_tmp.html", "w")
@@ -330,6 +335,7 @@ local function insert_log_row(sds,time,minimo,integral,tiempo,fase, init)
       local cmd="cp /var/log/saglog2_tmp.html /home/user/saglog2.html"
       --print(cmd)
       os.execute(cmd)
+      os.execute("sync")
 
       -- csv file
       print("saglog csv file!")
@@ -341,6 +347,7 @@ local function insert_log_row(sds,time,minimo,integral,tiempo,fase, init)
       cmd='head -n '..tostring(LOG_MAX-1)..' /home/user/saglog.csv >>/var/log/saglog_tmp.csv; cp /var/log/saglog_tmp.csv /home/user/saglog.csv'
       print(cmd)
       os.execute(cmd)
+      os.execute("sync")
       ----------
 
       -- Emitir notificación de nueva fila insertada en histórico
@@ -367,9 +374,21 @@ local function gaplog_set(sds, date, minimo, integral, tiempo, fase)
 	       end
 
 local function gaplog_init(sds)
-		   local t,last_id,last_queue_wraps=dofile("../share/config/gaplog-" .. profile .. ".lua") -- XXX path y sufijo "hardcoded"
+                   local t,last_id, last_queue_wraps
+                   local filename = "../share/config/gaplog-" .. profile .. ".lua"
+                   if (pcall(dofile_protected, filename)) then
+                      t,last_id,last_queue_wraps=dofile_protected(filename)
+                   else
+                      t = {}
+                      fd=io.open(filename, "w+")
+                      fd:write('return {}\n')
+                      fd:close()
+                      os.execute("sync")
+                      print("Fallo al leer archivo " .. filename)
+                   end
 		   if t~=nil then
-		    for i,v in pairs(t) do
+		    for i = 1, #t do
+		      v = t[i]
 		      insert_log_row(sds, v.time, v.minimo, v.integral, v.tiempo, v.fase, true)
 		    end
 		   end
@@ -407,6 +426,7 @@ local function gaplog_del_log(sds)
 		      cmd = [[echo >/home/user/saglog.csv]]
 		      print(cmd)
 		      os.execute(cmd)
+		      os.execute("sync")
 		   end
 
 
