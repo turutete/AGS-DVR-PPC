@@ -2,7 +2,7 @@ require "oids-zigor"
 
 zigorParameter = zigorExperiment .. ".3"
 
--- Parámetros
+-- Parï¿½metros
 zigorParamSystem   = zigorParameter .. ".1"
 zigorSysName       = zigorParamSystem .. ".1"
 zigorSysDescr      = zigorParamSystem .. ".2"
@@ -40,6 +40,7 @@ zigorNetSmtpAuth = zigorParamNet .. ".15"
 zigorNetSmtpTest = zigorParamNet .. ".16"
 zigorNetVncPassword = zigorParamNet .. ".17"
 zigorNetEnableSnmp = zigorParamNet .. ".18"
+zigorNetEnableSSH = zigorParamNet .. ".19"
 --
 zigorParamDialUp = zigorParameter .. ".3"
 zigorDialUpPin = zigorParamDialUp .. ".1"

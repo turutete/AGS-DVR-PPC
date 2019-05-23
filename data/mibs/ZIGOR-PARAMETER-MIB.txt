@@ -907,6 +907,14 @@ zigorNetEnableSnmp OBJECT-TYPE
 	DESCRIPTION
 		"Enable the SNMP server external connections."
 	::= { zigorParamNet 18 }
+	
+zigorNetEnableSSH OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Enable the SSH server remote access."
+	::= { zigorParamNet 19 }
 
 -- Control
 zigorCtrlParamState OBJECT-TYPE
