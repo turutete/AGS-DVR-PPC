@@ -1224,3 +1224,6 @@ msgstr "seconds"
 
 msgid "Habilitar Servidor SNMP"
 msgstr "Enable SNMP Server"
+
+msgid "Habilitar Servicio SSH"
+msgstr "Enable SSH Service"

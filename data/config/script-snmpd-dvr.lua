@@ -583,6 +583,19 @@ local function setsig_handler(sds, k, v, data)
 	       password = access.get(sds, zigorNetVncPassword .. ".0")
 	       os.execute("echo " .. password .. " | vncpasswd -f > /etc/.vncpasswd")
 	    end
+		
+		-- SSH deshabilitar/habilitar
+	    if changes[zigorNetEnableSSH] then
+	       sshEnabled = access.get(sds, zigorNetEnableSSH .. ".0")
+	       if sshEnabled == 1 then
+	               os.execute("ln -s /etc/init.d/dropbear /etc/runlevels/default/dropbear")
+	               os.execute("/etc/init.d/dropbear restart")
+	       else
+	               os.execute("rm -f /etc/runlevels/default/dropbear")
+	               os.execute("/etc/init.d/dropbear stop")
+	       end
+	    end
+		
 	    --
 	    changes={}
 	    -- grabar configuración sistema y reiniciar servicios en la próxima iteración del "mainloop"

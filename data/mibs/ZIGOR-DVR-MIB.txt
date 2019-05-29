@@ -145,7 +145,7 @@ zigorDvrObjVSecundarioT OBJECT-TYPE
 	::= { zigorDvrObjEstado 6 }
 
 zigorDvrObjISecundarioR OBJECT-TYPE
-	SYNTAX		INTEGER (0..10000)
+	SYNTAX		INTEGER (0..20000)
 	UNITS		"0.1A"
 	MAX-ACCESS	read-only
 	STATUS		current
@@ -154,7 +154,7 @@ zigorDvrObjISecundarioR OBJECT-TYPE
 	::= { zigorDvrObjEstado 7 }
 
 zigorDvrObjISecundarioS OBJECT-TYPE
-	SYNTAX		INTEGER (0..10000)
+	SYNTAX		INTEGER (0..20000)
 	UNITS		"0.1A"
 	MAX-ACCESS	read-only
 	STATUS		current
@@ -163,7 +163,7 @@ zigorDvrObjISecundarioS OBJECT-TYPE
 	::= { zigorDvrObjEstado 8 }
 
 zigorDvrObjISecundarioT OBJECT-TYPE
-	SYNTAX		INTEGER (0..10000)
+	SYNTAX		INTEGER (0..20000)
 	UNITS		"0.1A"
 	MAX-ACCESS	read-only
 	STATUS		current

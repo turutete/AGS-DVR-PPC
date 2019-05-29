@@ -33,7 +33,7 @@ local param = {
    --
    [ zigorSysCode .. ".0"           ] = "000000",
    [ zigorSysTimeZone .. ".0"       ] = 354,  -- Europe/Madrid
-   [ zigorSysVersion .. ".0"        ] = "dvr-1.2.3",
+   [ zigorSysVersion .. ".0"        ] = "dvr-1.2.4",
    [ zigorSysNotificationLang .. ".0" ] = 1,  -- en
    --
    [ zigorSysBacklightTimeout .. ".0" ] = 5,  -- minutes
@@ -60,6 +60,7 @@ local param = {
    [ zigorNetEmail4 .. ".0"         ] = "",
    [ zigorNetVncPassword .. ".0"    ] = "",
    [ zigorNetEnableSnmp .. ".0"     ] = 1, -- Habilitado por defecto
+   [ zigorNetEnableSSH .. ".0"     ] = 1, -- Habilitado por defecto?
    -- ParamDialUp
    [ zigorDialUpPin .. ".0"         ] = "",
    [ zigorDialUpSmsNum1 .. ".0"     ] = "",
