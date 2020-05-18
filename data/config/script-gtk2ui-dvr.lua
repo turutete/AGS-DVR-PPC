@@ -305,12 +305,9 @@ if access_level<NIVEL_MIN_ACTUACIONES then
 end
 
 local w_button_reboot = gobject.get_data(ui, "button_reboot")
-local w_button_test = gobject.get_data(ui, "button_test")
+
 if access_level<NIVEL_MIN_BUTTON_REBOOT then
    gobject.set_property(w_button_reboot, "sensitive", false)
-   gobject.set_property(w_button_test, "visible", false)  -- XXX
-else
-   gobject.set_property(w_button_test, "visible", true) -- XXX
 end
 
 local w_hbuttonbox_reboot = gobject.get_data(ui, "hbuttonbox_reboot")
@@ -1321,15 +1318,6 @@ if remote==0 then  -- mostrar teclado solo en local
    --gobject.connect(w_edit, "button-press-event", edit_press)  -- OK!
    gobject.connect(w_edit, "button-release-event", edit_press)  -- OK! (usar release en lugar de press para evitar cortar callbacks de grabar el foco etc!)
 end
-
---  XXX test
-local function firefox(w, key)
-   print(">>>firefox!")
-   cmd='su - user -c "DISPLAY=:0 firefox -width 1024 -height 600 http://maps.pqube.com"'
-   os.execute(cmd)
-end
---gobject.connect(w_button_term, "populate-popup", firefox)
-gobject.connect(w_button_test, "clicked", firefox)
 
 ------------------
 -- gestion boton mostrar/ocultar teclado edicion
