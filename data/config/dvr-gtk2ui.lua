@@ -376,7 +376,6 @@ ags = {
       },
       --
       container_name="mainwindow",
-      --layout_filename="ui-dvr.glade",
       layout_filename="ui-dvr-1024x600.glade",
       layout_root = "vbox1",
    },
@@ -769,7 +768,6 @@ ags = {
       mod_filename="dvrgtk2",
       mod_new="gtk2gladelo",
       --
-      --layout_filename="ui-dvr.glade",
       layout_filename="ui-dvr-1024x600.glade",
       layout_root = "window2",
    },
@@ -897,7 +895,6 @@ end
    loginui2 = {
       --mod_filename="dvrgtk2",
       mod_new="gtk2gladelo",
-      --layout_filename="ui-dvr.glade",
       layout_filename="ui-dvr-1024x600.glade",
       layout_root = "window3",
    },

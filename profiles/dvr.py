@@ -457,7 +457,7 @@ all_data = {
 	},
 	'ui':	{
 		'config_install_dir':	'/share/ui/',
-		'data_fn':			[ 'ui-dvr-1.lxml', 'ui-dvr-2.lxml', 'ui-dvr-3.lxml', 'ui-dvr-4.lxml', 'ui-dvr.glade', 'ui-dvr-1024x600.glade', ],
+		'data_fn':			[ 'ui-dvr-1.lxml', 'ui-dvr-2.lxml', 'ui-dvr-3.lxml', 'ui-dvr-4.lxml', 'ui-dvr-1024x600.glade', ],
 	},
 	'pixbufs':	{
 		'config_install_dir':	'/share/pixbufs/',
