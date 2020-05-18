@@ -1,0 +1,6 @@
+#define mycursor_width 8
+#define mycursor_height 8
+#define mycursor_x_hot 0
+#define mycursor_y_hot 0
+static unsigned char mycursor_bits[] = {
+   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };

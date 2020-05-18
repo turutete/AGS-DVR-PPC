@@ -1,0 +1,89 @@
+<!-- NO EDITAR ESTE FICHERO. Created by AGS. -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>AVC DVR</title>
+  <link rel="stylesheet" href="main.css">
+
+  <!-- promise polyfills promises for IE11 -->
+  <script src="./noVNC/vendor/promise.js"></script>
+  <!-- ES2015/ES6 modules polyfill -->
+  <script type="module">
+      window._noVNC_has_module_support = true;
+  </script>
+  <script>
+      window.addEventListener("load", function() {
+          if (window._noVNC_has_module_support) return;
+          var loader = document.createElement("script");
+          loader.src = "./noVNC/vendor/browser-es-module-loader/dist/browser-es-module-loader.js";
+          document.head.appendChild(loader);
+      });
+  </script>
+  <script type="module" crossorigin="anonymous">
+      // Load supporting scripts
+      import * as WebUtil from './noVNC/app/webutil.js';
+      import RFB from './noVNC/core/rfb.js';
+
+      var rfb;
+      var desktopName;
+
+
+      WebUtil.init_logging(WebUtil.getConfigVar('logging', 'warn'));
+      // By default, use the host and port of server that served this file
+      var host = WebUtil.getConfigVar('host', window.location.hostname);
+
+      var password = WebUtil.getConfigVar('password', '');
+      var path = WebUtil.getConfigVar('path', 'websockify');
+
+      // If a token variable is passed in, set the parameter in a cookie.
+      // This is used by nova-novncproxy.
+      var token = WebUtil.getConfigVar('token', null);
+      if (token) {
+          // if token is already present in the path we should use it
+          path = WebUtil.injectParamIfMissing(path, "token", token);
+
+          WebUtil.createCookie('token', token, 1)
+      }
+
+      (function() {
+          var url = 'ws';
+
+          url += '://' + host + '/tcp_proxy';
+
+          rfb = new RFB(document.getElementById('noVNC_container'), url,
+                        { repeaterID: WebUtil.getConfigVar('repeaterID', ''),
+                          shared: WebUtil.getConfigVar('shared', true),
+                          credentials: { password: password } });
+          rfb.viewOnly = WebUtil.getConfigVar('view_only', false);
+          rfb.scaleViewport = WebUtil.getConfigVar('scale', true);
+          rfb.resizeSession = WebUtil.getConfigVar('resize', true);
+      })();
+  </script>
+</head>
+
+<body>
+  <div class="container header">
+    <p class="title-text">AVC DVR</p>
+  </div>
+
+  </div>
+    <div id="noVNC_container" style="display: flex; width: 100%; height: 100%; overflow: auto; background-color: rgb(40, 40, 40);">
+  </div>
+
+  <div class="container footer">
+    <div class="footer-cols">
+      <img src="images/logo_zigor.png">
+    </div>
+    <div class="footer-cols">
+      <a href="downloads.html"><img class="center" src="images/down48.png"></a>
+    </div>
+    <div class="footer-cols">
+      <p class="footer-text">ZIGOR CORPORACIÓN S.A.</p>
+      <p class="footer-text">E-mail: zigor@zigor.com</p>
+      <p class="footer-text">Web: www.zigor.com</p>
+    </div>
+  </div>
+</body>
+</html>
+

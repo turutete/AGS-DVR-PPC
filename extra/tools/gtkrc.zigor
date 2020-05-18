@@ -1,0 +1,28 @@
+# Fichero de recursos de gtk2 para establecer tema, etc.
+#Por defecto en /etc/gtk-2.0 o .gtkrc-2.0...
+#Indicar explicitamente con variable de entorno GTK2_RC_FILES
+
+#Definiciones de tema propias:
+style "zigor"
+{
+  #Propiedades relacionas con la señalizacion del foco con teclado:
+  #GtkWidget::focus-line-width   = 2
+  GtkWidget::focus-line-width   = 1
+  GtkWidget::focus-padding      = 0
+  GtkWidget::focus-line-pattern = "\0"
+  GtkWidget::interior-focus     = 0
+
+  #fondo pelin oscuro:
+  bg [NORMAL] = { 0.65, 0.65, 0.65 }
+  #azul corporativo en seleccion hotspot:
+  bg [PRELIGHT] = { 0.33, 0.44, 0.55 }
+}
+
+style "zigorButton"
+{
+  #fondo pelin mas claro:
+  bg [NORMAL] = { 0.80, 0.80, 0.80 }
+}
+
+class "GtkWidget" style "zigor"
+class "GtkButton" style "zigorButton"

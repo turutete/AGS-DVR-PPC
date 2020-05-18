@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>SAG LOG</title>
+</head>
+<body>
+<style type="text/css">
+.miestilo {
+   border-style: none;
+   background-color: white;
+   font-family: Verdana, Sans-Serif;
+   font-size: 0.8em;
+}
+.miestilo td {
+   padding: 5px;
+}
+/*
+.miestilo .odd {
+   background-color: #ddd;
+}
+.miestilo .even {
+   background-color: white;
+}
+*/
+tbody tr:nth-child(even) {
+  background: #ddd;
+}
+</style>
+<table class="miestilo">
+  <theader>
+    <th>[Date]</th><th>[Minimum(%)]</th><th>[Average(%)]</th><th>[Duration(ms)]</th><th>[Phase]</th>
+  </theader>
+  <tbody>
+<tr><td>27/05/2019/21:16:56</td><td>35</td><td>72.853939782191</td><td>1561</td><td>R</td><td>VInR:173.2V/VInS:176.9V/VInT:176.2V/VBus:724.8V/VOutR:208.8V/VOutS:208.5V/VOutT:208.4V/IR:1170A/IS:1163.2A/IT:1177.6A/PR:144.6kW/PS:141.4kW/PT:143.2kW</td></tr>
+<tr><td>27/05/2019/21:00:07</td><td>80</td><td>87.5</td><td>5</td><td>R</td><td>VInR:179.9V/VInS:182.9V/VInT:182.6V/VBus:710.3V/VOutR:208.9V/VOutS:209.1V/VOutT:208.7V/IR:984.4A/IS:981.6A/IT:999.6A/PR:121.2kW/PS:119kW/PT:119.6kW</td></tr>
+<tr><td>27/05/2019/21:00:06</td><td>36</td><td>42.723880597015</td><td>335</td><td>R</td><td>VInR:175.6V/VInS:178.4V/VInT:178.4V/VBus:694.9V/VOutR:205.2V/VOutS:206.1V/VOutT:205.2V/IR:985.6A/IS:990A/IT:995.2A/PR:117.6kW/PS:114.2kW/PT:112.8kW</td></tr>
+<tr><td>27/05/2019/20:55:07</td><td>80</td><td>87.5</td><td>5</td><td>R</td><td>VInR:179.3V/VInS:182.7V/VInT:182.4V/VBus:721.4V/VOutR:208.5V/VOutS:209V/VOutT:208.8V/IR:982.4A/IS:980.4A/IT:1008.4A/PR:120.6kW/PS:118.6kW/PT:119kW</td></tr>
+<tr><td>27/05/2019/20:55:06</td><td>38</td><td>49.400906735751</td><td>386</td><td>S</td><td>VInR:175.4V/VInS:178.7V/VInT:178.9V/VBus:719.5V/VOutR:206.9V/VOutS:207.4V/VOutT:207.3V/IR:984.4A/IS:982.4A/IT:1006.8A/PR:119.2kW/PS:116.2kW/PT:115.8kW</td></tr>
+<tr><td>27/05/2019/20:50:10</td><td>36</td><td>44.454479768786</td><td>346</td><td>R</td><td>VInR:177.1V/VInS:179.9V/VInT:180V/VBus:708.4V/VOutR:205.8V/VOutS:206.1V/VOutT:205.7V/IR:983.2A/IS:992.4A/IT:995.2A/PR:118.2kW/PS:116.2kW/PT:113.8kW</td></tr>
+<tr><td>27/05/2019/20:45:05</td><td>38</td><td>44.196428571429</td><td>322</td><td>R</td><td>VInR:175.3V/VInS:177.6V/VInT:178.1V/VBus:755.1V/VOutR:207.5V/VOutS:208.1V/VOutT:208V/IR:982.4A/IS:1001.2A/IT:997.6A/PR:120.2kW/PS:118.6kW/PT:113.2kW</td></tr>
+<tr><td>27/05/2019/20:40:07</td><td>43</td><td>49.340062111801</td><td>322</td><td>R</td><td>VInR:188.9V/VInS:190.9V/VInT:191.9V/VBus:708.9V/VOutR:208.7V/VOutS:209.3V/VOutT:209V/IR:664.8A/IS:672A/IT:676.8A/PR:81.8kW/PS:80kW/PT:77kW</td></tr>
+<tr><td>27/05/2019/20:35:07</td><td>44</td><td>49.728260869565</td><td>322</td><td>R</td><td>VInR:192.4V/VInS:194.4V/VInT:195.3V/VBus:719.5V/VOutR:208.9V/VOutS:209.5V/VOutT:209V/IR:662.8A/IS:675.2A/IT:679.6A/PR:81.4kW/PS:80.4kW/PT:78.4kW</td></tr>
+<tr><td>27/05/2019/20:30:09</td><td>42</td><td>47.593167701863</td><td>322</td><td>R</td><td>VInR:181.6V/VInS:183.7V/VInT:184.4V/VBus:725.2V/VOutR:208.5V/VOutS:208.8V/VOutT:208.8V/IR:662.4A/IS:666.4A/IT:681.6A/PR:81.4kW/PS:77.4kW/PT:78.8kW</td></tr>
+<tr><td>27/05/2019/20:25:28</td><td>41</td><td>47.821100917431</td><td>327</td><td>R</td><td>VInR:197.8V/VInS:199.7V/VInT:200.8V/VBus:685.8V/VOutR:207.1V/VOutS:208V/VOutT:207.5V/IR:666.8A/IS:675.6A/IT:675.2A/PR:80.8kW/PS:79.2kW/PT:77kW</td></tr>
+<tr><td>27/05/2019/20:15:05</td><td>50</td><td>53.616352201258</td><td>318</td><td>R</td><td>VInR:199.1V/VInS:199.3V/VInT:200.7V/VBus:710.8V/VOutR:210.2V/VOutS:210.5V/VOutT:210V/IR:338.4A/IS:341.6A/IT:348.4A/PR:42.2kW/PS:40kW/PT:38.4kW</td></tr>
+<tr><td>27/05/2019/20:11:09</td><td>50</td><td>53.369905956113</td><td>319</td><td>R</td><td>VInR:187V/VInS:187.9V/VInT:189V/VBus:720.4V/VOutR:210V/VOutS:210.8V/VOutT:210V/IR:340.4A/IS:344.8A/IT:355.2A/PR:42.2kW/PS:39.8kW/PT:38.8kW</td></tr>
+<tr><td>27/05/2019/20:07:06</td><td>50</td><td>53.61328125</td><td>320</td><td>S</td><td>VInR:189.4V/VInS:190.3V/VInT:191.3V/VBus:717.1V/VOutR:210.3V/VOutS:210.7V/VOutT:210.3V/IR:338.4A/IS:348A/IT:353.2A/PR:42kW/PS:41.4kW/PT:40.2kW</td></tr>
+<tr><td>27/05/2019/20:03:18</td><td>47</td><td>52.453987730061</td><td>326</td><td>R</td><td>VInR:192.1V/VInS:192.8V/VInT:194.4V/VBus:724.8V/VOutR:210V/VOutS:209.9V/VOutT:209.9V/IR:340.4A/IS:351.2A/IT:358A/PR:42.4kW/PS:39.6kW/PT:38.4kW</td></tr>
+<tr><td>27/05/2019/19:59:31</td><td>51</td><td>55.63880126183</td><td>317</td><td>R</td><td>VInR:190.5V/VInS:189.7V/VInT:191.7V/VBus:725.7V/VOutR:210.1V/VOutS:210.2V/VOutT:210.2V/IR:19.2A/IS:44.8A/IT:45.6A/PR:1.4kW/PS:0.8kW/PT:0kW</td></tr>
+<tr><td>27/05/2019/19:59:05</td><td>52</td><td>56.033123028391</td><td>317</td><td>R</td><td>VInR:191.9V/VInS:191.9V/VInT:193.4V/VBus:719.5V/VOutR:210V/VOutS:210.3V/VOutT:210.5V/IR:20.4A/IS:34.8A/IT:64.4A/PR:1.4kW/PS:0kW/PT:0.4kW</td></tr>
+<tr><td>27/05/2019/19:55:12</td><td>51</td><td>55.696202531646</td><td>316</td><td>R</td><td>VInR:194.2V/VInS:194.1V/VInT:195.8V/VBus:719V/VOutR:210V/VOutS:210.5V/VOutT:210.4V/IR:20.4A/IS:40A/IT:46.8A/PR:1kW/PS:0kW/PT:0.6kW</td></tr>
+<tr><td>27/05/2019/19:51:08</td><td>53</td><td>56.427444794953</td><td>317</td><td>S</td><td>VInR:191V/VInS:190.5V/VInT:192V/VBus:722.3V/VOutR:210.1V/VOutS:210.7V/VOutT:210.1V/IR:18.8A/IS:36.4A/IT:56.8A/PR:0.8kW/PS:0.8kW/PT:0.6kW</td></tr>
+<tr><td>27/05/2019/19:47:26</td><td>52</td><td>56.051587301587</td><td>315</td><td>R</td><td>VInR:191.5V/VInS:191.5V/VInT:193V/VBus:719.9V/VOutR:210V/VOutS:210.5V/VOutT:210.4V/IR:19.6A/IS:37.2A/IT:44A/PR:1.2kW/PS:0kW/PT:0kW</td></tr>
+<tr><td>27/05/2019/18:19:07</td><td>51</td><td>56.70871559633</td><td>218</td><td>R</td><td>VInR:196V/VInS:196.2V/VInT:197.4V/VBus:719.5V/VOutR:209.8V/VOutS:210.2V/VOutT:209.9V/IR:19.2A/IS:19.2A/IT:43.6A/PR:0.6kW/PS:0.2kW/PT:0.4kW</td></tr>
+  </tbody>
+</table>
+</body>
+</html>
