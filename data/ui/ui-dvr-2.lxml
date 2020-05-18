@@ -57,38 +57,6 @@ local xml = [[
 $passwords
 
       </node>
-      <node name="Comunicaciones" >
-        <var key="$zigorNetIP.0" name="Dirección IP" />
-        <var key="$zigorNetMask.0" name="Máscara de red" />
-        <var key="$zigorNetGateway.0" name="Gateway" />
-        <var key="$zigorNetDNS.0" name="DNS" />
-        <var key="$zigorNetSmtp.0"     name="Envio email: Servidor de correo SMTP" />
-        <var key="$zigorNetSmtpUser.0" name="Envio email: Usuario" />
-        <var key="$zigorNetSmtpPass.0" name="Envio email: Password" />
-        <var key="$zigorNetSmtpEmail.0" name="Envio email: Dirección de correo (* vs @)" />
-        <var key="$zigorNetSmtpAuth.0" name="Envio email: Autenticación (NO/SSL/TLS)" />
-        <var key="$zigorNetSmtpTest.0" name="Envio email: Email Test Envio (* vs @)" />
-        <var key="$zigorNetEmail1.0" name="Email 1 para envio de alarmas (* vs @)" />
-        <var key="$zigorNetEmail2.0" name="Email 2 para envio de alarmas (* vs @)" />
-        <var key="$zigorNetEmail3.0" name="Email 3 para envio de alarmas (* vs @)" />
-        <var key="$zigorNetEmail4.0" name="Email 4 para envio de alarmas (* vs @)" />
-        <var key="$zigorModbusMode.0" enum="enum_MBMode"  name="Modo MODBUS" />
-        <var key="$zigorModbusAddress.0" name="Modbus RTU: Direccion" />
-        <var key="$zigorModbusBaudrate.0" enum="enum_MBBaudrate"  name="Modbus RTU: Velocidad" />
-        <var key="$zigorModbusParity.0" enum="enum_MBParity"  name="Modbus RTU: Paridad" />
-        <var key="$zigorModbusTCPPort.0" name="Modbus TCP: Puerto" />
-        <var key="$zigorModbusTCPTimeout.0" name="Modbus TCP: Tiempo inactividad para Reset (s)" />
-        <var key="$zigorDialUpPin.0" name="PIN del modem" />
-        <var key="$zigorDialUpSmsNum1.0" name="Número 1 para envio SMS" />
-        <var key="$zigorDialUpSmsNum2.0" name="Número 2 para envio SMS" />
-        <var key="$zigorDialUpSmsNum3.0" name="Número 3 para envio SMS" />
-        <var key="$zigorDialUpSmsNum4.0" name="Número 4 para envio SMS" />
-        <var key="$zigorNetPortHttp.0" name="Puerto TCP acceso HTTP" />
-        <var key="$zigorNetPortVnc.0"  name="Puerto TCP aplicación a través de HTTP" />
-        <var key="$zigorNetVncPassword.0"  name="VNC Server password" />
-        <var key="$zigorNetEnableSnmp.0"  enum="enum_SiNo" name="Habilitar Servidor SNMP" />
-        <var key="$zigorNetEnableSSH.0"  enum="enum_SiNo" name="Habilitar Servicio SSH" />
-      </node>
     </node>
     <node pic="cfg" name="DVR" >
       <var key="$zigorDvrParamVRedNom.0" units="V" name="Tensión de red nominal" factor="10" />

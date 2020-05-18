@@ -59,8 +59,8 @@ local param = {
    [ zigorNetEmail3 .. ".0"         ] = "",
    [ zigorNetEmail4 .. ".0"         ] = "",
    [ zigorNetVncPassword .. ".0"    ] = "",
-   [ zigorNetEnableSnmp .. ".0"     ] = 1, -- Habilitado por defecto
-   [ zigorNetEnableSSH .. ".0"     ] = 1, -- Habilitado por defecto?
+   [ zigorNetEnableSnmp .. ".0"     ] = 2, -- Deshabilitado por defecto
+   [ zigorNetEnableSSH .. ".0"     ] = 2, -- Deshabilitado por defecto?
    -- ParamDialUp
    [ zigorDialUpPin .. ".0"         ] = "",
    [ zigorDialUpSmsNum1 .. ".0"     ] = "",
@@ -71,7 +71,7 @@ local param = {
    [ zigorModbusAddress .. ".0"          ] = 1, -- 1..247
    [ zigorModbusBaudrate .. ".0"         ] = 3,  -- 38400
    [ zigorModbusParity .. ".0"           ] = 2,  -- Par
-   [ zigorModbusMode .. ".0"             ] = 2,  -- TCP
+   [ zigorModbusMode .. ".0"             ] = 1,  -- RTU
    [ zigorModbusTCPPort .. ".0"          ] = 502,  -- default port of modbus
    [ zigorModbusTCPTimeout .. ".0"       ] = 600,  -- timeout en segundos
    --
