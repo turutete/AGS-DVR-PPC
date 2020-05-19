@@ -540,6 +540,16 @@ local function make_demo_handler()
 end
 
 
+local function configureSSH(sds)
+   local sshEnabled = access.get(sds, zigorNetEnableSSH .. ".0")
+   if sshEnabled == 1 then
+           os.execute("ln -s /etc/init.d/dropbear /etc/runlevels/default/dropbear")
+           os.execute("/etc/init.d/dropbear restart")
+   else
+           os.execute("rm -f /etc/runlevels/default/dropbear")
+           os.execute("/etc/init.d/dropbear stop")
+   end
+end
 ----------------------------------------
 -- Ahora uso dofile... --local displays_dvr=require "displays-dvr"
 
@@ -584,16 +594,9 @@ local function setsig_handler(sds, k, v, data)
 	       os.execute("echo " .. password .. " | vncpasswd -f > /etc/.vncpasswd")
 	    end
 		
-		-- SSH deshabilitar/habilitar
+            -- SSH deshabilitar/habilitar
 	    if changes[zigorNetEnableSSH] then
-	       sshEnabled = access.get(sds, zigorNetEnableSSH .. ".0")
-	       if sshEnabled == 1 then
-	               os.execute("ln -s /etc/init.d/dropbear /etc/runlevels/default/dropbear")
-	               os.execute("/etc/init.d/dropbear restart")
-	       else
-	               os.execute("rm -f /etc/runlevels/default/dropbear")
-	               os.execute("/etc/init.d/dropbear stop")
-	       end
+                configureSSH(sds)
 	    end
 		
 	    --
@@ -1086,6 +1089,8 @@ setsig_init=0  -- usado para evitar sets de ciertas variables en arranque
 gaplog_init(sdscoreglib)
 --VReNom:
 set_VRedNom(sdscoreglib)
+-- Servicio SSH
+configureSSH(sdscoreglib)
 
 ----------------------------------------
 -- Gestión alarmas
