@@ -160,11 +160,16 @@ local param = {
    [ zigorAlarmCfgSeverity .. ".17"       ] = AlarmSeverityLEVE,
    [ zigorAlarmCfgNotification .. ".17"   ] = AlarmNotificationNOSMS,
    [ zigorAlarmCfgId .. ".18"             ] = 18,
-   [ zigorAlarmCfgDescr .. ".18"          ] = zigorAlarmaPasswdChange,
-   [ zigorAlarmCfgSeverity .. ".18"       ] = AlarmSeverityLEVE, -- XXX
+   [ zigorAlarmCfgDescr .. ".18"          ] = zigorAlarmaTemperaturaAlta,
+   [ zigorAlarmCfgSeverity .. ".18"       ] = AlarmSeverityGRAVE,
    [ zigorAlarmCfgNotification .. ".18"   ] = AlarmNotificationNOSMS,
+   [ zigorAlarmCfgId .. ".19"             ] = 19,
+   [ zigorAlarmCfgDescr .. ".19"          ] = zigorAlarmaPasswdChange,
+   [ zigorAlarmCfgSeverity .. ".19"       ] = AlarmSeverityLEVE, -- XXX
+   [ zigorAlarmCfgNotification .. ".19"   ] = AlarmNotificationNOSMS,
+   [ zigorAlarmCfgNotification .. ".19"   ] = AlarmNotificationNOSMS,
    --
-   [ zigorAlarmsCfgPresent .. ".0"        ] = 18,
+   [ zigorAlarmsCfgPresent .. ".0"        ] = 19,
    [ zigorAlarmLogMaxEntries .. ".0"      ] = 100, -- XXX
 
    [ zigorDvrGapLogMaxEntries .. ".0"     ] = 100, -- XXX gaplog

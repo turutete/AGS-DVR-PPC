@@ -62,6 +62,7 @@ local xml = [[
       <var key="$zigorDvrObjRegHueco.0" name="Registro Hueco" />
       <var key="$zigorDvrObjAlarmaPLL.0" name="Alarma PLL" />
       <var key="$zigorDvrObjResetDriver.0" name="Reset Driver" />
+      <var key="$zigorDvrObjErrorTemp.0" name="Error temperatura" />
       <var key="$zigorDvrObjEComDSP.0" name="Error de comunicación DSP" />
     </node>
   </node>

@@ -246,6 +246,21 @@ local factory_ErrorComDSP = function(sds)
 	end
      end
 
+local factory_AlarmaTemperatura = function(sds)
+        return
+        function()
+           local FlagErrorTemp  = access.get(sds, zigorDvrObjErrorTemp .. ".0")
+
+           if FlagErrorTemp==TruthValueTRUE then
+              return zigorAlarmaTemperaturaAlta,{
+                 ["1"] = true,
+              }
+           else
+              return zigorAlarmaTemperaturaAlta,{}
+           end
+        ---
+        end
+     end
 
 function alarms_dvr_new(sds)
    -- La tabla "alarms" contiene las funciones para evaluar las condiciones de alarmas, una función por alarma.
@@ -269,6 +284,7 @@ function alarms_dvr_new(sds)
       ErrorFusible      = { f = factory_ErrorFusible(sds), ca = 5, cd = 5, },
       AlarmaPLL         = { f = factory_AlarmaPLL(sds), ca = 5, cd = 5, },
       ErrorComDSP       = { f = factory_ErrorComDSP(sds), ca = 5, cd = 5, },
+      AlarmaTemperatura = { f = factory_AlarmaTemperatura(sds), ca = 5, cd = 5, },
    }
 
    return alarms

@@ -1172,3 +1172,17 @@ msgstr "分钟"
 msgid "segundos"
 msgstr "秒"
 
+msgid "Alarma temperatura alta"
+msgstr "高温报警"
+
+msgid "Temperatura alta"
+msgstr "高温"
+
+msgid "<Temperatura alta>"
+msgstr "<高温>"
+
+msgid "Alarma tensión de bus máxima"
+msgstr "最大母线电压报警"
+
+msgid "_Alarma VBusMax_"
+msgstr "最大母线电压报警"

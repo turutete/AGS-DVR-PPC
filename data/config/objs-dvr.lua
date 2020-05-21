@@ -62,6 +62,7 @@ objects_dsp = {
 	 [zigorDvrObjRegHueco ..".0"	        ] = "RegHueco",
 	 [zigorDvrObjAlarmaPLL ..".0"		] = "AlarmaPLL",
 	 [zigorDvrObjResetDriver ..".0"	        ] = "ResetDriver",
+	 [zigorDvrObjErrorTemp ..".0"           ] = "ErrorTemp",
       },
       read = true,
    },

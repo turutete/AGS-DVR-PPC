@@ -1227,3 +1227,18 @@ msgstr "Enable SNMP Server"
 
 msgid "Habilitar Servicio SSH"
 msgstr "Enable SSH Service"
+
+msgid "Alarma temperatura alta"
+msgstr "High temperature alarm"
+
+msgid "Temperatura alta"
+msgstr "High temperature"
+
+msgid "<Temperatura alta>"
+msgstr "<High temperature>"
+
+msgid "Alarma tensión de bus máxima"
+msgstr "Maximum bus voltage alarm"
+
+msgid "_Alarma VBusMax_"
+msgstr "_Alarm VBusMax_"

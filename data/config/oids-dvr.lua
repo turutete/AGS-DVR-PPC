@@ -62,6 +62,8 @@ zigorDvrObjVRedNom = zigorDvrObjEstado..".45"
 
 zigorDvrObjModemStatus = zigorDvrObjEstado..".46"
 
+zigorDvrObjErrorTemp = zigorDvrObjEstado..".47"
+
 --
 -- Parametros Sistema
 --
@@ -93,6 +95,7 @@ zigorAlarmaErrorFusible = zigorDvrAlarms..".13"
 zigorAlarmaPLL = zigorDvrAlarms..".14"
 zigorAlarmaErrorComDSP = zigorDvrAlarms..".15"
 zigorAlarmaStatusChange = zigorDvrAlarms..".16"
+zigorAlarmaTemperaturaAlta = zigorDvrAlarms..".17"
 
 -- gaplog:
 zigorDvrGapLog = zigorDvrMIB..".3"

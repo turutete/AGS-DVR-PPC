@@ -28,6 +28,7 @@ displays_dvr = {
       [ zigorAlarmaPLL             ] = { codigo = "23", display_lcd = _g("AlarmaPLL","Maximum 16 characters & ASCII only"),	display = _g("Alarma PLL"),		display_sms = _g("<Alarma PLL>","SMS characters only [GSM 03.38]"), },
       [ zigorAlarmaErrorComDSP     ] = { codigo = "24", display_lcd = _g("Fallo Com.DSP","Maximum 16 characters & ASCII only"),	display = _g("Error de comunicación con DSP"), display_sms = _g("<Error de comunicacion con DSP>","SMS characters only [GSM 03.38]"), },
       [ zigorAlarmaStatusChange    ] = { codigo = "25", display_lcd = _g("CambioEstado","Maximum 16 characters & ASCII only"),	display = _g("Cambio de estado"),		display_sms = _g("<Cambio de estado>","SMS characters only [GSM 03.38]"), },
+      [ zigorAlarmaTemperaturaAlta ] = { codigo = "26", display_lcd = _g("Temperatura alta","Maximum 16 characters & ASCII only"),  display = _g("Alarma temperatura alta"),               display_sms = _g("<Temperatura alta>","SMS characters only [GSM 03.38]"), },
    },
    -- XXX en nuevo displays-alarm.lua ???
    display_imp = {
@@ -51,6 +52,7 @@ displays_dvr = {
       [ 3 ]    = { ["fase-display"] = "T" },
    },
    display_EstadoControl = {
+      -- Los estados son lo que envía el DSP + 1 (el DSP envía un 0 y se mapea al valor [1])
       default = { display = "?" },
       [ 1]    = { display = _g("OFF") },
       [ 2]    = { display = _g("Espera Carga"), display_lcd=_g("_Espera Carga_","Maximum 16 characters & ASCII only") },
@@ -62,7 +64,9 @@ displays_dvr = {
       [ 8]    = { display = _g("Tensión de bus mínima"), display_lcd=_g("_V Bus Minima_","Maximum 16 characters & ASCII only") },
       [ 9]    = { display = _g("Hueco máximo"),	display_lcd=_g("_Hueco Maximo_","Maximum 16 characters & ASCII only") },
       [10]    = { display = _g("Alarma driver"),	display_lcd=_g("_Alarma Driver_","Maximum 16 characters & ASCII only") },
-      [11]    = { display = _g("Espera OFF"),	display_lcd=_g("_Espera OFF_","Maximum 16 characters & ASCII only") },
+      [12]    = { display = _g("Alarma tensión de bus máxima"),        display_lcd=_g("_Alarma VBusMax_","Maximum 16 characters & ASCII only") },
+
+      [16]    = { display = _g("Espera OFF"),	display_lcd=_g("_Espera OFF_","Maximum 16 characters & ASCII only") },
       [21]    = { display = _g("Error de precarga"),	display_lcd=_g("_Error precarga_","Maximum 16 characters & ASCII only") },
       [22]    = { display = _g("Error tensión de condensador"),	display_lcd=_g("_Error VCond_","Maximum 16 characters & ASCII only") },
       [23]    = { display = _g("Error tensión de bus máxima"),	display_lcd=_g("_Error VBusMax_","Maximum 16 characters & ASCII only") },

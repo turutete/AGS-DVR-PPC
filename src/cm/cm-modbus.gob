@@ -93,6 +93,7 @@ const typeAlarmCodes AlarmCodes[]={
    { zigorAlarmaPLL,                  23 }, 
    { zigorAlarmaErrorComDSP,          24 }, 
    { zigorAlarmaStatusChange,         25 }, 
+   { zigorAlarmaTemperaturaAlta,      26 },
    { NULL, 0 },
 };
 

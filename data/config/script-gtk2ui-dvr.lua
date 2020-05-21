@@ -455,6 +455,7 @@ local displays = {
    [ zigorDvrObjRegHueco .. ".0"           ] = displays_dvr.display_ActivoInact_RG,
    [ zigorDvrObjAlarmaPLL .. ".0"          ] = displays_dvr.display_ActivoInact_RG,
    [ zigorDvrObjResetDriver .. ".0"        ] = displays_dvr.display_ActivoInact_RG,
+   [ zigorDvrObjErrorTemp .. ".0"          ] = displays_dvr.display_ActivoInact_RG,
    --
    [ zigorDvrObjEComDSP .. ".0"            ] = displays_dvr.display_SiNo_RG,
    --

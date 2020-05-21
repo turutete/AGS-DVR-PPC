@@ -471,6 +471,14 @@ zigorDvrObjModemStatus OBJECT-TYPE
 		"Status of the modem"
 	::= { zigorDvrObjEstado 46 }
 
+zigorDvrObjErrorTemp OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Error de temperatura"
+	::= { zigorDvrObjEstado 47}
+
 --
 -- Parametros Sistema
 --
@@ -621,6 +629,11 @@ zigorAlarmaStatusChange OBJECT-IDENTITY
 		"Alarma de cambio de estado"
 	::= { zigorDvrAlarms 16}
 
+zigorAlarmaTemperaturaAlta OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"Alarma temperatura alta"
+	::= { zigorDvrAlarms 17}
 
 --
 -- Registro de Huecos
