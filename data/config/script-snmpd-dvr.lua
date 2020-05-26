@@ -701,13 +701,21 @@ local function setsig_handler(sds, k, v, data)
 
    -- Actuaciones
    if (k == zigorDvrObjOrdenMarcha .. ".0" or k == zigorDvrObjOrdenParo .. ".0" or k == zigorDvrObjOrdenReset .. ".0") then
-      gobject.block(sds, set_handler_id)              -- nos bloqueamos la señal 'setsig' para evitar recursión
-      if(v==1) then -- Solo actuación si On(1)
-	 access.set(sds, k, 1)                       -- la variable de actuación a On(1) mientras se actua
-	 bus.write(zigorobj_dsp, DA_ETX_BUS_DSP .. ID_ETX_ACTUA, nil) -- escritura en el bus del objeto de actuación
-      end
-      access.set(sds, k, 2) -- variable a Off(2)
-      gobject.unblock(sds, set_handler_id)            -- desbloqueamos señal
+
+      gobject.timeout_add(1, function(k)
+                                gobject.block(sds, set_handler_id)  -- Bloquear señal para evitar recursión
+                                access.set(sds, k, 1)                       -- la variable de actuación a On(1) mientras se actua
+                                for i=1,3 do
+                                   bus.write(zigorobj_dsp, DA_ETX_BUS_DSP .. ID_ETX_ACTUA, nil) -- escritura en el bus del objeto de actuación
+                                end
+                                access.set(sds, k, 2) -- variable a Off(2)
+                                for i=1,3 do
+                                   bus.write(zigorobj_dsp, DA_ETX_BUS_DSP .. ID_ETX_ACTUA, nil) -- escritura en el bus del objeto de actuación
+                                end
+                                gobject.unblock(sds, set_handler_id)
+                                return false -- no repetir
+                             end,
+                          k)
       res=true              -- evitamos el 'set'
       --gobject.stop(sds, "setsig")  --XXX
    end
