@@ -1434,7 +1434,16 @@ if remote==1 then  -- ocultar en modo remoto
 end
 
 gobject.connect(w_level_params_button, "clicked", mostrar_login)
-gobject.connect(w_event_level, "button_press_event", mostrar_login)
+
+if remote==0 then
+    gobject.connect(w_event_level, "button_press_event", mostrar_login)
+else
+    gobject.connect(w_event_level, "button_press_event", function (w, ml)
+                                                             gobject.main_loop_quit(ml)
+                                                             print("Exit por boton terminar")
+                                                             os.exit()  -- mas robusto?
+                                                         end)
+end
 
 --gobject.set_property(logo, "pixbuf", gobject.get_data(pixbufs, "logo") )
     
