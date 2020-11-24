@@ -187,6 +187,8 @@ function func_CtrlParamState(w, iter)
 end
 
 
+local EComDSP = 2
+
 --------------------------------------------------
 -- Factorías varias
 -- Factoría para generar funciones de formateo de celdas con magnitudes (volts, ampers, etc.)
@@ -195,12 +197,16 @@ local function factory_cell_format(model, key, col, factor, units, name, size, c
 
    return function()
 	     local aux   = treestore.get(model, iters[key], col)
-	     
+	     local text_color = color
 	     if(aux) then
 		local v = myround(aux / (factor or 1) ); -- pasamos a Volts
-		label = name .. v .. units
-		-- (jur) span
-		label ="<span foreground='"..color.."' weight='bold' font_desc='"..size.."'>" .. label .. "</span>"
+		if (EComDSP == 2) then
+		   label = name .. v .. units
+		else
+		   label = "N/A"
+		   text_color = "#ff003f"
+		end
+		label ="<span foreground='"..text_color.."' weight='bold' font_desc='"..size.."'>" .. label .. "</span>"
 	     end
 	     return label
 	  end
@@ -214,8 +220,6 @@ local function factory_object_property(object, prop_name, func)
 end
 
 --------------------------------------------------
---fun_vr = factory_object_property(w_lab_vr, "label", factory_cell_format(store, zigorDvrObjVRedR .. ".0", "val", 10, " V", "V1 = ") )
---fun_vr = factory_object_property(w_lab_vr, "label", factory_cell_format(store, zigorDvrObjVRedR .. ".0", "val", 10, " V", "", "22", "green") )
 fun_vr = factory_object_property(w_lab_vr, "label", factory_cell_format(store, zigorDvrObjVRedR .. ".0", "val", 10, "", "", "22", "#1d9d26") )
 fun_vs = factory_object_property(w_lab_vs, "label", factory_cell_format(store, zigorDvrObjVRedS .. ".0", "val", 10, "", "", "22", "#1d9d26") )
 fun_vt = factory_object_property(w_lab_vt, "label", factory_cell_format(store, zigorDvrObjVRedT .. ".0", "val", 10, "", "", "22", "#1d9d26") )
@@ -237,10 +241,19 @@ local function fun_estado(w)
       -- importante habilitar propiedades de 'pango markup' a la etiqueta en glade! :-)
       --t='<span weight="ultrabold" foreground="blue" variant="smallcaps" size="large">' .. t .. '</span>'
       --t='<span weight="bold" foreground="#261d9d" size="large">' .. t .. '</span>'
-      t='<span weight="bold" foreground="#1d949d" size="large">' .. t .. '</span>'
+      if (EComDSP == 2) then
+        t='<span weight="bold" foreground="#1d949d" size="large">' .. t .. '</span>'
+      else
+        t='<span weight="bold" foreground="#ff003f" size="large">'.. _g("Error de comunicación con DSP") .. '</span>'
+      end
+
       gobject.set_property(w_estado, "label", t)
    
    end
+end
+
+local function fun_fallo_comunicaciones_dsp(w)
+   EComDSP = treestore.get(w, iters[zigorDvrObjEComDSP .. ".0"    ], "val")
 end
 
 local function fun_ball(w)
@@ -281,6 +294,7 @@ local funcs = {
    [ zigorDvrObjPSalidaS .. ".0" ]     = {fun_pss, },
    [ zigorDvrObjPSalidaT .. ".0" ]     = {fun_pst, },
    [ zigorDvrObjEstadoControl .. ".0" ] = {fun_estado, fun_ball},
+   [ zigorDvrObjEComDSP .. ".0" ]     = {fun_fallo_comunicaciones_dsp, fun_vr, fun_vs, fun_vt, fun_vsr, fun_vss, fun_vst, fun_isr, fun_iss, fun_ist, fun_psr, fun_pss, fun_pst, fun_estado},
 }
 ----------------------------------------
 -- Acceso a elementos de la 'ui' en funcion del nivel de acceso:
