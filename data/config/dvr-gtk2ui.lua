@@ -157,14 +157,6 @@ local columns_alarms_view = {
    },
    -- columna 4
    ["4"] = {
-      properties = { title = "Nivel", },  -- i18n
-      -- "Cells" columna 4
-      cells = {
-	 ["1"] = { name = "imp-display", markup = true, },
-      },
-   },
-   -- columna 5
-   ["5"] = {
       properties = { title = "Fecha", },  -- i18n
       -- "Cells" columna 5
       cells = {
@@ -173,31 +165,13 @@ local columns_alarms_view = {
 	 },
       },
    },
-   -- columna 6
-   ["6"] = {
+   -- columna 5
+   ["5"] = {
       properties = { title = "Elementos", },  -- i18n
       -- "Cells" columna 6
       cells = {
 	 ["1"] = { name = "elements",
 	 },
-      },
-   },
-   -- columna 7
-   ["7"] = {
-      --properties = { title = "Reconocer", },  -- i18n
-      properties = { title = "Rec.", },
-      -- "Cells" columna 7
-      cells = {
-	 ["1"] = { name = "ack", },
-      },
-   },
-   -- columna 8
-   ["8"] = {
-      --properties = { title = "Reset", },  -- i18n
-      properties = { title = "Res.", },
-      -- "Cells" columna 8
-      cells = {
-	 ["1"] = { name = "reset", },
       },
    },
 }
@@ -234,14 +208,6 @@ local columns_heventos_view = {
    },
    -- columna 4
    ["4"] = {
-      properties = { title = "Nivel", },  -- i18n
-      -- "Cells" columna 4
-      cells = {
-	 ["1"] = { name = "imp-display", markup = true, },
-      },
-   },
-   -- columna 5
-   ["5"] = {
       properties = { title = "Fecha", },  -- i18n
       -- "Cells" columna 5
       cells = {
@@ -250,8 +216,8 @@ local columns_heventos_view = {
 	 },
       },
    },
-   -- columna 6
-   ["6"] = {
+   -- columna 5
+   ["5"] = {
       properties = { title = "Elemento", },  -- i18n
       -- "Cells" columna 6
       cells = {

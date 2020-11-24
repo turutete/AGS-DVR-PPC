@@ -81,11 +81,11 @@ local function update_log_html(sds)
 </style>
 <table class="miestilo">
 <theader>
-   <th>[N.]</th><th>[Date]</th><th>[Description]</th><th>[Code]</th><th>[Status]</th><th>[Severity]</th><th>[Elements]</th>
+   <th>[N.]</th><th>[Date]</th><th>[Description]</th><th>[Code]</th><th>[Status]</th><th>[Elements]</th>
 </theader>
 <tbody>
 ]]
-      local ddescr, dcond, date, cod, element, sev, dsev
+      local ddescr, dcond, date, cod, element
       local alarms_config=get_alarm_config_index(sds)
 
       local fd=io.open("/home/user/alarmlog.html", "w") -- XXX path y sufijo "hardcoded"
@@ -97,13 +97,11 @@ local function update_log_html(sds)
         dcond = displays.display_condicion[alarm["cond"]]["display"]
         date = os.date("%d/%m/%Y/%H:%M:%S", os.time(ZDateAndTime2timetable(alarm["time"])))
         cod = display_descr[alarm["descr"]]["codigo"]
-        sev=access.get(sds, zigorAlarmCfgSeverity ..".".. tostring(alarms_config[alarm["descr"]]))
-        dsev = displays.display_severidad[sev]["display"]
         element=alarm["element"]
        
         local class
         if(i%2==1) then class='class="odd"' else class='class="even"' end
-        fd:write('<tr '..class..'><td>'..i..'.</td><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..dsev..'</td><td>'..element..'</td></tr>\n')
+        fd:write('<tr '..class..'><td>'..i..'.</td><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..element..'</td></tr>\n')
       end
       fd:write("</tbody></table>\n</body>\n</html>\n")
       fd:close()
@@ -143,7 +141,7 @@ tbody tr:nth-child(even) {
 </style>
 <table class="miestilo">
   <theader>
-    <th>[Date]</th><th>[Description]</th><th>[Code]</th><th>[Status]</th><th>[Severity]</th><th>[Elements]</th>
+    <th>[Date]</th><th>[Description]</th><th>[Code]</th><th>[Status]</th><th>[Elements]</th>
   </theader>
   <tbody>
   </tbody>
@@ -222,8 +220,6 @@ local function insert_log_row(sds,descr,time,element,cond, init)
       local dcond = displays.display_condicion[cond]["display"]
       local date = os.date("%d/%m/%Y/%H:%M:%S", os.time(ZDateAndTime2timetable(time)))
       local cod = display_descr[descr]["codigo"]
-      local sev=access.get(sds, zigorAlarmCfgSeverity ..".".. tostring(alarms_config[descr]))
-      local dsev = displays.display_severidad[sev]["display"]
        
       -- (new) idea adjuntar tb en otro fichero info adicional del estado (medidas)
       local vr = access.get(sds, zigorDvrObjVRedR..".0")
@@ -256,12 +252,7 @@ local function insert_log_row(sds,descr,time,element,cond, init)
 	    --print(">>> tbody\n")
 	    fd:write(line) fd:write('\n')
 	    lines=0
-	    --[[
-	    local class
-	    if(toggle==true) then class='class="odd"' toggle=false else class='class="even"' toggle=true end
-	    new='    <tr '..class..'><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..dsev..'</td><td>'..element..'</td></tr>\n'
-	    --]]
-	    new='<tr><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..dsev..'</td><td>'..element..'</td></tr>\n'
+	    new='<tr><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..element..'</td></tr>\n'
 	    fd:write(new)
 	    print(new)
 	 elseif string.match(line,"</tbody>") then
@@ -303,9 +294,9 @@ local function insert_log_row(sds,descr,time,element,cond, init)
 	    --if vr~=0 and vs~=0 and vt~=0 and voutr~=0 and vouts~=0 and voutt~=0 and vbus~=0 and ir~=0 and is~=0 and it~=0 and pr~=0 and ps~=0 and pt~=0 then
 	    if vr~=nil and vs~=nil and vt~=nil and voutr~=nil and vouts~=nil and voutt~=nil and vbus~=nil and ir~=nil and is~=nil and it~=nil and pr~=nil and ps~=nil and pt~=nil then
 	       local extra = "VInR:"..tostring(vr/10).."V/VInS:"..tostring(vs/10).."V/VInT:"..tostring(vt/10).."V/VBus:"..tostring(vbus/10).."V/VOutR:"..tostring(voutr/10).."V/VOutS:"..tostring(vouts/10).."V/VOutT:"..tostring(voutt/10).."V/IR:"..tostring(ir/10).."A/IS:"..tostring(is/10).."A/IT:"..tostring(it/10).."A/PR:"..tostring(pr/10).."kW/PS:"..tostring(ps/10).."kW/PT:"..tostring(pt/10).."kW"
-	       new='<tr><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..dsev..'</td><td>'..element..'</td><td>'..extra..'</td></tr>\n'
+	       new='<tr><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..element..'</td><td>'..extra..'</td></tr>\n'
 	    else
-	       new='<tr><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..dsev..'</td><td>'..element..'</td></tr>\n'
+	       new='<tr><td>'..date..'</td><td>'..ddescr..'</td><td>'..cod..'</td><td>'..dcond..'</td><td>'..element..'</td></tr>\n'
 	    end
 	    fd:write(new)
 	    print(new)
@@ -331,7 +322,7 @@ local function insert_log_row(sds,descr,time,element,cond, init)
       -- csv file
       --print("csv file!")
       fd=io.open("/var/log/alarmlog_tmp.csv", "w")
-      new = date..','..ddescr..','..cod..','..dcond..','..dsev..','..element..'\n'
+      new = date..','..ddescr..','..cod..','..dcond..','..element..'\n'
       fd:write(new)
       print(new)
       fd:close()
