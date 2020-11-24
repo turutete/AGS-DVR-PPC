@@ -235,6 +235,57 @@ msgstr "Phase T Output Power"
 msgid "Estado de Control"
 msgstr "Control Status"
 
+msgid "Parado"
+msgstr "Stopped"
+
+msgid "Error VInst"
+msgstr "VInst error"
+
+msgid "Saturado"
+msgstr "Saturated"
+
+msgid "Pwm Ond On"
+msgstr "Ondulator PWM On"
+
+msgid "Bypass On"
+msgstr "Bypass On"
+
+msgid "Pwm Rec On"
+msgstr "Rectifier PWM On"
+
+msgid "Deteccion enable"
+msgstr "Detection enabled"
+
+msgid "Alarma VBus Max"
+msgstr "VBus Max Flag"
+
+msgid "Alarma VCond Max"
+msgstr "VCond Max Flag"
+
+msgid "Alarma VBus Min"
+msgstr "VBus Min Flag"
+
+msgid "Alarma VRed"
+msgstr "VGrid Alarm Flag"
+
+msgid "Error PLL"
+msgstr "PLL Error"
+
+msgid "Alarma Driver"
+msgstr "Driver Failure Flag"
+
+msgid "Parado Error"
+msgstr "Stopped by Error flag"
+
+msgid "Error Driver"
+msgstr "Driver error flag"
+
+msgid "Error Termo"
+msgstr "Thermostat error flag"
+
+msgid "Registro hueco"
+msgstr "Gap registered flag"
+
 msgid "Error de comunicación DSP"
 msgstr "DSP Communication Failure"
 
@@ -342,6 +393,9 @@ msgstr "TCP Port for HTTP access"
 
 msgid "Puerto TCP aplicación a través de HTTP"
 msgstr "TCP Port for application through HTTP"
+
+msgid "Tensión de Red Nominal"
+msgstr "Nominal AC Voltage"
 
 msgid "Tensión de red nominal (LL)"
 msgstr "Nominal AC Voltage (LL)"
