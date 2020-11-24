@@ -149,11 +149,11 @@ view   vw_user    excluded   $zigorSysPasswordPass.3
 ###--write access:
 view   vw_userW   included   $zigorExperiment
 view   vw_userW   excluded   $zigorSysCode.0
-view   vw_userW   excluded   $zigorDvrParamVRedNom.0
+view   vw_userW   included   $zigorDvrParamVRedNom.0
 view   vw_userW   excluded   $zigorDvrParamVMinDVR.0
 view   vw_userW   excluded   $zigorDvrParamNumEquipos.0
 view   vw_userW   excluded   $zigorDvrParamFactor.0
-view   vw_userW   excluded   $zigorDvrParamFrecNom.0
+view   vw_userW   included   $zigorDvrParamFrecNom.0
 view   vw_userW   excluded   $zigorAlarmCfgSeverity
 view   vw_userW   excluded   $zigorCtrlParamDemo.0
 
