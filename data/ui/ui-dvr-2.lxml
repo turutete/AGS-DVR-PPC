@@ -20,7 +20,6 @@ local xml = [[
       <var key="$zigorSysCode.0" name="Código del equipo" />
       <var key="$zigorSysVersion.0" name="Firmware" />
       <var key="$zigorCtrlParamState.0" name="Configuración" />
-      <var key="$zigorDvrObjModemStatus.0" name="Estado módem" />
     </node>
     <node pic="medidas" name="Medidas" >
       <var key="$zigorDvrObjVRedR.0" units="V" name="Tensión de entrada fase R" factor="10" />
