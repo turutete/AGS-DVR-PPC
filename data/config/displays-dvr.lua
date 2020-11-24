@@ -24,7 +24,6 @@ displays_dvr = {
       [ zigorAlarmaErrorDriver     ] = { codigo = "19", display_lcd = _g("ErrorDriver","Maximum 16 characters & ASCII only"),	display = _g("Error driver"),		display_sms = _g("<Error driver>","SMS characters only [GSM 03.38]"), },
       [ zigorAlarmaErrorTermo      ] = { codigo = "20", display_lcd = _g("ErrorTermo","Maximum 16 characters & ASCII only"),	display = _g("Error termostato"),		display_sms = _g("<Error termostato>","SMS characters only [GSM 03.38]"), },
       [ zigorAlarmaLimitando       ] = { codigo = "21", display_lcd = _g("Limitando","Maximum 16 characters & ASCII only"),	display = _g("Limitando"),		display_sms = _g("<Limitando>","SMS characters only [GSM 03.38]"), },
-      [ zigorAlarmaErrorFusible    ] = { codigo = "22", display_lcd = _g("ErrorFusible","Maximum 16 characters & ASCII only"),	display = _g("Error fusible"),	display_sms = _g("<Error fusible>","SMS characters only [GSM 03.38]"), },
       [ zigorAlarmaPLL             ] = { codigo = "23", display_lcd = _g("AlarmaPLL","Maximum 16 characters & ASCII only"),	display = _g("Alarma PLL"),		display_sms = _g("<Alarma PLL>","SMS characters only [GSM 03.38]"), },
       [ zigorAlarmaErrorComDSP     ] = { codigo = "24", display_lcd = _g("Fallo Com.DSP","Maximum 16 characters & ASCII only"),	display = _g("Error de comunicación con DSP"), display_sms = _g("<Error de comunicacion con DSP>","SMS characters only [GSM 03.38]"), },
       [ zigorAlarmaStatusChange    ] = { codigo = "25", display_lcd = _g("CambioEstado","Maximum 16 characters & ASCII only"),	display = _g("Cambio de estado"),		display_sms = _g("<Cambio de estado>","SMS characters only [GSM 03.38]"), },
@@ -72,8 +71,10 @@ displays_dvr = {
       [23]    = { display = _g("Error tensión de bus máxima"),	display_lcd=_g("_Error VBusMax_","Maximum 16 characters & ASCII only") },
       [24]    = { display = _g("Error termostato"),		display_lcd=_g("_Error Termo_","Maximum 16 characters & ASCII only") },
       [25]    = { display = _g("Error driver"),		display_lcd=_g("_Error Driver_","Maximum 16 characters & ASCII only") },
-      [26]    = { display = _g("Error fusible"),		display_lcd=_g("_Error Fusible_","Maximum 16 characters & ASCII only") },
+      [26]    = { display = _g("Error Fusible / Error condensador AC"),		display_lcd=_g("_Error Fus/C-AC_","Maximum 16 characters & ASCII only") }, -- Error CON13
       [27]    = { display = _g("Error temperatura"),	display_lcd=_g("_Error Temp_","Maximum 16 characters & ASCII only") },
+      [28]    = { display = _g("Error fusible"),                display_lcd=_g("_Error Fusible_","Maximum 16 characters & ASCII only") },
+      [29]    = { display = _g("Error Condensador AC"),                display_lcd=_g("_Error Cond AC_","Maximum 16 characters & ASCII only") },
    },
    -- Mantener estas tablas sincronizadas con MIB (*)
    display_condicion = {

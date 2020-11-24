@@ -58,7 +58,7 @@ local xml = [[
       <var key="$zigorDvrObjErrorDriver.0" name="Error Driver" />
       <var key="$zigorDvrObjErrorTermo.0" name="Error Termo" />
       <var key="$zigorDvrObjLimitando.0" name="Limitando" />
-      <var key="$zigorDvrObjErrorFusible.0" name="Error Fusible" />
+      <var key="$zigorDvrObjErrorFusCondAC.0" name="Error Fusible / Error condensador AC" />
       <var key="$zigorDvrObjRegHueco.0" name="Registro Hueco" />
       <var key="$zigorDvrObjAlarmaPLL.0" name="Alarma PLL" />
       <var key="$zigorDvrObjResetDriver.0" name="Reset Driver" />

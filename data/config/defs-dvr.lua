@@ -46,7 +46,7 @@ tipo_objeto_dsp = {
       ErrorDriver         = { start = 63, len =  1, cod = COD_UINT, type = G_TYPE_INT, maps = boolmap, },
       ErrorTermo          = { start = 62, len =  1, cod = COD_UINT, type = G_TYPE_INT, maps = boolmap, },
       Limitando           = { start = 61, len =  1, cod = COD_UINT, type = G_TYPE_INT, maps = boolmap, },
-      ErrorFusible        = { start = 60, len =  1, cod = COD_UINT, type = G_TYPE_INT, maps = boolmap, },
+      ErrorFusCondAC      = { start = 60, len =  1, cod = COD_UINT, type = G_TYPE_INT, maps = boolmap, },
       RegHueco            = { start = 59, len =  1, cod = COD_UINT, type = G_TYPE_INT, maps = boolmap, },
       AlarmaPLL           = { start = 58, len =  1, cod = COD_UINT, type = G_TYPE_INT, maps = boolmap, },
       ResetDriver         = { start = 57, len =  1, cod = COD_UINT, type = G_TYPE_INT, maps = boolmap, },

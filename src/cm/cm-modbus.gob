@@ -89,11 +89,10 @@ const typeAlarmCodes AlarmCodes[]={
    { zigorAlarmaErrorDriver,          19 }, 
    { zigorAlarmaErrorTermo,           20 }, 
    { zigorAlarmaLimitando,            21 }, 
-   { zigorAlarmaErrorFusible,         22 }, 
-   { zigorAlarmaPLL,                  23 }, 
-   { zigorAlarmaErrorComDSP,          24 }, 
-   { zigorAlarmaStatusChange,         25 }, 
-   { zigorAlarmaTemperaturaAlta,      26 },
+   { zigorAlarmaPLL,                  22 }, 
+   { zigorAlarmaErrorComDSP,          23 }, 
+   { zigorAlarmaStatusChange,         24 }, 
+   { zigorAlarmaTemperaturaAlta,      25 },
    { NULL, 0 },
 };
 

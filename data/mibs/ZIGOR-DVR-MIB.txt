@@ -48,14 +48,18 @@ EstadoControl ::= TEXTUAL-CONVENTION
                 onErrorRed(7),
                 onVBusMin(8),
                 onHuecoMax(9),
-		esperaOff(11),
+                onAlarmaDriver(10),
+                onVBusMax(12),
+                esperaOff(16),
                 errorCarga(21),
                 errorVCond(22),
                 errorVBusMax(23),
                 errorTermo(24),
                 errorDriver(25),
-                errorFusible(26),
-                errorTemperatura(27)
+                errorFusOrCondAC(26),
+                errorTemperatura(27),
+                errorFusible(28),
+                errorCondAC(29)
 	}
 
 Fase::= TEXTUAL-CONVENTION
@@ -431,12 +435,12 @@ zigorDvrObjGapFase OBJECT-TYPE
 		"Fase del hueco"
 	::= { zigorDvrObjEstado 41}
 
-zigorDvrObjErrorFusible OBJECT-TYPE
+zigorDvrObjErrorFusCondAC OBJECT-TYPE
 	SYNTAX		INTEGER
 	MAX-ACCESS	read-only
 	STATUS		current
 	DESCRIPTION
-		"Error fusible"
+		"Error Fusible / Error condensador AC"
 	::= { zigorDvrObjEstado 42}
 
 zigorDvrObjRegHueco OBJECT-TYPE
@@ -605,35 +609,29 @@ zigorAlarmaLimitando OBJECT-IDENTITY
 		"Limitando"
 	::= { zigorDvrAlarms 12}
 
-zigorAlarmaErrorFusible OBJECT-IDENTITY
-	STATUS		current
-	DESCRIPTION
-		"ErrorFusible"
-	::= { zigorDvrAlarms 13}
-
 zigorAlarmaPLL OBJECT-IDENTITY
 	STATUS		current
 	DESCRIPTION
 		"AlarmaPLL"
-	::= { zigorDvrAlarms 14}
+	::= { zigorDvrAlarms 13}
 
 zigorAlarmaErrorComDSP OBJECT-IDENTITY
 	STATUS		current
 	DESCRIPTION
 		"Alarma Error Comunicacion DSP"
-	::= { zigorDvrAlarms 15}
+	::= { zigorDvrAlarms 14}
 
 zigorAlarmaStatusChange OBJECT-IDENTITY
 	STATUS		current
 	DESCRIPTION
 		"Alarma de cambio de estado"
-	::= { zigorDvrAlarms 16}
+	::= { zigorDvrAlarms 15}
 
 zigorAlarmaTemperaturaAlta OBJECT-IDENTITY
 	STATUS		current
 	DESCRIPTION
 		"Alarma temperatura alta"
-	::= { zigorDvrAlarms 17}
+	::= { zigorDvrAlarms 16}
 
 --
 -- Registro de Huecos

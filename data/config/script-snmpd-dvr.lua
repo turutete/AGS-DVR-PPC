@@ -452,7 +452,7 @@ local function make_demo_handler()
       { oid=zigorDvrObjAlarmaDriver..".0",	estado=10 },
       { oid=zigorDvrObjErrorDriver..".0",	estado=25 },
       { oid=zigorDvrObjErrorTermo..".0",	estado=24 },
-      { oid=zigorDvrObjErrorFusible..".0",	estado=26 },
+      { oid=zigorDvrObjErrorFusCondAC..".0",	estado=26 },
    }
    
    if count==0 then  -- solo al inicio

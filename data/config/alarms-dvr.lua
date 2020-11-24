@@ -197,22 +197,6 @@ local factory_Limitando = function(sds)
 	---
 	end
      end
-local factory_ErrorFusible = function(sds)
-	return
-	function()
-	   -- Variables "locales" de función
-	   local ErrorFusible  = access.get(sds, zigorDvrObjErrorFusible .. ".0")
-	   
-	   if ErrorFusible==TruthValueTRUE then
-	      return zigorAlarmaErrorFusible,{
-	         ["1"] = true,  -- debemos especificar elementos aunque sea único
-	      }
-	   else
-	      return zigorAlarmaErrorFusible,{}
-	   end
-	---
-	end
-     end
 local factory_AlarmaPLL = function(sds)
 	return
 	function()
@@ -281,7 +265,6 @@ function alarms_dvr_new(sds)
       ErrorDriver       = { f = factory_ErrorDriver(sds), ca = 5, cd = 5, },
       ErrorTermo        = { f = factory_ErrorTermo(sds), ca = 5, cd = 5, },
       Limitando         = { f = factory_Limitando(sds), ca = 5, cd = 5, },
-      ErrorFusible      = { f = factory_ErrorFusible(sds), ca = 5, cd = 5, },
       AlarmaPLL         = { f = factory_AlarmaPLL(sds), ca = 5, cd = 5, },
       ErrorComDSP       = { f = factory_ErrorComDSP(sds), ca = 5, cd = 5, },
       AlarmaTemperatura = { f = factory_AlarmaTemperatura(sds), ca = 5, cd = 5, },
