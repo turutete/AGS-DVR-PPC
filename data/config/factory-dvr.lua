@@ -10,8 +10,8 @@ local param = {
    -- Parámetros generales
    --
    -- ParamSystem
-   [ zigorSysName ..  ".0"          ] = "AVC DVR",
-   [ zigorSysDescr .. ".0"          ] = "AVC DVR",
+   [ zigorSysName ..  ".0"          ] = "",
+   [ zigorSysDescr .. ".0"          ] = "",
    [ zigorSysLocation .. ".0"       ] = "Vitoria",
    [ zigorSysContact .. ".0"        ] = "zigor@zigor.com",
    -- Password de "usuario basico" (solo lectura)
