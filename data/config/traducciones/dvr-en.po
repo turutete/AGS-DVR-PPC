@@ -343,8 +343,8 @@ msgstr "TCP Port for HTTP access"
 msgid "Puerto TCP aplicación a través de HTTP"
 msgstr "TCP Port for application through HTTP"
 
-msgid "Tensión de red nominal"
-msgstr "Nominal AC Voltage"
+msgid "Tensión de red nominal (LL)"
+msgstr "Nominal AC Voltage (LL)"
 
 msgid "Tensión mínima DVR"
 msgstr "DVR Minimum Voltage"

@@ -999,8 +999,8 @@ function set_VRedNom(sds)
    vrednom=access.get(sds, zigorDvrParamVRedNom .. ".0")
    factor =access.get(sds, zigorDvrParamFactor .. ".0")  -- 0.001
    if vrednom and factor and factor~=0 then
-      --access.set(sds, zigorDvrObjVRedNom .. ".0", vrednom/(factor/10))
-      access.set(sds, zigorDvrObjVRedNom .. ".0", vrednom/(factor/1000))
+      local VRedNom = vrednom / (factor/1000) / math.sqrt(3)
+      access.set(sds, zigorDvrObjVRedNom .. ".0", VRedNom)
    end
 end
 

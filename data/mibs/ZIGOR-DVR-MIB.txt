@@ -494,7 +494,7 @@ zigorDvrParamVRedNom OBJECT-TYPE
 	MAX-ACCESS	read-write
 	STATUS		current
 	DESCRIPTION
-		"Tension de Red Nominal"
+		"Tension de Red Nominal (LL)"
 	::= { zigorDvrObjParams 1 }
 
 zigorDvrParamVMinDVR OBJECT-TYPE

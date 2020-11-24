@@ -343,7 +343,7 @@ msgstr "HTTP通讯的TCP端口"
 msgid "Puerto TCP aplicación a través de HTTP"
 msgstr "HTTP应用程序TCP端口"
 
-msgid "Tensión de red nominal"
+msgid "Tensión de red nominal (LL)"
 msgstr "标称交流电压"
 
 msgid "Tensión mínima DVR"

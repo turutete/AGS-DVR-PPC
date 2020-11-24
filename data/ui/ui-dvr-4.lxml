@@ -119,7 +119,7 @@ $passwords
       </node>
     </node>
     <node pic="cfg" name="DVR" >
-      <var key="$zigorDvrParamVRedNom.0" units="V" name="Tensión de red nominal" factor="10" />
+      <var key="$zigorDvrParamVRedNom.0" units="V" name="Tensión de red nominal (LL)" factor="10" />
       <var key="$zigorDvrParamVMinDVR.0" units="V" name="Tensión mínima DVR" factor="10" />
       <var key="$zigorDvrParamNumEquipos.0" name="Equipos en paralelo" />
       <var key="$zigorDvrParamFactor.0" name="Factor de conversión para tensiones" factor="1000" />

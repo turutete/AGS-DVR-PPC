@@ -346,7 +346,7 @@ msgstr ""
 msgid "Equipo"
 msgstr ""
 
-msgid "Tensión de red nominal"
+msgid "Tensión de red nominal (LL)"
 msgstr ""
 
 msgid "Tensión mínima DVR"
