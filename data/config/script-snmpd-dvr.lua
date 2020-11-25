@@ -844,13 +844,26 @@ local function setsig_handler(sds, k, v, data)
       gobject.block(sds, set_handler_id)
       err=access.set(sds, k, v)
       if err==0 then 
-	 res=true -- no hacer el set, ya hecho
-	 -- Recalcular
-	 set_VRedNom(sds)
+         res=true -- no hacer el set, ya hecho
+         -- Recalcular
+         set_VRedNom(sds)
       end
       gobject.unblock(sds, set_handler_id)
    end
-   
+
+   -- calculo de variable VMinDVR
+   if (k == zigorDvrParamVMinDVR .. ".0") then
+      -- Metemos la variable en el SDS _antes_ de recalcular
+      gobject.block(sds, set_handler_id)
+      err=access.set(sds, k, v)
+      if err==0 then 
+         res=true -- no hacer el set, ya hecho
+         -- Recalcular
+         set_VMinDVR(sds)
+      end
+      gobject.unblock(sds, set_handler_id)
+   end
+
    -- Tensiones segun parametro de factor
    if (k == zigorDvrObjVRedR .. ".0") or (k == zigorDvrObjVRedS .. ".0") or (k == zigorDvrObjVRedT .. ".0") or
       (k == zigorDvrObjVSecundarioR .. ".0") or (k == zigorDvrObjVSecundarioS .. ".0") or (k == zigorDvrObjVSecundarioT .. ".0") then
@@ -1008,6 +1021,15 @@ function set_VRedNom(sds)
    end
 end
 
+function set_VMinDVR(sds)
+   local vrednom,factor
+   vmindvr=access.get(sds, zigorDvrParamVMinDVR .. ".0")
+   if vmindvr then
+      local VMinDVR = vmindvr / math.sqrt(3)
+      access.set(sds, zigorDvrObjVMinDVR .. ".0", VMinDVR)
+   end
+end
+
 --------------------------------------------
 -- Manipulación "buffer" de salida al bus
 --------------------------------------------
@@ -1021,7 +1043,7 @@ local fichero_dsp_buf = {
    buffer = { 
 --      zigorDvrParamVRedNom .. ".0",
       zigorDvrObjVRedNom .. ".0",
-      zigorDvrParamVMinDVR .. ".0",
+      zigorDvrObjVMinDVR .. ".0",
       zigorDvrParamFrecNom .. ".0",
    },
 }
@@ -1101,6 +1123,8 @@ setsig_init=0  -- usado para evitar sets de ciertas variables en arranque
 gaplog_init(sdscoreglib)
 --VReNom:
 set_VRedNom(sdscoreglib)
+--VMinDVR:
+set_VMinDVR(sdscoreglib)
 -- Servicio SSH
 configureSSH(sdscoreglib)
 

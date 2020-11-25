@@ -186,7 +186,7 @@ local edit_config_dvr = {
       check_args = {factor=10, min=0, max=1000000}, },
    [zigorDvrParamVMinDVR] = {
       check = check_number,
-      check_args = {factor=10, min=0, max=2300}, },
+      check_args = {factor=10, min=0, max=4000}, },
    [zigorDvrParamNumEquipos] = {
       check = check_number,
       check_args = {min=1, max=5}, },

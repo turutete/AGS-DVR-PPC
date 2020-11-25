@@ -64,6 +64,8 @@ zigorDvrObjModemStatus = zigorDvrObjEstado..".46"
 
 zigorDvrObjErrorTemp = zigorDvrObjEstado..".47"
 
+zigorDvrObjVMinDVR = zigorDvrObjEstado..".48"
+
 --
 -- Parametros Sistema
 --

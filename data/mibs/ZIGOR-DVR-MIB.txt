@@ -483,6 +483,14 @@ zigorDvrObjErrorTemp OBJECT-TYPE
 		"Error de temperatura"
 	::= { zigorDvrObjEstado 47}
 
+zigorDvrObjVMinDVR OBJECT-TYPE
+	SYNTAX		INTEGER
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION
+		"Tension VRedMinDVR (en tensión simple)"
+	::= { zigorDvrObjEstado 48}
+
 --
 -- Parametros Sistema
 --

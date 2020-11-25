@@ -80,7 +80,7 @@ local param = {
    -- Parámetros particulares
    --
    [ zigorDvrParamVRedNom .. ".0"	] = 4000,  -- 0.1
-   [ zigorDvrParamVMinDVR .. ".0"	] = 1380,  -- 0.1
+   [ zigorDvrParamVMinDVR .. ".0"	] = 2400,  -- 0.1
    [ zigorDvrParamNumEquipos .. ".0"	] = 1,
    [ zigorDvrParamFactor .. ".0"	] = 1000,  -- 0.001
    [ zigorDvrParamFrecNom .. ".0"	] = 500,   -- 0.1

@@ -403,6 +403,9 @@ msgstr "Nominal AC Voltage (LL)"
 msgid "Tensión mínima DVR"
 msgstr "DVR Minimum Voltage"
 
+msgid "Tensión mínima DVR (LL)"
+msgstr "DVR Minimum Voltage (LL)"
+
 msgid "Equipos en paralelo"
 msgstr "Number of parallel units"
 
