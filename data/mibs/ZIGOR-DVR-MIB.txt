@@ -633,6 +633,12 @@ zigorAlarmaTemperaturaAlta OBJECT-IDENTITY
 		"Alarma temperatura alta"
 	::= { zigorDvrAlarms 16}
 
+zigorAlarmaSagRecorded OBJECT-IDENTITY
+	STATUS		current
+	DESCRIPTION
+		"Hueco registrado"
+	::= { zigorDvrAlarms 17}
+
 --
 -- Registro de Huecos
 --

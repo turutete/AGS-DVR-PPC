@@ -95,6 +95,7 @@ zigorAlarmaPLL = zigorDvrAlarms..".13"
 zigorAlarmaErrorComDSP = zigorDvrAlarms..".14"
 zigorAlarmaStatusChange = zigorDvrAlarms..".15"
 zigorAlarmaTemperaturaAlta = zigorDvrAlarms..".16"
+zigorAlarmaSagRecorded = zigorDvrAlarms..".17"
 
 -- gaplog:
 zigorDvrGapLog = zigorDvrMIB..".3"

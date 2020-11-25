@@ -167,7 +167,7 @@ local columns_alarms_view = {
    },
    -- columna 5
    ["5"] = {
-      properties = { title = "Elementos", },  -- i18n
+      properties = { title = "Descripción", },  -- i18n
       -- "Cells" columna 6
       cells = {
 	 ["1"] = { name = "elements",
@@ -218,7 +218,7 @@ local columns_heventos_view = {
    },
    -- columna 5
    ["5"] = {
-      properties = { title = "Elemento", },  -- i18n
+      properties = { title = "Descripción", },  -- i18n
       -- "Cells" columna 6
       cells = {
 	 ["1"] = { name = "element",

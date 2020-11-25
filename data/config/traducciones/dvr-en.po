@@ -439,6 +439,9 @@ msgstr "Level"
 msgid "Elementos"
 msgstr "Elements"
 
+msgid "Descripción"
+msgstr "Description"
+
 msgid "Reconocer"
 msgstr "Recognised"
 
@@ -463,6 +466,18 @@ msgstr "Duration (ms)"
 msgid "Fase"
 msgstr "Phase"
 
+msgid "F"
+msgstr "Ph"
+
+msgid "Mín"
+msgstr "Min"
+
+msgid "Med"
+msgstr "Avg"
+
+msgid "Dur"
+msgstr "Dur"
+
 msgid "Introduce password"
 msgstr "Enter password"
 
@@ -480,6 +495,9 @@ msgstr "System Start"
 
 msgid "Cambio de password"
 msgstr "Password change"
+
+msgid "Hueco registrado"
+msgstr "Sag registered"
 
 #. Maximum 16 characters & ASCII only
 msgid "ErrorVInst"

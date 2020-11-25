@@ -98,6 +98,7 @@
 #define zigorAlarmaErrorComDSP                             ".1.3.6.1.4.1.4576.4.10.2.14"
 #define zigorAlarmaStatusChange                            ".1.3.6.1.4.1.4576.4.10.2.15"
 #define zigorAlarmaTemperaturaAlta                         ".1.3.6.1.4.1.4576.4.10.2.16"
+#define zigorAlarmaSagRecorded                             ".1.3.6.1.4.1.4576.4.10.2.17"
 
 #define zigorDvrGapLogTotalEntries                         ".1.3.6.1.4.1.4576.4.10.3.1"
 #define zigorDvrGapLogMaxEntries                           ".1.3.6.1.4.1.4576.4.10.3.2"

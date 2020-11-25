@@ -385,6 +385,9 @@ msgstr "等级"
 msgid "Elementos"
 msgstr "成分"
 
+msgid "Descripción"
+msgstr "描述"
+
 msgid "Reconocer"
 msgstr "确认"
 
@@ -409,6 +412,18 @@ msgstr "持续时间（ms）"
 msgid "Fase"
 msgstr "相"
 
+msgid "F"
+msgstr "相"
+
+msgid "Mín"
+msgstr "最小值"
+
+msgid "Med"
+msgstr "平均值"
+
+msgid "Dur"
+msgstr "持续时间"
+
 msgid "Introduce password"
 msgstr "输入密码"
 
@@ -426,6 +441,9 @@ msgstr "系统开始"
 
 msgid "Cambio de password"
 msgstr "密码变化"
+
+msgid "Hueco registrado"
+msgstr "电压暂降已注册"
 
 #. Maximum 16 characters & ASCII only
 msgid "ErrorVInst"
@@ -559,6 +577,12 @@ msgstr "保险丝故障"
 
 msgid "Error fusible"
 msgstr "保险丝故障"
+
+msgid "Error Fusible / Error condensador AC"
+msgstr "保险丝故障 / 交流电容器故障"
+
+msgid "_Error Fus/C-AC_"
+msgstr "_保险丝故障/交流电容器故障_"
 
 #. SMS characters only [GSM 03.38]
 msgid "<Error fusible>"
@@ -720,6 +744,12 @@ msgstr "保险丝故障"
 
 msgid "Error temperatura"
 msgstr "温度故障"
+
+msgid "Error Condensador AC"
+msgstr "交流电容器故障"
+
+msgid "_Error Cond AC_"
+msgstr "_交流电容器故障_"
 
 #. Maximum 16 characters & ASCII only
 msgid "_Error Temp_"

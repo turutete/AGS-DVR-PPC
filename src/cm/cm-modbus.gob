@@ -76,7 +76,8 @@ typedef struct{
 
 const typeAlarmCodes AlarmCodes[]={
    { zigorAlarmaStart,                00 }, 
-   { zigorAlarmaPasswdChange,         01 }, 
+   { zigorAlarmaPasswdChange,         01 },
+   { zigorAlarmaSagRecorded,          02 },
    { zigorAlarmaErrorVInst,           10 }, 
    { zigorAlarmaSaturado,             11 }, 
    { zigorAlarmaVBusMax,              12 }, 

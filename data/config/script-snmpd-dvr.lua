@@ -227,7 +227,6 @@ local function insert_log_row(sds,time,minimo,integral,tiempo,fase, init)
 
       --update_gaplog_html(sds)
       -- (new) html & csv! (idea sólo en inglés para simplificar)
-      setlocale(sds, "en_GB.utf8")   -- require "functions" required.
       local displays = dofile("../share/config/displays-dvr.lua")
       local display_fase = displays.display_hueco
       local dfase=display_fase[fase]["fase-display"]
@@ -370,8 +369,13 @@ end
 ------------------------
 
 local function gaplog_set(sds, date, minimo, integral, tiempo, fase)
-		  insert_log_row(sds, date, minimo, integral, tiempo, fase, false)
-	       end
+        insert_log_row(sds, date, minimo, integral, tiempo, fase, false)
+        local displays = dofile("../share/config/displays-dvr.lua")
+        local display_fase = displays.display_hueco
+        local dfase=display_fase[fase]["fase-display"]
+        local sag_info = _g("F") .. ": " .. dfase .. " " ..  _g("Dur") .. ": " .. tiempo .. " ms" .. " " .. _g("Mín") ..": " .. minimo .. " %" .. " " .. _g("Med") .. ": " .. integral .. " %"
+        alt.insert(zigorAlarmaSagRecorded, index_cond.bloqueada, sag_info, date)
+    end
 
 local function gaplog_init(sds)
                    local t,last_id, last_queue_wraps

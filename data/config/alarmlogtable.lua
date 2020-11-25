@@ -19,7 +19,7 @@ local function ElementList2table(elements)
    return t
 end
 
--- Devuelve los elementos que están en "a" pero no en "b"
+-- Devuelve los elementos que estï¿½n en "a" pero no en "b"
 local function elements_diff(a, b)
    local t={}
 
@@ -81,7 +81,7 @@ local function update_log_html(sds)
 </style>
 <table class="miestilo">
 <theader>
-   <th>[N.]</th><th>[Date]</th><th>[Description]</th><th>[Code]</th><th>[Status]</th><th>[Elements]</th>
+   <th>[N.]</th><th>[Date]</th><th>[Event]</th><th>[Code]</th><th>[Status]</th><th>[Description]</th>
 </theader>
 <tbody>
 ]]
@@ -141,7 +141,7 @@ tbody tr:nth-child(even) {
 </style>
 <table class="miestilo">
   <theader>
-    <th>[Date]</th><th>[Description]</th><th>[Code]</th><th>[Status]</th><th>[Elements]</th>
+    <th>[Date]</th><th>[Event]</th><th>[Code]</th><th>[Status]</th><th>[Description]</th>
   </theader>
   <tbody>
   </tbody>
@@ -210,8 +210,6 @@ local function insert_log_row(sds,descr,time,element,cond, init)
       os.execute("sync")
       -- update_log_html(sds)
       -------------
-      -- (new) html & csv! (idea sólo en inglés para simplificar)
-      setlocale(sds, "en_GB.utf8")   -- require "functions" required.
       local displays = dofile("../share/config/displays-dvr.lua")
       local display_descr = displays.display_descr
       local alarms_config=get_alarm_config_index(sds)
@@ -332,7 +330,7 @@ local function insert_log_row(sds,descr,time,element,cond, init)
       os.execute("sync")
       ----------
 
-      -- Emitir notificación de nueva fila insertada en histórico
+      -- Emitir notificaciï¿½n de nueva fila insertada en histï¿½rico
       access.set(sds, zigorTrapAlarmLogEntryAdded, this_id)
    end
 
@@ -354,7 +352,7 @@ end
 ----
 -- Constructor de "objeto" "alarmlogtable"
 ----
--- Parámetros
+-- Parï¿½metros
 -- sds:
 --    Objeto "sds" (implementa AccessIf y AccessXIf)
 function alarmlogtable_new(params)
@@ -437,7 +435,7 @@ function alarmlogtable_new(params)
 			 end
 
    local del_log = function()
-		      -- borramos histórico de SDS
+		      -- borramos histï¿½rico de SDS
 		      local key = zigorAlarmLogId
 		      local nextkey=accessx.getnextkey(sds, key) -- primero
 		      while( nextkey and is_substring(nextkey, key) and nextkey~=key ) do
@@ -445,7 +443,7 @@ function alarmlogtable_new(params)
 			 del_row_by_id(id)
 			 nextkey=accessx.getnextkey(sds, nextkey) -- siguiente
 		      end
-		      -- borramos histórico de disco
+		      -- borramos histï¿½rico de disco
 		      local fd=io.open("../share/config/alarmlog-" .. profile .. ".lua", "w+") -- XXX path y sufijo "hardcoded"
 		      fd:write('local alarmlog = ')
 		      fd:write( "{}" )
@@ -454,7 +452,7 @@ function alarmlogtable_new(params)
 		      fd:close()
 		      -- inicializamos
 		      id=1
-		      -- XXX añadir un evento "borrado de histórico"
+		      -- XXX aï¿½adir un evento "borrado de histï¿½rico"
 		      
 		      --update_log_html(sds)
 		      --cmd = [[sed -i '/tbody/,/\/tbody/d' /home/user/alarmlog.html; echo >/home/user/alarmlog.csv]]
@@ -475,7 +473,7 @@ function alarmlogtable_new(params)
    return {
       set=set,
       del_log=del_log,
-      -- exportamos función para insertar una fila sin control de estado
+      -- exportamos funciï¿½n para insertar una fila sin control de estado
       insert=insert,
       --update_html_log=update_html_log,
    }

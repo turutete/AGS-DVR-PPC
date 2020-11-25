@@ -11,6 +11,8 @@ displays_dvr = {
    display_descr = {
       [ zigorAlarmaStart           ] = { codigo = "00", display = _g("Inicio sistema"), }, -- XXX
       [ zigorAlarmaPasswdChange    ] = { codigo = "01", display = _g("Cambio de password"), },-- XXX
+      [ zigorAlarmaSagRecorded     ] = { codigo = "02", display = _g("Hueco registrado"), },
+
       --
       [ zigorAlarmaErrorVInst      ] = { codigo = "10", display_lcd = _g("ErrorVInst","Maximum 16 characters & ASCII only"),	display = _g("Error tensión instantánea"),	display_sms = _g("<Error tension instantanea>","SMS characters only [GSM 03.38]"), },
       [ zigorAlarmaSaturado        ] = { codigo = "11", display_lcd = _g("Sobrecarga","Maximum 16 characters & ASCII only"),	display = _g("Sobrecarga"),		display_sms = _g("<Sobrecarga>","SMS characters only [GSM 03.38]"), },
