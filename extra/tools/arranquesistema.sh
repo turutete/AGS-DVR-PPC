@@ -50,6 +50,7 @@ ${PATH_ACTIVA_TOOLS}/respawn.sh ${PATH_ACTIVA_TOOLS}/ags-cliente-local.sh &>/var
 
 #${PATH_ACTIVA_TOOLS}/lanzar_Xvnc.sh &>/dev/null &
 ${PATH_ACTIVA_TOOLS}/lanzar_Xvnc.sh &>/var/log/lanzar_Xvnc &
+/usr/local/zigor/activa/tools/xscreensaver_once.sh &
 
 sleep 5
 
@@ -72,3 +73,6 @@ ${PATH_ACTIVA_TOOLS}/xscreensaver.sh &
 # XXX
 ${PATH_ACTIVA_TOOLS}/respawn.sh /usr/sbin/mgetty ttyS1 &
 lighttpd -f /etc/lighttpd/lighttpd.conf
+
+killall xscreensaver_once.sh
+killall xv
