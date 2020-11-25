@@ -11,7 +11,7 @@ then
 fi
 
 # idioma:
-export LC_ALL=""
+export LC_ALL="en_GB.utf8"
 echo $LC_ALL
 export LAUNCH="${PATH_ACTIVA_TOOLS}/`basename $0`"
 echo $LAUNCH
