@@ -44,7 +44,17 @@ function save_system_data(sds)
    local snmpd_conf=require ("snmpd_conf-" .. profile)
    if(snmpd_conf) then
       if(snmpd_conf:save(sds)) then
-	 snmpd_conf:restart()
+         os.execute("touch /tmp/block_gui.txt")
+         snmpd_conf:restart()
+         os.execute("/usr/local/zigor/activa/tools/xscreensaver_once_remoto.sh &")
+         os.execute("killall ags-servidor")
+         os.execute("killall ags-cliente-local")
+         os.execute("killall ags-cliente-remoto")
+         os.execute("sleep 30")
+         os.execute("rm /tmp/block_gui.txt")
+         os.execute("killall xscreensaver_once_remoto.sh")
+         os.execute("killall xv")
+         os.execute('/usr/local/zigor/activa/tools/xsetroot -d :1 -solid "rgb:20/20/20"')
       end
    end
    -- Cfg pin del modem

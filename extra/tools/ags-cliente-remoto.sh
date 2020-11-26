@@ -4,6 +4,12 @@ PATH_ACTIVA="/usr/local/zigor/activa"
 PATH_ACTIVA_TOOLS="${PATH_ACTIVA}/tools"
 PATH_ACTIVA_AGS="${PATH_ACTIVA}/ags-dvr"
 
+LOCK_FILE=/tmp/block_gui.txt
+if [ -f $LOCK_FILE ]; then
+    sleep 1
+    exit
+fi
+
 #XXX debug:
 if [ $# -ge 1 ]
 then
