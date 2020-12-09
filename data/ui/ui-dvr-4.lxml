@@ -42,8 +42,8 @@ local xml = [[
       <var key="$zigorDvrObjEstadoControl.0" name="Estado de Control" />
       <var key="$zigorDvrObjParado.0" name="Parado" />
       <var key="$zigorDvrObjErrorVInst.0" name="Error Vinst" />
-      <var key="$zigorDvrObjSaturado.0" name="Saturado" />
-      <var key="$zigorDvrObjPwmOndOn.0" name="Pwm Ond On" />
+      <var key="$zigorDvrObjSaturado.0" name="Sobrecarga" />
+      <var key="$zigorDvrObjPwmOndOn.0" name="Pwm Inv On" />
       <var key="$zigorDvrObjBypassOn.0" name="Bypass On" />
       <var key="$zigorDvrObjPwmRecOn.0" name="Pwm Rec On" />
       <var key="$zigorDvrObjDeteccionEnable.0" name="Deteccion enable" />
@@ -57,9 +57,9 @@ local xml = [[
       <var key="$zigorDvrObjParadoError.0" name="Parado Error" />
       <var key="$zigorDvrObjErrorDriver.0" name="Error Driver" />
       <var key="$zigorDvrObjErrorTermo.0" name="Error Termo" />
-      <var key="$zigorDvrObjLimitando.0" name="Limitando" />
+      <var key="$zigorDvrObjLimitando.0" name="Limitación de potencia interna" />
       <var key="$zigorDvrObjErrorFusCondAC.0" name="Error Fusible / Error condensador AC" />
-      <var key="$zigorDvrObjRegHueco.0" name="Registro Hueco" />
+      <var key="$zigorDvrObjRegHueco.0" name="Registro hueco" />
       <var key="$zigorDvrObjAlarmaPLL.0" name="Alarma PLL" />
       <var key="$zigorDvrObjResetDriver.0" name="Reset Driver" />
       <var key="$zigorDvrObjErrorTemp.0" name="Error temperatura" />

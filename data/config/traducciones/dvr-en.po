@@ -241,9 +241,6 @@ msgstr "Stopped"
 msgid "Error VInst"
 msgstr "VInst error"
 
-msgid "Saturado"
-msgstr "Saturated"
-
 msgid "Pwm Ond On"
 msgstr "Ondulator PWM On"
 
@@ -284,7 +281,7 @@ msgid "Error Termo"
 msgstr "Thermostat error flag"
 
 msgid "Registro hueco"
-msgstr "Gap registered flag"
+msgstr "Sag registered flag"
 
 msgid "Error de comunicación DSP"
 msgstr "DSP Communication Failure"
@@ -621,12 +618,12 @@ msgid "<Error termostato>"
 msgstr "Thermostat failure"
 
 #. Maximum 16 characters & ASCII only
-msgid "Limitando"
-msgstr "Pre-Overload"
+msgid "Limitación de potencia interna"
+msgstr "Internal power limitation"
 
 #. SMS characters only [GSM 03.38]
-msgid "<Limitando>"
-msgstr "Pre-Overload"
+msgid "<Limitación de potencia interna>"
+msgstr "Internal power limitation"
 
 #. Maximum 16 characters & ASCII only
 msgid "ErrorFusible"
