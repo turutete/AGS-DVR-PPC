@@ -12,7 +12,10 @@ loadlualib("accessx")
 local function ElementList2table(elements)
    local t={}
 
-   for e in string.gmatch(elements, "([^ \t\n\r]+)") do
+   if (elements == "  ") then -- Se añade un espacio entre cada elemento, con lo que los elementos "vacios" acaban siendo dos espacios
+      t[" "] = true
+   end
+   for e in string.gmatch(elements, "([^ \t\n\r]+)") do -- Con esta RegEx NO se tienen en cuenta los elementos que son un espacio en blanco
       t[e]=true
    end
 
@@ -427,7 +430,7 @@ function alarmlogtable_new(params)
 		   id=last_id or id
 		   access.set(sds, zigorAlarmLogQueueWraps .. ".0", last_queue_wraps or 0)
 		   local date=os.date("%Y%m%d%H%M%S0%z")
-		   insert_log_row(sds, zigorAlarmaStart, date, "1", index_cond["activa"], false)
+		   insert_log_row(sds, zigorAlarmaStart, date, " ", index_cond["activa"], false)
 		end
 
    local del_row_by_id = function(id)

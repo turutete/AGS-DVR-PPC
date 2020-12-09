@@ -13,7 +13,7 @@ local factory_ErrorVInst = function(sds)
 	   
 	   if ErrorVInst==TruthValueTRUE then
 	      return zigorAlarmaErrorVInst,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaErrorVInst,{}
@@ -29,7 +29,7 @@ local factory_Saturado = function(sds)
 	   
 	   if Saturado==TruthValueTRUE then
 	      return zigorAlarmaSaturado,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaSaturado,{}
@@ -45,7 +45,7 @@ local factory_AlarmaVBusMax = function(sds)
 	   
 	   if AlarmaVBusMax==TruthValueTRUE then
 	      return zigorAlarmaVBusMax,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaVBusMax,{}
@@ -61,7 +61,7 @@ local factory_AlarmaVCondMax = function(sds)
 	   
 	   if AlarmaVCondMax==TruthValueTRUE then
 	      return zigorAlarmaVCondMax,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaVCondMax,{}
@@ -77,7 +77,7 @@ local factory_AlarmaVBusMin = function(sds)
 	   
 	   if AlarmaVBusMin==TruthValueTRUE then
 	      return zigorAlarmaVBusMin,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaVBusMin,{}
@@ -93,7 +93,7 @@ local factory_AlarmaVRed = function(sds)
 	   
 	   if AlarmaVRed==TruthValueTRUE then
 	      return zigorAlarmaVRed,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaVRed,{}
@@ -109,7 +109,7 @@ local factory_LimitIntVSal = function(sds)
 	   
 	   if LimitIntVSal==TruthValueTRUE then
 	      return zigorAlarmaLimitIntVSal,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaLimitIntVSal,{}
@@ -125,7 +125,7 @@ local factory_AlarmaDriver = function(sds)
 	   
 	   if AlarmaDriver==TruthValueTRUE then
 	      return zigorAlarmaDriver,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaDriver,{}
@@ -141,7 +141,7 @@ local factory_ParadoError = function(sds)
 	   
 	   if ParadoError==TruthValueTRUE then
 	      return zigorAlarmaParadoError,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaParadoError,{}
@@ -157,7 +157,7 @@ local factory_ErrorDriver = function(sds)
 	   
 	   if ErrorDriver==TruthValueTRUE then
 	      return zigorAlarmaErrorDriver,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaErrorDriver,{}
@@ -173,7 +173,7 @@ local factory_ErrorTermo = function(sds)
 	   
 	   if ErrorTermo==TruthValueTRUE then
 	      return zigorAlarmaErrorTermo,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaErrorTermo,{}
@@ -189,7 +189,7 @@ local factory_Limitando = function(sds)
 	   
 	   if Limitando==TruthValueTRUE then
 	      return zigorAlarmaLimitando,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaLimitando,{}
@@ -205,7 +205,7 @@ local factory_AlarmaPLL = function(sds)
 	   
 	   if AlarmaPLL==TruthValueTRUE then
 	      return zigorAlarmaPLL,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaPLL,{}
@@ -221,7 +221,7 @@ local factory_ErrorComDSP = function(sds)
 	   
 	   if EComDSP==TruthValueTRUE then
 	      return zigorAlarmaErrorComDSP,{
-	         [""] = true,  -- debemos especificar elementos aunque sea único
+	         [" "] = true,  -- debemos especificar elementos aunque sea único
 	      }
 	   else
 	      return zigorAlarmaErrorComDSP,{}
@@ -237,7 +237,7 @@ local factory_AlarmaTemperatura = function(sds)
 
            if FlagErrorTemp==TruthValueTRUE then
               return zigorAlarmaTemperaturaAlta,{
-                 [""] = true,
+                 [" "] = true,
               }
            else
               return zigorAlarmaTemperaturaAlta,{}
