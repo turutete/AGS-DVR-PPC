@@ -1,7 +1,28 @@
 -- IMPORTANTE: ESTE FICHERO ESTÁ EN UTF-8
 
 require "parameter"
-   
+
+function check_vredNom(s, args)
+   val=tonumber(s)
+   if not val then
+      return false
+   end
+
+   if args.factor and args.factor~=0 then
+      val=val*args.factor
+   end
+
+   if val >= 1950 and val <= 2250 then
+      return true
+   end
+
+   if val >= 3750 and val <= 4150 then
+      return true
+   end
+
+   return false
+end
+
 -- Configuración de edición
 -- para cada parámetro:
 -- check(entrada, check_args) se llama para saber si entrada (in)válida (retorna verdadero si válida)
@@ -181,21 +202,20 @@ local edit_config_dvr = {
    },
    ---
    [zigorDvrParamVRedNom] = {
-      check = check_number,
-      --check_args = {factor=10, min=0, max=2500}, },
-      check_args = {factor=10, min=0, max=1000000}, },
+      check = check_vredNom,
+      check_args = {factor=10}, },
    [zigorDvrParamVMinDVR] = {
       check = check_number,
-      check_args = {factor=10, min=0, max=4000}, },
+      check_args = {factor=10, min=750, max=2550}, },
    [zigorDvrParamNumEquipos] = {
-      check = check_number,
-      check_args = {min=1, max=5}, },
+      check = check_number_values,
+      check_args = {values={1,2,3}}, },
    [zigorDvrParamFactor] = {
       check = check_number,
       check_args = {factor=1000, min=0, max=1000000}, },
    [zigorDvrParamFrecNom] = {
-      check = check_number,
-      check_args = {factor=10, min=500, max=600}, },
+      check = check_number_values,
+      check_args = {factor=10, values={500,600}}, },
 
    --- modbus
    [zigorModbusAddress] =  {
