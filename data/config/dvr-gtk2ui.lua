@@ -149,28 +149,11 @@ local columns_alarms_view = {
    },
    -- columna 3
    ["3"] = {
-      properties = { title = "Est.", },  -- i18n
-      -- "Cells" columna 3
-      cells = {
-	 ["1"] = { name = "pic", },
-      },
-   },
-   -- columna 4
-   ["4"] = {
       properties = { title = "Fecha", },  -- i18n
       -- "Cells" columna 5
       cells = {
 	 ["1"] = { name = "time-display",
 	    properties = { foreground = "Blue", },
-	 },
-      },
-   },
-   -- columna 5
-   ["5"] = {
-      properties = { title = "Descripción", },  -- i18n
-      -- "Cells" columna 6
-      cells = {
-	 ["1"] = { name = "elements",
 	 },
       },
    },
