@@ -570,12 +570,12 @@ msgid "<Error termostato>"
 msgstr "感温器故障"
 
 #. Maximum 16 characters & ASCII only
-msgid "Limitando"
-msgstr "内部功率限制"
+msgid "Limitación de potencia interna"
+msgstr "内部电源限制"
 
 #. SMS characters only [GSM 03.38]
-msgid "<Limitando>"
-msgstr "内部功率限制"
+msgid "<Limitación de potencia interna>"
+msgstr "内部电源限制"
 
 #. Maximum 16 characters & ASCII only
 msgid "ErrorFusible"
