@@ -538,7 +538,9 @@ local function make_demo_handler()
    end
 
    count=count+1
-   
+
+   access.set(sdscoreglib, zigorDvrObjEComDSP..".0", 2) -- Inhibir la alarma de error de comunicaciones con el DSP
+
    return true
  end
 end
