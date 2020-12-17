@@ -241,8 +241,8 @@ msgstr "Stopped"
 msgid "Error VInst"
 msgstr "VInst error"
 
-msgid "Pwm Ond On"
-msgstr "Ondulator PWM On"
+msgid "Pwm Inv On"
+msgstr "Inverter PWM On"
 
 msgid "Bypass On"
 msgstr "Bypass On"
@@ -400,8 +400,8 @@ msgstr "Nominal AC Voltage (LL)"
 msgid "Tensión mínima DVR"
 msgstr "DVR Minimum Voltage"
 
-msgid "Tensión mínima DVR (LL)"
-msgstr "DVR Minimum Voltage (LL)"
+msgid "Tensión mínima DVR (LN)"
+msgstr "DVR Minimum Voltage (LN)"
 
 msgid "Equipos en paralelo"
 msgstr "Number of parallel units"
@@ -411,6 +411,9 @@ msgstr "Voltage Conversion Factor"
 
 msgid "Frecuencia nominal"
 msgstr "Nominal Frequency"
+
+msgid "Hueco nominal"
+msgstr "Nominal sag"
 
 msgid "Niveles"
 msgstr "Levels"

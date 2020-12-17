@@ -76,6 +76,8 @@ zigorDvrParamVMinDVR = zigorDvrObjParams..".2"
 zigorDvrParamNumEquipos = zigorDvrObjParams..".3"
 zigorDvrParamFactor = zigorDvrObjParams..".4"
 zigorDvrParamFrecNom = zigorDvrObjParams..".5"
+zigorDvrParamHuecoNom = zigorDvrObjParams..".6"
+
 --
 -- Alarmas
 --

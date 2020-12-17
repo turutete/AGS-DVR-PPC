@@ -847,6 +847,7 @@ local function setsig_handler(sds, k, v, data)
          res=true -- no hacer el set, ya hecho
          -- Recalcular
          set_VRedNom(sds)
+         set_VMinDVR(sds)
       end
       gobject.unblock(sds, set_handler_id)
    end
@@ -857,6 +858,18 @@ local function setsig_handler(sds, k, v, data)
       gobject.block(sds, set_handler_id)
       err=access.set(sds, k, v)
       if err==0 then 
+         res=true -- no hacer el set, ya hecho
+         -- Recalcular
+         access.set(sds, zigorDvrObjVMinDVR .. ".0", v)
+      end
+      gobject.unblock(sds, set_handler_id)
+   end
+
+   if (k == zigorDvrParamHuecoNom .. ".0") then
+      -- Metemos la variable en el SDS _antes_ de recalcular
+      gobject.block(sds, set_handler_id)
+      err=access.set(sds, k, v)
+      if err==0 then
          res=true -- no hacer el set, ya hecho
          -- Recalcular
          set_VMinDVR(sds)
@@ -1022,10 +1035,12 @@ function set_VRedNom(sds)
 end
 
 function set_VMinDVR(sds)
-   local vrednom,factor
-   vmindvr=access.get(sds, zigorDvrParamVMinDVR .. ".0")
-   if vmindvr then
-      local VMinDVR = vmindvr / math.sqrt(3)
+   local vrednom,porcentaje
+   vredNom = access.get(sds, zigorDvrParamVRedNom .. ".0")
+   huecoNom = access.get(sds, zigorDvrParamHuecoNom .. ".0")
+   if vredNom and huecoNom then
+      local VMinDVR = vredNom / math.sqrt(3) * (1 - (huecoNom / 100))
+      access.set(sds, zigorDvrParamVMinDVR .. ".0", VMinDVR)
       access.set(sds, zigorDvrObjVMinDVR .. ".0", VMinDVR)
    end
 end

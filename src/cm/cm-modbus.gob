@@ -240,6 +240,7 @@ const typeHoldingReg HoldingReg[]={
    { 0, UINT16, zigorDvrParamNumEquipos,	0, 0, 0, {0}, 		{10000} },
    { 0, UINT16, zigorDvrParamFactor,		0, 0, 0, {0}, 		{1000000} },
    { 0, UINT16, zigorDvrParamFrecNom,		0, 0, 0, {0}, 		{10000} },
+   { 0, UINT16, zigorDvrParamHuecoNom,		0, 0, 0, {40}, 		{60} },
    { 0, UINT16, zigorDvrObjOrdenMarcha,		0, 0, 1, {1}, 		{1} },
    { 0, UINT16, zigorDvrObjOrdenParo,		0, 0, 1, {1}, 		{1} },
    { 0, UINT16, zigorDvrObjOrdenReset,		0, 0, 1, {1}, 		{1} },

@@ -540,6 +540,15 @@ zigorDvrParamFrecNom OBJECT-TYPE
 		"Nominal Frequency."
 	::= { zigorDvrObjParams 5 }
 
+zigorDvrParamHuecoNom OBJECT-TYPE
+	SYNTAX		INTEGER (0..100)
+	UNITS		"0.1Hz"
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Nominal sag."
+	::= { zigorDvrObjParams 6 }
+
 --
 -- Alarmas
 --

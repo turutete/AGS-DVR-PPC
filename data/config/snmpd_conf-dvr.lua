@@ -154,6 +154,7 @@ view   vw_userW   excluded   $zigorDvrParamVMinDVR.0
 view   vw_userW   excluded   $zigorDvrParamNumEquipos.0
 view   vw_userW   excluded   $zigorDvrParamFactor.0
 view   vw_userW   included   $zigorDvrParamFrecNom.0
+view   vw_userW   excluded   $zigorDvrParamHuecoNom.0
 view   vw_userW   excluded   $zigorAlarmCfgSeverity
 view   vw_userW   excluded   $zigorCtrlParamDemo.0
 

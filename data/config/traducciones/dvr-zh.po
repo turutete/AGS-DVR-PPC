@@ -352,8 +352,8 @@ msgstr "标称交流电压 (LL)"
 msgid "Tensión mínima DVR"
 msgstr "AVC DVR最低电压"
 
-msgid "Tensión mínima DVR (LL)"
-msgstr "AVC DVR最低电压 (LL)"
+msgid "Tensión mínima DVR (LN)"
+msgstr "AVC DVR最低电压 (LN)"
 
 msgid "Equipos en paralelo"
 msgstr "并联设备台数"
@@ -363,6 +363,9 @@ msgstr "电压转换系数"
 
 msgid "Frecuencia nominal"
 msgstr "标称频率"
+
+msgid "Hueco nominal"
+msgstr "公称压力降"
 
 msgid "Niveles"
 msgstr "等级"
