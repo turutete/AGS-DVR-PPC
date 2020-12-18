@@ -166,6 +166,37 @@ function check_number(s, args)
    return true
 end
 
+local function has_value(tab, val)
+   for index, value in ipairs(tab) do
+      if (value == val) then
+         return true
+      end
+   end
+
+   return false
+end
+
+function check_number_values(s, args) -- Solo admite algunos valores
+   val=tonumber(s)
+   if not val then
+      return false
+   end
+
+   if args.factor and args.factor~=0 then
+      val=val*args.factor
+   end
+
+   if args.values then
+      -- comprobamos rango
+      if not has_value(args.values, val)  then
+         -- fuera de rango
+         return false
+      end
+   end
+
+   return true
+end
+
 function check_enum()
    -- XXX no es necesaria comprobación, no permitimos edición, solo seleccionar de la lista
    return true

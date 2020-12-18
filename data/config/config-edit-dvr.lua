@@ -182,20 +182,19 @@ local edit_config_dvr = {
    ---
    [zigorDvrParamVRedNom] = {
       check = check_number,
-      --check_args = {factor=10, min=0, max=2500}, },
       check_args = {factor=10, min=0, max=1000000}, },
    [zigorDvrParamVMinDVR] = {
       check = check_number,
       check_args = {factor=10, min=0, max=4000}, },
    [zigorDvrParamNumEquipos] = {
-      check = check_number,
-      check_args = {min=1, max=5}, },
+      check = check_number_values,
+      check_args = {values={1,2,3,4,5}}, },
    [zigorDvrParamFactor] = {
       check = check_number,
       check_args = {factor=1000, min=0, max=1000000}, },
    [zigorDvrParamFrecNom] = {
-      check = check_number,
-      check_args = {factor=10, min=500, max=600}, },
+      check = check_number_values,
+      check_args = {factor=10, values={500,600}}, },
    [zigorDvrParamHuecoNom] = {
       check = check_number_values,
       check_args = {values={40,50,60}}, },
