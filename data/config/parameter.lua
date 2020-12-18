@@ -1,4 +1,4 @@
--- Control parï¿½metros
+-- Control parámetros
 loadlualib("access")
 function load_param(p, sds)
    package.loaded[p] = nil -- Forzamos recarga desde disco
@@ -114,7 +114,7 @@ function save_system_data(sds)
 end
 
 function save_param(p, sds, factory)
-   -- Salvar parï¿½metros
+   -- Salvar parámetros
    local param=require(p) or require(factory)
    if(param) then
       save_param_data(param, sds, "../share/config/" .. p .. ".lua")
@@ -128,7 +128,7 @@ function check_string(s, args)
       return false
    end
 
-   -- comprobamos expresiï¿½n regular
+   -- comprobamos expresión regular
    if args.re then
       local a,b=string.find(s, args.re)
       if a~=1 or b~=string.len(s) then
@@ -136,17 +136,18 @@ function check_string(s, args)
       end
    end
 
-   -- por defecto permitimos ediciï¿½n
+   -- por defecto permitimos edición
    return true
 end
 
 function check_number(s, args)
-   -- pasamos a nï¿½mero
+   -- pasamos a número
    val=tonumber(s)
-   -- no es nï¿½mero
+   -- no es número
    if not val then
       return false
    end
+   
    -- aplicamos factor opcional
    if args.factor and args.factor~=0 then
       val=val*args.factor
@@ -161,42 +162,12 @@ function check_number(s, args)
       end
    end
 
-   return true
-end
-
-local function has_value(tab, val)
-   for index, value in ipairs(tab) do
-      if (value == val) then
-         return true
-      end
-   end
-   
-   return false
-end
-
-function check_number_values(s, args) -- Solo admite algunos valores
-   val=tonumber(s)
-   if not val then
-      return false
-   end
-
-   if args.factor and args.factor~=0 then
-      val=val*args.factor
-   end
-
-   if args.values then
-      -- comprobamos rango
-      if not has_value(args.values, val)  then
-         -- fuera de rango
-         return false
-      end
-   end
-
+   -- por defecto permitimos edición
    return true
 end
 
 function check_enum()
-   -- XXX no es necesaria comprobaciï¿½n, no permitimos ediciï¿½n, solo seleccionar de la lista
+   -- XXX no es necesaria comprobación, no permitimos edición, solo seleccionar de la lista
    return true
 end
 
@@ -207,7 +178,7 @@ function check_date(s, args)
    local d={}
    for k,v in pairs(args.fields) do
       d[k] = tonumber( date[v+2] )
-      -- Comprobamos que estï¿½n todos los campos
+      -- Comprobamos que estén todos los campos
       if not d[k] then
 	 return false
       end
@@ -222,19 +193,19 @@ function check_date(s, args)
 
    -- Comprobamos dias de febrero
    if d.month==2 then
-      local dias_feb=28 -- por defecto, 28 dï¿½as
+      local dias_feb=28 -- por defecto, 28 días
       -- comprobamos si bisiesto
       if math.fmod(d.year, 4)==0 and (math.fmod(d.year, 100)~=0 or math.fmod(d.year, 400)==0) then
 	 -- bisiesto, ponemos a 29
 	 dias_feb=29
       end
-      -- comprobamos dï¿½a vï¿½lido
+      -- comprobamos día válido
       if d.day>dias_feb then
 	 return false
       end
    end
 
-   -- Comprobamos meses de 30 dï¿½as
+   -- Comprobamos meses de 30 días
    if (d.month==4 or d.month==6 or d.month==9 or d.month==11) and d.day>30 then
       return false
    end
@@ -259,7 +230,7 @@ function check_ip(s, args)
       end
    end
 
-   -- por defecto, ip vï¿½lida
+   -- por defecto, ip válida
    return true
 end
 
@@ -273,7 +244,7 @@ function check_coordlong(s, args)
       else
          l[k] = tonumber( long[v+2] )
       end
-      -- Comprobamos que estï¿½n todos los campos
+      -- Comprobamos que estén todos los campos
       if not l[k] then
 	 return false
       end
@@ -298,7 +269,7 @@ function check_coordlat(s, args)
       else
          l[k] = tonumber( long[v+2] )
       end
-      -- Comprobamos que estï¿½n todos los campos
+      -- Comprobamos que estén todos los campos
       if not l[k] then
 	 return false
       end
