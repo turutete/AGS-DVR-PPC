@@ -12,8 +12,8 @@ local param = {
    -- ParamSystem
    [ zigorSysName ..  ".0"          ] = "",
    [ zigorSysDescr .. ".0"          ] = "",
-   [ zigorSysLocation .. ".0"       ] = "Vitoria",
-   [ zigorSysContact .. ".0"        ] = "zigor@zigor.com",
+   [ zigorSysLocation .. ".0"       ] = "Paris",
+   [ zigorSysContact .. ".0"        ] = "Schneider@SE.com",
    -- Password de "usuario basico" (solo lectura)
    [ zigorSysPasswordIndex .. ".1"  ] = 1,
    [ zigorSysPasswordPass .. ".1"   ] = "1234",
