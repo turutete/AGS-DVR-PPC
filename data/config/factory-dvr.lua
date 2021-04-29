@@ -10,7 +10,7 @@ local param = {
    -- Parámetros generales
    --
    -- ParamSystem
-   [ zigorSysName ..  ".0"          ] = "",
+   [ zigorSysName ..  ".0"          ] = "PowerLogic DVR",
    [ zigorSysDescr .. ".0"          ] = "",
    [ zigorSysLocation .. ".0"       ] = "Paris",
    [ zigorSysContact .. ".0"        ] = "Schneider@SE.com",
