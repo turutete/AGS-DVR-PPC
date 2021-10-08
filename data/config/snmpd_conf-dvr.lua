@@ -279,6 +279,7 @@ master  yes
 # Incrementar este valor si el servidor muere
 # por "broken pipe" (SIGPIPE)
 AgentXTimeout 90
+smuxsocket  1.0.0.0
 
 _DISABLE_SNMP_
 ]]
