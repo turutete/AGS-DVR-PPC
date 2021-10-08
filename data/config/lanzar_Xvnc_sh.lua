@@ -45,7 +45,7 @@ PATH_ACTIVA="/usr/local/zigor/activa"
 PATH_ACTIVA_TOOLS="${PATH_ACTIVA}/tools"
 
 #Xvnc:
-Xvnc :1 -rfbport $$zigorNetPortVnc.0 -dpi 88 -depth 16 -geometry 1024x600 -nocursor -alwaysshared -desktop zigor -fp /usr/share/fonts/misc _USE_PASSWORD_ &
+Xvnc :1 -rfbport $$zigorNetPortVnc.0 -dpi 88 -depth 16 -geometry 1024x600 -nolisten tcp -nocursor -alwaysshared -desktop zigor -fp /usr/share/fonts/misc _USE_PASSWORD_ &
 
 sleep 1
 
