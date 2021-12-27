@@ -21,7 +21,7 @@ end
 local this  = {
    file     = "/etc/snmp/snmpd.conf",
    get      = snmpd_conf_get,
-   save     = tmpl_save,   
+   save     = tmpl_save,
    restart  = tmpl_service_restart,
    _service = "snmpd",
    tmpl     = [[
@@ -41,7 +41,7 @@ local this  = {
 
 sysname  $$zigorSysName.0
 sysdescr $$zigorSysDescr.0
-# XXX sysobjectid 
+# XXX sysobjectid
 
 # syslocation: The [typically physical] location of the system.
 #   Note that setting this value here means that when trying to
@@ -82,12 +82,12 @@ sysservices 76
 #   arguments:  user [noauth|auth|priv] [restriction_oid]
 
 #rwuser  root   noauth
-#rwuser  root  
+#rwuser  root
 
 # rouser: a SNMPv3 read-only user
 #   arguments:  user [noauth|auth|priv] [restriction_oid]
 
-#rouser  bigthor  
+#rouser  bigthor
 
 # rocommunity: a SNMPv1/SNMPv2c read-only access community name
 #   arguments:  community [default|hostname|network/bits] [oid]
@@ -100,7 +100,7 @@ sysservices 76
 #rwcommunity  admin
 
 ###
-# Configuración de acceso
+# Configuraciï¿½n de acceso
 
 # (NAME es SECURITY)
 # com2sec NAME    SOURCE    COMMUNITY
@@ -131,11 +131,16 @@ view   vw_zadmin   included   .1
 
 ### ADMIN (nivel 4)
 view   vw_admin   included   .1
+view   vw_admin   excluded   $zigorSysPasswordPass.3
+view   vw_admin   excluded   $zigorSysPasswordPass.2
+view   vw_admin   excluded   $zigorSysPasswordPass.1
 
 ### ZMS (nivel 3)
 ###--read access:
 view   vw_zms     included   $zigorExperiment
 view   vw_zms     excluded   $zigorSysPasswordPass.4
+view   vw_zms     excluded   $zigorSysPasswordPass.2
+view   vw_zms     excluded   $zigorSysPasswordPass.1
 ###... XXX
 ###--write access:
 view   vw_zmsW    included   $zigorExperiment
@@ -145,6 +150,7 @@ view   vw_zmsW    included   $zigorExperiment
 view   vw_user    included   $zigorExperiment
 view   vw_user    excluded   $zigorSysPasswordPass.4
 view   vw_user    excluded   $zigorSysPasswordPass.3
+view   vw_user    excluded   $zigorSysPasswordPass.1
 ###... XXX
 ###--write access:
 view   vw_userW   included   $zigorExperiment
@@ -184,7 +190,7 @@ access   grp_public ""      v2c   noauth exact vw_public  vw_publicW  none
 # trapsink: A SNMPv1 trap receiver
 #   arguments: host [community] [portnum]
 
-###trapsink  localhost  
+###trapsink  localhost
 
 # trap2sink: A SNMPv2c trap receiver
 #   arguments: host [community] [portnum]
@@ -218,44 +224,44 @@ authtrapenable  1
 
 # proc: Check for processes that should be running.
 #     proc NAME [MAX=0] [MIN=0]
-#   
+#
 #     NAME:  the name of the process to check for.  It must match
 #            exactly (ie, http will not find httpd processes).
 #     MAX:   the maximum number allowed to be running.  Defaults to 0.
 #     MIN:   the minimum number to be running.  Defaults to 0.
-#   
+#
 #   The results are reported in the prTable section of the UCD-SNMP-MIB tree
 #   Special Case:  When the min and max numbers are both 0, it assumes
 #   you want a max of infinity and a min of 1.
 
-proc  apache2  
-proc  sshd  
+proc  apache2
+proc  sshd
 
 # disk: Check for disk space usage of a partition.
 #   The agent can check the amount of available disk space, and make
-#   sure it is above a set limit.  
-#   
+#   sure it is above a set limit.
+#
 #    disk PATH [MIN=100000]
-#   
+#
 #    PATH:  mount path to the disk in question.
 #    MIN:   Disks with space below this value will have the Mib's errorFlag set.
 #           Can be a raw byte value or a percentage followed by the %
 #           symbol.  Default value = 100000.
-#   
+#
 #   The results are reported in the dskTable section of the UCD-SNMP-MIB tree
 
-disk  / 
+disk  /
 
 # load: Check for unreasonable load average values.
 #   Watch the load average levels on the machine.
-#   
+#
 #    load [1MAX=12.0] [5MAX=12.0] [15MAX=12.0]
-#   
+#
 #    1MAX:   If the 1 minute load average is above this limit at query
 #            time, the errorFlag will be set.
 #    5MAX:   Similar, but for 5 min average.
 #    15MAX:  Similar, but for 15 min average.
-#   
+#
 #   The results are reported in the laTable section of the UCD-SNMP-MIB tree
 
 load  5 5 5
@@ -271,7 +277,7 @@ load  5 5 5
 # master: Should the agent operate as a master agent or not.
 #   Currently, the only supported master agent type for this token
 #   is "agentx".
-#   
+#
 #   arguments: (on|yes|agentx|all|off|no)
 
 master  yes
