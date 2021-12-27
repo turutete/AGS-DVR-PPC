@@ -1,10 +1,10 @@
 -- funciones "helpers"
 
 -- Convierte una tabla en formato "flat" a formato "cells"
--- para poder usar directamente una definición de tabla con
+-- para poder usar directamente una definiciï¿½n de tabla con
 -- Gtk2TreeView.
 function ags_flat2cells(flat)
-   for k,v in pairs(flat) do      
+   for k,v in pairs(flat) do
       local ref_v=flat[k]
       ref_v.properties={}
       ref_v.properties.title=v.name
@@ -29,13 +29,13 @@ function loadlualib(lualib)
    return require( (AGS_LMOD_PREFIX or "") .. lualib )
 end
 
--- Dada una cadena hexadecimal, devuelve el número que representa
+-- Dada una cadena hexadecimal, devuelve el nï¿½mero que representa
 -- p.e.: x"10" >> 16
 function x(s)
    return tonumber(s, 16)
 end
--- Devuelve un byte (cadena de 1 carácter) con el valor ASCII especificado
--- p.e. en combinación con x(): byte( x"61" ) >> "a"
+-- Devuelve un byte (cadena de 1 carï¿½cter) con el valor ASCII especificado
+-- p.e. en combinaciï¿½n con x(): byte( x"61" ) >> "a"
 function byte(n)
    return string.char(n)
 end
@@ -65,7 +65,7 @@ end
 -- tmpl_get(plantilla, sds, oids)
 function tmpl_get(this, sds, oids)
    if not oids then oids = _G end -- Si no se especifica tabla de OIDs se supone global
-   
+
    -- Sustituimos subidentificadores por OIDs
    local t=string.gsub(this.tmpl, "%$(%w+)", function (k) return oids[k] or "$" .. k end)
    -- Sustituimos OIDs por valor
@@ -74,27 +74,72 @@ function tmpl_get(this, sds, oids)
    return t
 end
 
--- Salva fichero de configuración desde plantilla
--- devuelve true si se actualizó el fichero
+
+function StringDifference(str1,str2)
+    for i = 1,#str1 do --Loop over strings
+        if str1:sub(i,i) ~= str2:sub(i,i) then --If that character is not equal to it's counterpart
+            print(string.sub(str1,i,i+5))
+            return i --Return that index
+
+        end
+    end
+    return #str1+1 --Return the index after where the shorter one ends as fallback.
+end
+
+--fucion que devuelve los valores contenidos en un array.
+--esta funciona permite, posteriormente, ser llamada e iterar sobre todos los valores.
+function values(t)
+
+  local i = 0
+  return function() i = i + 1; return t[i] end
+
+end
+
+
+
+-- Salva fichero de configuraciï¿½n desde plantilla
+-- devuelve true si se actualizï¿½ el fichero
 function tmpl_save(this, sds, oids)
+   print("tmpl_save this", this.file)
+
    local t=this:get(sds, oids)
    local s=file_load(this.file)
-   
+
+   if oids then
+        print("oids a sustituir: ")
+        for v in values(oids) do
+                print("            ---> ", v)
+        end
+  end
+
+
+
+   if s~=t then
+        print("tmpl_save s~=t TRUE")
+        StringDifference(s,t)
+   else
+        print("tmpl_save s~=t FALSE")
+        print("************************************************************iguales t y s*************************************************************************************")
+
+   end
    if s and t and s~=t then
       file_save(this.file,  t)
+      print("tmpl_save return true")
       return true
    else
+      print("tmpl_save return false")
       return false
    end
 end
 
 function tmpl_service_restart(this)
+   print("Reiniciar servicio: ", this._service)
    os.execute("/etc/init.d/" .. this._service .. " restart &")
 end
 
 
--- Redondea número
--- (idp = número de decimales) 
+-- Redondea nï¿½mero
+-- (idp = nï¿½mero de decimales)
 function math.round(num, idp)
    local mult = 10^(idp or 0)
    return math.floor(num  * mult + 0.5) / mult
@@ -125,7 +170,7 @@ function ZDateAndTime2timetable(t)
    tt.zhh  =string.sub(t,17,18)
    tt.zmm  =string.sub(t,19,20)
 
-   -- ZDateAndTime está en hora local
+   -- ZDateAndTime estï¿½ en hora local
    tt.lhour =string.sub(t,9,10)
    tt.lmin  =string.sub(t,11,12)
 
@@ -150,7 +195,7 @@ function display2enum(t)
 end
 
 --
--- Índice de configuración de alarmas (leemos con un "walk")
+-- ï¿½ndice de configuraciï¿½n de alarmas (leemos con un "walk")
 --
 function get_alarm_config_index(sds)
    require "oids-alarm"
@@ -195,8 +240,8 @@ function serialize (o, indent)
 end
 
 --
--- bloquea todos los "handlers" de señal "sig" en "obj" que no lo estén ya
--- retorna tabla con los id de "handlers" bloqueados y tamaño
+-- bloquea todos los "handlers" de seï¿½al "sig" en "obj" que no lo estï¿½n ya
+-- retorna tabla con los id de "handlers" bloqueados y tamaï¿½o
 -- (para posterior desbloqueo por unblock_list)
 --
 function block_rest(obj, sig)
@@ -204,7 +249,7 @@ function block_rest(obj, sig)
    local i=1
    handlers[i]=gobject.get_unblocked(obj, sig)
    while(handlers[i]) do
-      gobject.block(obj, handlers[i]) 
+      gobject.block(obj, handlers[i])
       i=i+1
       handlers[i]=gobject.get_unblocked(obj, sig)
    end
@@ -266,7 +311,7 @@ end
 --
 function setlocale(sds, language)
    local lang="en_GB.utf8"
-   
+
    if language==nil then
       local v = access.get(sds, zigorSysNotificationLang..".0")
       if v then
@@ -280,13 +325,13 @@ function setlocale(sds, language)
    else
       lang=language
    end
-   
+
    print(">>>setlocale:",lang)
    i18n.setlocale(lang)
 end
 
 --
--- Lee un archivo con dofile, se usa para poder usar pcall() y detectar errores 
+-- Lee un archivo con dofile, se usa para poder usar pcall() y detectar errores
 --
 function dofile_protected(filename)
    return dofile(filename)
