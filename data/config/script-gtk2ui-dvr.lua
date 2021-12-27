@@ -138,10 +138,21 @@ local NIVEL_MIN_RESET_ALARMAS=2
 --
 local function action_params(object, action)
    --XXX
+   print("action_params: object", object)
+   print("action_params: action", action)
+   print("access_level_key: ", access_level_key)
+   print("access_level:", access_level)
+   local algo = access.get(sds,zigorSysPasswordPass .. "." .. tostring(access_level))
+   print("algo:", algo)
+
    if(access_level_key ~= access.get(sds,zigorSysPasswordPass .. "." .. tostring(access_level))) then
+      print("Acces_level_key distinto.")
+      -- Para que se pase la configuración a active-dvr.lua
+      access.set(sds, zigorCtrlParamState .. ".0", tonumber(action) )
       --cambio de password de nivel actual -> reiniciar
+      access.set(sds, zigorSysPasswordPass .. "." .. tostring(access_level), algo)
+      print("Main loop quit")
       gobject.main_loop_quit(main_loop)
-      print("Exit por cambio de nivel de acceso")
       os.exit()  -- mas robustez?
    end
    --
@@ -163,7 +174,7 @@ function func_CtrlParamState(w, iter)
    local state=treestore.get(w, iter, "val")
    gobject.set_property(w_param_state_image, "pixbuf", pb)
    gobject.set_property(w_param_state_label, "label", lb)
-   
+
    -- Cambiar estado botones de configuración
    if     state == 1 then -- temp(1)
       gobject.set_property(w_save_params_button,    "sensitive", true)
@@ -235,7 +246,7 @@ fun_pst = factory_object_property(w_lab_pst, "label", factory_cell_format(store,
 
 local function fun_estado(w)
    local estado = treestore.get(w, iters[zigorDvrObjEstadoControl .. ".0"    ], "display")
-   
+
    if estado then
       local t = estado
       -- importante habilitar propiedades de 'pango markup' a la etiqueta en glade! :-)
@@ -248,7 +259,7 @@ local function fun_estado(w)
       end
 
       gobject.set_property(w_estado, "label", t)
-   
+
    end
 end
 
@@ -258,7 +269,7 @@ end
 
 local function fun_ball(w)
    local val =treestore.get(w, iters[zigorDvrObjEstadoControl .. ".0" ],  "val")
-   
+
    if(val) then
       if(val==4) then  -- on XXX OJO hardcoded
 	 gobject.set_property(w_ball, "pixbuf", pb_green)
@@ -344,7 +355,7 @@ gobject.connect(treeview, "changed_rowsig", treeseleccion)
 -- Confirmación
 --
 local confirma_params = {}
-local function confirma_cancel(w)   
+local function confirma_cancel(w)
    gobject.set_property(w_hbuttonbox_menu, "sensitive", true)
    gobject.set_property(w_notebook, "page", confirma_params.oldpage)
 end
@@ -584,11 +595,11 @@ local bar_id
 local current_w=w_button_estado
 gobject.set_property(current_w,  "sensitive", false)
 local function factory_notebook_page(nb, p, w)
-   return 
+   return
    function()
       gobject.set_property(current_w,  "sensitive", true)
       current_w=w
-      
+
       --gobject.set_property(w_label_section, "label", "<b>".. gobject.get_property(current_w, "label")  .."</b>")
       ----gobject.set_property(w_label_section, "label", "<b>".. gobject.get_property(button_labels[p+1], "label")  .."</b>")  -- i18n
       gobject.set_property(current_w,  "sensitive", false)
@@ -621,7 +632,7 @@ gobject.connect(w_button_term,   "clicked",
 			cmd=[[sed -i -e 's/ACCESS_LEVEL=.*/ACCESS_LEVEL=ZZZ/' ]] .. script
 			cmd = string.gsub(cmd,"ZZZ", "1")
 			print(cmd)
-			os.execute(cmd)		
+			os.execute(cmd)
 		end
 		gobject.main_loop_quit(ml)
 		print("Exit por boton terminar")
@@ -679,7 +690,7 @@ do
 
    -- Preparamos parámetros para storetable
    local firstrow=treestore.first(alarms_store)
-   local presets = { 
+   local presets = {
       --
    }
    local keyvals = {
@@ -690,9 +701,9 @@ do
       [ "imp-key"             ] = "imp",
    }
    local id_col="id"
-   
+
    alarm_st=storetable_new{sds, alarms_store, zigorAlarmId, presets, id_col, keyvals, firstrow}
-   local function alarm_update() 
+   local function alarm_update()
       if alarm_dirty then
 	 local total=alarm_st.update()
 	 alarm_st.refresh()
@@ -706,7 +717,7 @@ do
 	    elseif cond == index_cond.reconocida then
 	       global_alarm_state=index_cond.reconocida
 	    end
-	 end	 
+	 end
 	 gobject.set_property(w_alarm_state_image, "pixbuf", display_cond[global_alarm_state].pic)
 	 -- Si tabla vacía, reintento periódico
 	 if total~=0 then
@@ -729,7 +740,7 @@ do
       [ zigorAlarmCfgSeverity ] = display_imp,
       -- XXX completar
    }
-   
+
    local alarm_handler_id -- forward declaration
    local function alarm_display(s, iter, keyvals)
       -- Inicializar clave de severidad
@@ -769,7 +780,7 @@ do
 	       -- magnitudes y cadenas
 	       -- XXX no se contempla en tabla de alarmas
 	    end
-	    
+
 	    gobject.unblock(s, alarm_handler_id)
 	 end
       end
@@ -777,11 +788,11 @@ do
       local t=treestore.get(s, iter, "time")
       if t then
 	 gobject.block(s, alarm_handler_id)
-	 
+
 	 local tt=ZDateAndTime2timetable(t)
 	 t_display=os.date("%d/%m/%y %H:%M:%S", os.time(tt))
 	 treestore.set(s, iter, "time-display", gobject.locale_to_utf8(t_display) or "?")
-	 
+
 	 gobject.unblock(s, alarm_handler_id)
       end
       -- actualizamos estado (activo/reconocido)
@@ -794,7 +805,7 @@ do
       -- reseteamos evento
       local reset=treestore.get(s, iter, "reset")
       if reset then
-      if treestore.get(s, iter, "cond")==index_cond.bloqueada 
+      if treestore.get(s, iter, "cond")==index_cond.bloqueada
       and access_level>=NIVEL_MIN_RESET_ALARMAS then  -- XXX (jur)
 	    local id = treestore.get(s, iter, "id")
 	    local msg = _g("Reseteando alarma...")
@@ -820,7 +831,7 @@ do
       -- actualizamos "display"
       alarm_display(s, iter, data)
    end
-   
+
    alarm_handler_id=gobject.connect(alarms_store, "row-changed", alarm_changed, keyvals)
 end
 -- FIN Tabla de alarmas --
@@ -837,10 +848,10 @@ do
    w_activo    =gobject.get_data(pixbufs, "activo")
    w_inactivo  =gobject.get_data(pixbufs, "inactivo")
    w_reconocido=gobject.get_data(pixbufs, "reconocido")
-   
+
    -- Preparamos parámetros para storetable
    local firstrow=treestore.first(heventos_store)
-   local presets = { 
+   local presets = {
       --
    }
    local keyvals = {
@@ -851,9 +862,9 @@ do
       [ "imp-key"                ] = "imp",
    }
    local id_col="id"
-   
+
    heventos_st=storetable_new{sds, heventos_store, zigorAlarmLogId, presets, id_col, keyvals, firstrow}
-   function heventos_update() 
+   function heventos_update()
       if heventos_dirty then
 	 local total=heventos_st.update()
 	 heventos_st.refresh()
@@ -866,7 +877,7 @@ do
       return true
    end
    gobject.timeout_add(2000, heventos_update, nil)
-   
+
    --
    -- Gestión de "displays" de h. eventos
    --
@@ -877,7 +888,7 @@ do
       [ zigorAlarmCfgSeverity ]  = display_imp,
       -- XXX completar
    }
-   
+
    local heventos_handler_id -- forward declaration
    local function heventos_display(s, iter, keyvals)
       -- Inicializar clave de severidad
@@ -915,18 +926,18 @@ do
 	       -- magnitudes y cadenas
 	       -- XXX no se contempla en tabla de h. eventos
 	    end
-	    
+
 	    gobject.unblock(s, heventos_handler_id)
 	 end
 	 -- Actualizar "display" de fecha
 	 local t=treestore.get(s, iter, "time")
 	 if t then
 	    gobject.block(s, heventos_handler_id)
-	    
+
 	    local tt=ZDateAndTime2timetable(t)
 	    t_display=os.date("%d/%m/%y %H:%M:%S", os.time(tt))
 	    treestore.set(s, iter, "time-display", gobject.locale_to_utf8(t_display) or "?")
-	    
+
 	    gobject.unblock(s, heventos_handler_id)
 	 end
       end
@@ -937,7 +948,7 @@ do
       -- actualizamos "display"
       heventos_display(s, iter, data)
    end
-   
+
    heventos_handler_id=gobject.connect(heventos_store, "row-changed", heventos_changed, keyvals)
 end
 -- FIN Tabla de h. eventos  --
@@ -964,7 +975,7 @@ do
       [ zigorDvrGapLogTime     ] = "time",
    }
    local id_col="id"
-   
+
    gaplog_st_poll = storetable_new{sds, gaplog_st, zigorDvrGapLogId, presets, id_col, keyvals, firstrow}
    local function gaplog_update()
       if gaplog_dirty then
@@ -987,7 +998,7 @@ do
    gaplog_displays = {
       [ zigorDvrGapLogFase     ] = display_fase,
    }
-   
+
    local titulo='<span underline="single">'.._g("Ultimo Hueco")..':</span>'
    gobject.set_property(w_lab_aux, "label", titulo.."\n\n\n")
    local gaplog_rowchanged_handler_id -- forward declaration
@@ -1028,21 +1039,21 @@ do
 	       -- magnitudes y cadenas
 	       -- XXX no se contempla en tabla de h. eventos
 	    end
-	    
+
 	    gobject.unblock(s, gaplog_rowchanged_handler_id)
 	 end
 	 -- Actualizar "display" de fecha
 	 local t=treestore.get(s, iter, "time")
 	 if t then
 	    gobject.block(s, gaplog_rowchanged_handler_id)
-	    
+
 	    local tt=ZDateAndTime2timetable(t)
 	    t_display=os.date("%d/%m/%y %H:%M:%S", os.time(tt))
 	    treestore.set(s, iter, "time-display", gobject.locale_to_utf8(t_display) or "?")
 	    --- aprovechamos para actualizar info hueco en sinoptico:
 	    fecha = gobject.locale_to_utf8(t_display)
 	    ------
-	    
+
 	    gobject.unblock(s, gaplog_rowchanged_handler_id)
 	 end
       end  -- for
@@ -1060,7 +1071,7 @@ do
       -- actualizamos "display"
       gaplog_display(s, iter, data)
    end
-   
+
    gaplog_rowchanged_handler_id=gobject.connect(gaplog_st, "row-changed", gaplog_rowchanged, keyvals)
 
 end
@@ -1094,7 +1105,7 @@ end
 -- Tabla global de enumerados
 enums = {}
 do
-   local function insert_enum(enum_store, enum_table) 
+   local function insert_enum(enum_store, enum_table)
       local lookup_table = {}
       for i,t in pairs(enum_table) do
 	 local text,n=next(t)
@@ -1117,7 +1128,7 @@ do
    table_MBParity = display2enum(displays_dvr.display_MBParity)
    table_MBMode = display2enum(displays_dvr.display_MBMode)
    table_SiNo = display2enum(displays_dvr.display_SiNo_GR)
-   
+
    -- Inicialización enumerados a partir de tablas
    insert_enum(enum_AlarmCfgSeverity, table_AlarmCfgSeverity)
    insert_enum(enum_NotificationLang, table_NotificationLang)
@@ -1127,7 +1138,7 @@ do
    insert_enum(enum_MBParity, table_MBParity)
    insert_enum(enum_MBMode, table_MBMode)
    insert_enum(enum_SiNo, table_SiNo)
-   
+
    -- Inicializamos comboboxentry
    gobject.set_property(w_edit_val, "model",       enum_void )
    gobject.set_property(w_edit_val, "text-column", treestore.get_col_number(enum_void, "text") )
@@ -1251,7 +1262,7 @@ function cambio_idioma(object, sds)  -- i18n
       p_params()
       return
    end
-   
+
    script = os.getenv("LAUNCH")
    cmd=[[sed -i -e 's/LC_ALL=".*"/LC_ALL="LOCALE"/' ]] .. script
    cmd = string.gsub(cmd,"LOCALE",locale)
@@ -1308,7 +1319,7 @@ end
 local function edit_press(w, event, data)
    --print(">>>edit_press!!!")
    enable_kb2(true)
-   
+
    ----gtk.widget_grab_focus(w)
    return true  -->> (!)importante: si return TRUE, se para la emision del 'click' para evitar el posterior popup!
 end
@@ -1460,7 +1471,7 @@ else
 end
 
 --gobject.set_property(logo, "pixbuf", gobject.get_data(pixbufs, "logo") )
-    
+
 ----------
 -- Gestion Click en Login!
 local function login_handler()
@@ -1479,27 +1490,29 @@ local function login_handler()
 
    -- comprobar "password" vÃ¡lido
    require "oids-parameter"
-   
+
    i=1
    local pass
-   
+
    --gtk.statusbar_pop(sb, "login", top_id)
    --gtk.statusbar_pop(sb, "login")
-   
+
    ----local tabla_pass_id=gtk.statusbar_push(sb, "login", _g("Comprobando password..."))
    ----gtk.main_iteration_do(FALSE);  -- entiendo es para q pase por el bucle y se refresque la statusbar!
-   print("eooo")
-   
+   print("Comienzo login")
+
    local pass_key = accessx.getnextkey(sds, zigorSysPasswordPass) -- si no es correcto se da Timeout por community inapropiada
+   print("pass_key = ",pas_key)
    while( pass_key and is_substring(pass_key, zigorSysPasswordPass) and pass_key~=zigorSysPasswordPass ) do
       print("bucle pass")
       --local get_pass_id=gtk.statusbar_push(sb, "login", _g("Comprobando acceso nivel")..tostring(i).."...")
       ----gtk.main_iteration_do(FALSE);
       pass=access.get(sds, pass_key)
+      print("pass_key", pass_key)
       print("pass", pass)
       --gtk.statusbar_pop(sb, "login", get_pass_id)
       ----gtk.main_iteration_do(FALSE);
-      
+
       -- Comprobar si es el nuestro
       if pass and pass==password then
          print("pass match!")
@@ -1534,7 +1547,7 @@ local function login_handler()
       --top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce de nuevo el password"))
       top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce de nuevo"))
    end
-   -- 
+   --
    print("fin login_handler")
 end
 ----------
