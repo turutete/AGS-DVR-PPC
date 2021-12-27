@@ -453,6 +453,7 @@ all_data = {
 						'display-timezone.lua',
 						[ 'dvr-modbus.lua', 'config.lua','setup.lua','dvr-modbus.lua' ],
 						'xscreensaver.lua',
+						'sha1.lua',
 						],
 	},
 	'ui':	{
