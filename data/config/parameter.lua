@@ -18,6 +18,10 @@ function load_param(p, sds)
 end
 
 function save_param_data(param, sds, filename, extra)
+
+      print("save_param_data ,",param)
+      print("save_param_data ,",filename)
+
       local fd=io.open(filename, "w+") -- XXX path y sufijo "hardcoded"
       fd:write('local param = {\n')
       for k,v in pairs(param) do
@@ -36,13 +40,16 @@ function save_param_data(param, sds, filename, extra)
       fd:write('return param,extra\n')
 
       fd:close()
+      print("save_param_data Salida")
 end
 
 function save_system_data(sds)
    -- Salvar ficheros sistema
    -- Cfg snmpd
+   print("save_system_data")
    local snmpd_conf=require ("snmpd_conf-" .. profile)
    if(snmpd_conf) then
+      print("snmpd_conf si")
       if(snmpd_conf:save(sds)) then
          os.execute("touch /tmp/block_gui.txt")
          snmpd_conf:restart()
@@ -56,6 +63,7 @@ function save_system_data(sds)
          os.execute("killall xv")
          os.execute('/usr/local/zigor/activa/tools/xsetroot -d :1 -solid "rgb:20/20/20"')
       end
+      print("snmpd_conf si salida")
    end
    -- Cfg pin del modem
    local mgetty_config=require "mgetty_config"
@@ -111,10 +119,12 @@ function save_system_data(sds)
          xscreensaver:restart(sds)
       end
    end
+   print("Salir save_system_data")
 end
 
 function save_param(p, sds, factory)
    -- Salvar par�metros
+   print("Salvar parametros en ", p)
    local param=require(p) or require(factory)
    if(param) then
       save_param_data(param, sds, "../share/config/" .. p .. ".lua")
@@ -170,7 +180,7 @@ local function has_value(tab, val)
          return true
       end
    end
-   
+
    return false
 end
 
@@ -214,7 +224,7 @@ function check_date(s, args)
    end
 
    -- Comprobamos mes, hora y dia (1..31)
-   if d.month<1 or d.month>12 
+   if d.month<1 or d.month>12
       or d.day<1 or d.day>31
       or d.hour>23 or d.min>59 or d.sec>59 then
       return false
@@ -277,7 +287,7 @@ function check_coordlong(s, args)
       if not l[k] then
 	 return false
       end
-   end   
+   end
    --comprobaciones
    if l.grados>180 or l.minutos>59 or l.segundos>59
    or (l.grados==180 and (l.minutos>0 or l.segundos>0))
@@ -302,7 +312,7 @@ function check_coordlat(s, args)
       if not l[k] then
 	 return false
       end
-   end   
+   end
    --comprobaciones
    if l.grados>90 or l.minutos>59 or l.segundos>59
    or (l.grados==90 and (l.minutos>0 or l.segundos>0))
@@ -336,13 +346,13 @@ function format_coordlong(s, val, args)
       else
          l[k] = tonumber( long[v+2] )
       end
-   end   
+   end
    --paso a segundos
    local seg = l.segundos + l.minutos*60 + l.grados*3600
    if l.letra=="W" then
       seg=-seg
    end
-   
+
    return seg
 end
 
@@ -356,13 +366,13 @@ function format_coordlat(s, val, args)
       else
          l[k] = tonumber( long[v+2] )
       end
-   end   
+   end
    --paso a segundos
    local seg = l.segundos + l.minutos*60 + l.grados*3600
    if l.letra=="S" then
       seg=-seg
    end
-   
+
    return seg
 end
 
