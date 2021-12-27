@@ -75,7 +75,7 @@ local function update_gaplog_html(sds)
       local display_fase = displays.display_hueco
 
       t = rev_t(t)   -- ordenamos para que ultimas entradas primero
-      
+
       -- estilos
       local style = [[
 <style type="text/css">
@@ -106,14 +106,14 @@ local function update_gaplog_html(sds)
       local fd=io.open("/home/user/gaplog.html", "w") -- XXX path y sufijo "hardcoded"
       fd:write("<html>\n<body>\n")
       fd:write(style)
-      
+
       for i,gap in ipairs(t) do   -- ojo ipairs y no pairs
         date = os.date("%d/%m/%Y/%H:%M:%S", os.time(ZDateAndTime2timetable(gap["time"])))
         minimo=gap["minimo"]
         integral=gap["integral"]
         tiempo=gap["tiempo"]
         fase=display_fase[gap["fase"]]["fase-display"]
-       
+
         local class
         if(i%2==1) then class='class="odd"' else class='class="even"' end
         fd:write('<tr '..class..'><td>'..i..'.</td><td>'..date..'</td><td>'..minimo..'</td><td>'..integral..'</td><td>'..tiempo..'</td><td>'..fase..'</td></tr>\n')
@@ -231,7 +231,7 @@ local function insert_log_row(sds,time,minimo,integral,tiempo,fase, init)
       local display_fase = displays.display_hueco
       local dfase=display_fase[fase]["fase-display"]
       local date = os.date("%d/%m/%Y/%H:%M:%S", os.time(ZDateAndTime2timetable(time)))
-       
+
       -- (new) idea adjuntar tb en otro fichero info adicional del estado (medidas)
       local vr = access.get(sds, zigorDvrObjVRedR..".0")
       local vs = access.get(sds, zigorDvrObjVRedS..".0")
@@ -423,7 +423,7 @@ local function gaplog_del_log(sds)
 		      -- inicializamos
 		      id=1
 		      -- XXX añadir un evento "borrado de histórico"
-		      
+
 		      --update_gaplog_html(sds)
 		      --cmd = [[sed -i '/tbody/,/\/tbody/d' /home/user/saglog.html; echo >/home/user/saglog.csv]]
 		      create_log_html()
@@ -444,7 +444,7 @@ local function make_demo_handler()
  ---
  return function(data)
    -- Ejemplo de que cada COUNT_MAX segundos se genera una alarma aleatoriamente (de la tabla t) e igualmente se resetea. Además baile random de tensiones etc.
-   
+
    print("demo>> demo_handler", count)
 
    t={
@@ -458,7 +458,7 @@ local function make_demo_handler()
       { oid=zigorDvrObjErrorTermo..".0",	estado=24 },
       { oid=zigorDvrObjErrorFusCondAC..".0",	estado=26 },
    }
-   
+
    if count==0 then  -- solo al inicio
       --print("demo>> init")
       --access.set(sdscoreglib, zigorDvrObjParado..".0", 1)
@@ -511,7 +511,7 @@ local function make_demo_handler()
       access.set(sdscoreglib, zigorDvrObjPSalidaS..".0", PSS)
       access.set(sdscoreglib, zigorDvrObjPSalidaT..".0", PST)
    end
-   
+
    if count==update then
       --print("demo>> update")
       valor = math.random(1,#t)
@@ -519,7 +519,7 @@ local function make_demo_handler()
       access.set(sdscoreglib, t[valor].oid, 1)
       access.set(sdscoreglib, zigorDvrObjEstadoControl..".0", t[valor].estado)
    end
-   
+
    if count==COUNT_MAX then
       print("demo>> COUNT_MAX")
       count=0
@@ -528,7 +528,7 @@ local function make_demo_handler()
       -- reset error:
       access.set(sdscoreglib, t[valor].oid, 2)
       access.set(sdscoreglib, zigorDvrObjEstadoControl..".0", 4)  -- ON
-      
+
       --- XXX test (sds, time, minimo, integral, tiempo, fase, init)
       -- Obtenemos 'date' en formato ZDateAndTime
       time=os.date("%Y%m%d%H%M%S0%z")
@@ -571,7 +571,7 @@ local changes={} -- tabla para guardar registro de los cambios en temp(1)
 
 local function setsig_handler(sds, k, v, data)
    local res=false -- por defecto, no manejamos 'set'
-   
+
    -- Actuaciones
 
    -- Parámetros
@@ -580,6 +580,7 @@ local function setsig_handler(sds, k, v, data)
 	 -- "Commit" configuración
 	 if v==1 then     -- temp(1)
 	    -- grabar configuración AGS (parámetros)
+	    print("Se establecen parametros en active-dvr.lua")
 	    local p="active-"..profile
 	    local f="factory-"..profile
 	    local param=require(p) or require(f)
@@ -599,18 +600,19 @@ local function setsig_handler(sds, k, v, data)
 	       password = access.get(sds, zigorNetVncPassword .. ".0")
 	       os.execute("echo " .. password .. " | vncpasswd -f > /etc/.vncpasswd")
 	    end
-		
+
             -- SSH deshabilitar/habilitar
 	    if changes[zigorNetEnableSSH] then
                 configureSSH(sds)
 	    end
-		
+
 	    --
 	    changes={}
 	    -- grabar configuración sistema y reiniciar servicios en la próxima iteración del "mainloop"
+	    print("Grabar configuracion del sistema -> save_system_data")
  	    gobject.timeout_add(0,
  				function(sds)
- 				   save_system_data(sds) 
+ 				   save_system_data(sds)
  				   return false
  				end,
  				sds)
@@ -633,7 +635,7 @@ local function setsig_handler(sds, k, v, data)
 	    temp_timeout=0 -- XXX inicializar cuenta de expiración (?)
 	 end
       elseif access.get(sds, k)~=v then
-	 -- Edición de un parámetro. 
+	 -- Edición de un parámetro.
 	 -- Comprobamos si primera edición ( estado no es temp(1) )
 	 if access.get(sds, zigorCtrlParamState .. ".0")~=1 then
 	    -- Inicializamos registro de cambios para este temporal
@@ -650,7 +652,7 @@ local function setsig_handler(sds, k, v, data)
 	 end
 	 if not changes[id][n] then
 	    changes[id][n]={}
-	    changes[id][n].active=access.get(sds, k)	    
+	    changes[id][n].active=access.get(sds, k)
 	 end
 	 changes[id][n].temp=v
 	 -- inicializar cuenta de expiración
@@ -725,7 +727,7 @@ local function setsig_handler(sds, k, v, data)
       res=true              -- evitamos el 'set'
       --gobject.stop(sds, "setsig")  --XXX
    end
-   
+
    -- Cambio de zona horaria => CAMBIOS en el sistema (/etc/localtime)
    -- Y ademas hacemos uso de variable de entorno TZ para interaccion con algoritmo de reloj astronomico en cm-ctrl(gob)
    -- dado que solo cambio en /etc/locatime no del todo ok
@@ -746,7 +748,7 @@ local function setsig_handler(sds, k, v, data)
 	 --print("despues setenv",os.getenv("TZ"))
       end
    end
-   
+
    -- gaplog:
    -- Recepcion variables de objeto de bus zigor de evento de hueco
    if (k == zigorDvrObjGapMinimo .. ".0") then
@@ -845,7 +847,7 @@ local function setsig_handler(sds, k, v, data)
       -- Metemos la variable en el SDS _antes_ de recalcular
       gobject.block(sds, set_handler_id)
       err=access.set(sds, k, v)
-      if err==0 then 
+      if err==0 then
          res=true -- no hacer el set, ya hecho
          -- Recalcular
          set_VRedNom(sds)
@@ -859,7 +861,7 @@ local function setsig_handler(sds, k, v, data)
       -- Metemos la variable en el SDS _antes_ de recalcular
       gobject.block(sds, set_handler_id)
       err=access.set(sds, k, v)
-      if err==0 then 
+      if err==0 then
          res=true -- no hacer el set, ya hecho
          -- Recalcular
          access.set(sds, zigorDvrObjVMinDVR .. ".0", v)
@@ -912,7 +914,7 @@ local function setsig_handler(sds, k, v, data)
 	-- XXX
 	setlocale(sdscoreglib)
 	print("Test locale (Estado):" .. _g("Estado"))
-	---	
+	---
       end
    end
    --]]
@@ -921,13 +923,13 @@ local function setsig_handler(sds, k, v, data)
    -- New: Tratamiento Backlight Timeout (informar proceso char2scancode2 via signal):
    if k==zigorSysBacklightTimeout .. ".0" then
       print("Captura set de zigorSysBacklightTimeout")
-      
+
       --forzar el set:
       gobject.block(sds, set_handler_id)
       access.set(sds, k, v)
       gobject.unblock(sds, set_handler_id)
       res=true  -- no hacer el set, ya hecho
-      
+
       os.execute("killall -SIGUSR1 char2scancode2")
    end
    --]]
@@ -997,7 +999,67 @@ local function setsig_handler(sds, k, v, data)
 	    os.execute("killall -SIGUSR2 ags-modbus")
          end
    end
-   ---
+
+   -- PASSWORDS
+   if k == zigorSysPasswordPass .. ".4"         then
+        print("setsig: ",k)
+        local valor_previo = access.get(sds,k)
+        print("Valor anterior = ", valor_previo)
+        print("Valor actual = ", v)
+        gobject.block(sds, set_handler_id)
+        --cmd=[[sed -i -e 's/com2sec   admin   default   .*/com2sec   admin   default   ZZZZ/' ]] .. "/etc/snmp/snmpd.conf"
+        --cmd = string.gsub(cmd,"ZZZZ", v)
+        --os.execute(cmd)
+        local err = access.set(sds, k, v)
+        local valor_releido = access.get(sds,k)
+        print("Valor releido = ", valor_releido)
+
+        res = true
+        gobject.unblock(sds, set_handler_id)
+
+   elseif   k == zigorSysPasswordPass .. ".3"   then
+        print("setsig: ",k)
+        local valor_previo = access.get(sds,k)
+        print("Valor anterior = ", valor_previo)
+        print("Valor actual = ", v)
+        gobject.block(sds, set_handler_id)
+        --cmd=[[sed -i -e 's/com2sec   zms     default   .*/com2sec   zms     default   ZZZZ/' ]] .. "/etc/snmp/snmpd.conf"
+        --cmd = string.gsub(cmd,"ZZZZ", v)
+        local err = access.set(sds, k, v)
+        --os.execute(cmd)
+        res = true
+        gobject.unblock(sds, set_handler_id)
+
+   elseif k == zigorSysPasswordPass .. ".2"     then
+        print("setsig: ",k)
+        local valor_previo = access.get(sds,k)
+        print("Valor anterior = ", valor_previo)
+        print("Valor actual = ", v)
+        gobject.block(sds, set_handler_id)
+        --cmd=[[sed -i -e 's/com2sec   user    default   .*/com2sec   user    default   ZZZZ/' ]] .. "/etc/snmp/snmpd.conf"
+        --cmd = string.gsub(cmd,"ZZZZ", v)
+        local err = access.set(sds, k, v)
+        --os.execute(cmd)
+        res = true
+        gobject.unblock(sds, set_handler_id)
+
+   elseif k == zigorSysPasswordPass .. ".1"     then
+        print("setsig: ",k)
+        local valor_previo = access.get(sds,k)
+        print("Valor anterior = ", valor_previo)
+        print("Valor actual = ", v)
+        gobject.block(sds, set_handler_id)
+        --cmd=[[sed -i -e 's/com2sec   public  default   .*/com2sec   public  default   ZZZZ/' ]] .. "/etc/snmp/snmpd.conf"
+        --cmd = string.gsub(cmd,"ZZZZ", v)
+        --os.execute(cmd)
+        local err = access.set(sds, k, v)
+        local valor_releido = access.get(sds,k)
+        print("Valor releido = ", valor_releido)
+
+
+        res = true
+        gobject.unblock(sds, set_handler_id)
+   end
   end  --FIN (if setsig_init==0)
   ------
 
@@ -1057,7 +1119,7 @@ local dsp_buf   =string.char(tonumber(DA_ETX_BUS_DSP, 16), tonumber(ID_ETX_BUF, 
 
 local fichero_dsp_buf = {
    index = 1,
-   buffer = { 
+   buffer = {
 --      zigorDvrParamVRedNom .. ".0",
       zigorDvrObjVRedNom .. ".0",
       zigorDvrObjVMinDVR .. ".0",
@@ -1162,7 +1224,7 @@ local function alarm_manager(data)
       if temp_timeout < 150 then
 	 temp_timeout = temp_timeout +1
       else
-	 access.set(sdscoreglib, zigorCtrlParamState .. ".0", 2)      
+	 access.set(sdscoreglib, zigorCtrlParamState .. ".0", 2)
 	 temp_timeout=nil
       end
    end
@@ -1190,7 +1252,7 @@ local function alarm_manager(data)
    local date=os.date("%Y%m%d%H%M%S0%z")
    for k,v in pairs(alarms) do
       local descr,actives=v.f()
-      
+
       if descr then     -- Comprobación de seguridad
 
 	 --
@@ -1208,7 +1270,7 @@ local function alarm_manager(data)
 	       severity = 0,
 	    }
 	 end
-	 
+
 	 -- variables para saber si es "bloqueante"
 	 local severity=access.get(sdscoreglib, zigorAlarmCfgSeverity ..".".. tostring(alarms_config[descr]))
 	 local locked=(severity==index_sev["severa"] or severity==index_sev["persistente"])
@@ -1231,7 +1293,7 @@ local function alarm_manager(data)
 	 -- Filtramos elementos inactivos
 	 for e in pairs(alarm_cache[descr].cnt_act) do
 	    if not actives[e] then
-	       -- Reseteamos contador de activación si no 
+	       -- Reseteamos contador de activación si no
 	       -- se llegó a activar este elemento.
 	       if not alarm_cache[descr].t_elements[e] then
 		  alarm_cache[descr].cnt_act[e] = nil
@@ -1262,7 +1324,7 @@ local function alarm_manager(data)
 	       elements = e
 	    end
 	 end
-	 
+
 	 -- Calculamos condición en función de los elementos activos
 	 if elements ~= "" then
 	    cond = index_cond["activa"]
@@ -1380,7 +1442,7 @@ function sms_set(descr,cond,elements,date)
       tsms_index_r = tsms_index_r + 1
    end
    --print("sms>>>tsms_index_w:",tsms_index_w,"tsms_index_r:",tsms_index_r)
-   
+
    -- XXX (jur) Aprovechamos para envio de email:
    -------------------------------------------
    ------------
@@ -1401,7 +1463,7 @@ function sms_set(descr,cond,elements,date)
 	       local condd = displays.display_condicion[cond]["display"]
 	       local dated = os.date("%d/%m/%Y %H:%M:%S", os.time(ZDateAndTime2timetable(date)))
 	       local severityd = displays.display_severidad[severity]["display"]
-	       
+
 	       local name        = access.get(sdscoreglib, zigorSysName..".0")
 	       local description = access.get(sdscoreglib, zigorSysDescr..".0")
 	       local location    = access.get(sdscoreglib, zigorSysLocation..".0")
@@ -1430,7 +1492,7 @@ local function sms_send(number,text)
    --print("sms>>>sms_send")
    --XXX proteccion para longitud sms>160chars
    if #text > 160 then text = string.sub(text,1,160) end
-   
+
    -- si no lock file, crear lock file
    os.execute("ps x | grep dvr-snmpd | grep -v grep | cut -b 1-5 > /var/log/dvr-snmpd.pid")
    if(os.execute("test -f /var/lock/LCK.." .. puerto))==0 then
@@ -1450,7 +1512,7 @@ local function sms_send(number,text)
    --cmd="gsmsendsms -d /dev/"..puerto.." -b 9600 "..number.." \""..text.."\""
    cmd='../../tools/enviaSMS 1 0 '..number..' "'..text..'"'
    ret=os.execute(cmd)
-   
+
    -- remove lock file
    --print("sms>>>remove lock file")
    os.execute("rm -f /var/lock/LCK.."..puerto)
@@ -1507,7 +1569,7 @@ local Severidad = {  -- i18n
 local function sms_handler(data)
    --print("sms>>>---------")
    --print("sms>>>sms handler")
-   --  
+   --
    -- envio (si es posible), uno cada iteracion, de los sms pendientes
    --
    if(sms_modem_status()~= index_modem["libre"]) then return true end
@@ -1543,14 +1605,14 @@ local function sms_handler(data)
 	       local cod = display_descr[tsms[tsms_index_r].descr]["codigo"]
 	       local elements = tsms[tsms_index_r].elements
 	       --print("sms>>>envio: ",descr,cond,date,sev,cod,elements)
-	       
+
 	       local str = _g("Elementos")  -- i18n
 	       --if(sms_send(number, name.." ("..location.."): /"..cod.."/ "..descr.." ("..cond.."/"..sev.."/"..str..": "..elements..") "..date..".")~=true) then
 	       if(sms_send(number, name.." ("..location.."): /"..cod.."/ "..descr.." ("..cond.."/"..sev.."/"..str..": "..elements..") "..date..".")~=true) then
 	          --print("sms>>>cancelo envio sms, existe lock file")
 	          return true
 	       end
-	       
+
 	       -- se supone envio ok y se marca como enviado
 	       -- XXX contemplar hacer resets periodicos del modem por si acaso...
 	       tsms[tsms_index_r].sms[k]=1
