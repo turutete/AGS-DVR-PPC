@@ -1,5 +1,5 @@
 --
--- Edición
+-- Ediciï¿½n
 -- XXX
 loadlualib("gobject")
 require("gtk")
@@ -7,12 +7,12 @@ require "treestore"
 
 require "functions"  -- i18n
 
-local edit_same_units = true -- indica si la edición se hace en las mismas unidades que se muestra valor
+local edit_same_units = true -- indica si la ediciï¿½n se hace en las mismas unidades que se muestra valor
 local factor_prefix = {
    [10]      = "d",
    [100]     = "c",
    [1000]    = "m",
-   [1000000] = "u", -- XXX usar símbolo unicode de "micro"
+   [1000000] = "u", -- XXX usar sï¿½mbolo unicode de "micro"
 }
 
 local edit_data = {}
@@ -52,10 +52,10 @@ function edit_row_changed(object, iter, store)
    end
 
    -- Texto de entrada es "display" o "val" si "display" es no visible
-   gobject.set_property(w_edit, "invisible-char", string.byte("*") ) -- Carácter invisible por defecto
+   gobject.set_property(w_edit, "invisible-char", string.byte("*") ) -- Carï¿½cter invisible por defecto
    if ec and ec.hide then
       gobject.set_property(w_edit, "text", treestore.get(store, iter, "val") or "")
-      -- Carácter invisible opcional
+      -- Carï¿½cter invisible opcional
       if type(ec.hide)=="string" then
 	 gobject.set_property(w_edit, "invisible-char", string.byte(ec.hide) )
       end
@@ -65,7 +65,7 @@ function edit_row_changed(object, iter, store)
    -- Establecemos visibilidad del texto de entrada
    gobject.set_property(w_edit, "visibility", not (ec and ec.hide) )
 
-   -- Solo si esta interfaz tiene definidos enums en edición
+   -- Solo si esta interfaz tiene definidos enums en ediciï¿½n
    local model
    if enums then
       enum = treestore.get(store, iter, "enum")
@@ -120,7 +120,7 @@ function edit(object, sds)
       end
    end
 
-   -- Función de formateo opcional
+   -- Funciï¿½n de formateo opcional
    if edit_config[key] then
       local ec=edit_config[key]
       if ec.format then
@@ -142,6 +142,9 @@ function edit(object, sds)
       edit_id=gtk.statusbar_push(w_statusbar, "edit", _g("Estableciendo valor..."))
       gtk.main_iteration_do(FALSE);
       local err=access.set(sds, key, val)
+      print("key a escribir = ", key)
+      print("val a escribir = ", val)
+      
       gtk.statusbar_pop(w_statusbar, "set", edit_id)
       local msg
       if err==0 then
@@ -172,7 +175,7 @@ function edit_val_changed()
       local val=gobject.get_property(w_edit, "text") -- tipo "string"
       if val=="" then
 	 gtk.colorize_as_empty(w_edit)
-	 -- Comprobamos si puede ser vacío
+	 -- Comprobamos si puede ser vacï¿½o
 	 if ec.null then
 	    gobject.set_property(w_edit_button, "sensitive", true)
 	 else
@@ -189,7 +192,7 @@ function edit_val_changed()
 	 end
       end
    else
-      -- sin "edit config" edición normal
+      -- sin "edit config" ediciï¿½n normal
       gobject.set_property(w_edit_button, "sensitive", true)
       gtk.colorize_as_empty(w_edit)
    end
