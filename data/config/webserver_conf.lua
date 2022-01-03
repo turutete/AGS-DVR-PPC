@@ -26,6 +26,7 @@ $HTTP["url"] =~ "^/cgi-bin/" {
 
 server.username = "ags" 
 server.groupname = "users" 
+server.tag = ""
 
 server.port = $$zigorNetPortHttp.0
 
