@@ -7,7 +7,7 @@ require "functions"  -- i18n
 
 local param = {
    --
-   -- Parámetros generales
+   -- Parï¿½metros generales
    --
    -- ParamSystem
    [ zigorSysName ..  ".0"          ] = "PowerLogic DVR",
@@ -63,8 +63,11 @@ local param = {
    [ zigorNetEmail3 .. ".0"         ] = "",
    [ zigorNetEmail4 .. ".0"         ] = "",
    [ zigorNetVncPassword .. ".0"    ] = "",
-   [ zigorNetEnableSnmp .. ".0"     ] = 2, -- Deshabilitado por defecto
-   [ zigorNetEnableSSH .. ".0"     ] = 1, -- Deshabilitado por defecto?
+   [ zigorNetEnableSnmp .. ".0"     ] = 2,
+   [ zigorNetEnableSSH .. ".0"      ] = 2,
+   [ zigorNetEnableEthernet .. ".0" ] = 2,
+   [ zigorNetEnableHTTP .. ".0"     ] = 2,
+   [ zigorNetEnableVNC .. ".0"      ] = 2,
    -- ParamDialUp
    [ zigorDialUpPin .. ".0"         ] = "",
    [ zigorDialUpSmsNum1 .. ".0"     ] = "",
@@ -81,7 +84,7 @@ local param = {
    --
    [ zigorCtrlParamDemo .. ".0"     ] = 2,  -- desactivado por defecto
    --
-   -- Parámetros particulares
+   -- Parï¿½metros particulares
    --
    [ zigorDvrParamVRedNom .. ".0"	] = 4000,  -- 0.1
    [ zigorDvrParamVMinDVR .. ".0"	] = 1380,  -- 0.1
@@ -92,7 +95,7 @@ local param = {
 
 
    --
-   -- Configuración de alarmas
+   -- Configuraciï¿½n de alarmas
    --
    [ zigorAlarmCfgId .. ".1"              ] = 1,
    [ zigorAlarmCfgDescr .. ".1"           ] = zigorAlarmaStart,

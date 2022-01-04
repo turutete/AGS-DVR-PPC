@@ -506,8 +506,10 @@ local displays = {
    [ zigorCtrlParamDemo .. ".0"            ] = displays_dvr.display_SiNo_GR,
    [ zigorNetEnableSnmp .. ".0"            ] = displays_dvr.display_SiNo_GR,
    [ zigorNetVncPassword .. ".0"           ] = displays_dvr.display_PasswordPass,
-   [ zigorNetEnableSSH .. ".0"            ] = displays_dvr.display_SiNo_GR,
-
+   [ zigorNetEnableSSH .. ".0"             ] = displays_dvr.display_SiNo_GR,
+   [ zigorNetEnableEthernet .. ".0"        ] = displays_dvr.display_SiNo_GR,
+   [ zigorNetEnableHTTP .. ".0"            ] = displays_dvr.display_SiNo_GR,
+   [ zigorNetEnableVNC .. ".0"             ] = displays_dvr.display_SiNo_GR,
 }
 
 --- Actualizar la info de 'pic' si tabla de displays en otro fichero (y en ese fichero ahora el valor de pic convertir a texto)

@@ -115,8 +115,11 @@ $passwords
         <var key="$zigorNetPortHttp.0" name="Puerto TCP acceso HTTP" />
         <var key="$zigorNetPortVnc.0"  name="Puerto TCP aplicación a través de HTTP" />
         <var key="$zigorNetVncPassword.0"  name="VNC Server password" />
+        <var key="$zigorNetEnableEthernet.0"  enum="enum_SiNo" name="Habilitar Puerto Ethernet" />
         <var key="$zigorNetEnableSnmp.0"  enum="enum_SiNo" name="Habilitar Servidor SNMP" />
         <var key="$zigorNetEnableSSH.0"  enum="enum_SiNo" name="Habilitar Servicio SSH" />
+        <var key="$zigorNetEnableVNC.0"  enum="enum_SiNo" name="Habilitar Servicio VNC" />
+        <var key="$zigorNetEnableHTTP.0"  enum="enum_SiNo" name="Habilitar Servidor Web" />
       </node>
     </node>
     <node pic="cfg" name="DVR" >

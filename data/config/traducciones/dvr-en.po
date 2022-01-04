@@ -1315,6 +1315,15 @@ msgstr "Enable SNMP Server"
 msgid "Habilitar Servicio SSH"
 msgstr "Enable SSH Service"
 
+msgid "Habilitar Puerto Ethernet"
+msgstr "Enable Ethernet Port"
+
+msgid "Habilitar Servicio VNC"
+msgstr "Enable VNC Service"
+
+msgid "Habilitar Servidor Web"
+msgstr "Enable Web Server"
+
 msgid "Alarma temperatura alta"
 msgstr "High temperature alarm"
 

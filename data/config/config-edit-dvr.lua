@@ -200,6 +200,18 @@ local edit_config_dvr = {
       check = check_enum,
       check_args = {},
    },
+   [zigorNetEnableEthernet .. ".0"] = {
+      check = check_enum,
+      check_args = {},
+   },
+   [zigorNetEnableHTTP .. ".0"] = {
+      check = check_enum,
+      check_args = {},
+   },
+   [zigorNetEnableVNC .. ".0"] = {
+      check = check_enum,
+      check_args = {},
+   },
    ---
    [zigorDvrParamVRedNom] = {
       check = check_vredNom,

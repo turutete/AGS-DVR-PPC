@@ -84,8 +84,16 @@ function save_system_data(sds)
    -- Puerto del VNC
    local config=require "lanzar_Xvnc_sh"
    if(config) then
-      if(config:save(sds)) then
-	 config:restart()
+      local enableVNC = access.get(sds, zigorNetEnableVNC .. ".0")
+      if (config:save(sds)) then
+         if (enableVNC == TruthValueTRUE) then
+           config:restart()
+         else
+           config:stop()
+         end
+      end
+      if (enableVNC == TruthValueFALSE) then
+         config:stop()
       end
    end
    -- Puerto del VNC
@@ -98,8 +106,16 @@ function save_system_data(sds)
    -- Puerto del HTTP
    local config=require "webserver_conf"
    if(config) then
-      if(config:save(sds)) then
-	 config:restart()
+      local enableHTTP = access.get(sds, zigorNetEnableHTTP .. ".0")
+      if (config:save(sds)) then
+         if (enableHTTP == TruthValueTRUE) then
+           config:restart()
+         else
+           config:stop()
+         end
+      end
+      if (enableHTTP == TruthValueFALSE) then
+         config:stop()
       end
    end
    -- Cfg DNS

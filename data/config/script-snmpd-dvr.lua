@@ -545,15 +545,23 @@ local function make_demo_handler()
  end
 end
 
+local function configureETH(sds)
+   local ethEnabled = access.get(sds, zigorNetEnableEthernet .. ".0")
+   if ethEnabled == TruthValueTRUE then
+      os.execute("ifconfig eth0 up")
+   else
+      os.execute("ifconfig eth0 down")
+   end
+end
 
 local function configureSSH(sds)
    local sshEnabled = access.get(sds, zigorNetEnableSSH .. ".0")
-   if sshEnabled == 1 then
-           os.execute("ln -s /etc/init.d/dropbear /etc/runlevels/default/dropbear")
-           os.execute("/etc/init.d/dropbear restart")
+   if sshEnabled == TruthValueTRUE then
+      os.execute("ln -s /etc/init.d/dropbear /etc/runlevels/default/dropbear")
+      os.execute("/etc/init.d/dropbear restart")
    else
-           os.execute("rm -f /etc/runlevels/default/dropbear")
-           os.execute("/etc/init.d/dropbear stop")
+      os.execute("rm -f /etc/runlevels/default/dropbear")
+      os.execute("/etc/init.d/dropbear stop")
    end
 end
 ----------------------------------------
@@ -602,10 +610,13 @@ local function setsig_handler(sds, k, v, data)
 	    end
 
             -- SSH deshabilitar/habilitar
-	    if changes[zigorNetEnableSSH] then
+            if changes[zigorNetEnableSSH] then
                 configureSSH(sds)
-	    end
-
+            end
+            -- Puerto ethernet deshabilitar/habilitar
+            if changes[zigorNetEnableEthernet] then
+                configureETH(sds)
+            end
 	    --
 	    changes={}
 	    -- grabar configuración sistema y reiniciar servicios en la próxima iteración del "mainloop"
@@ -1233,6 +1244,8 @@ set_VRedNom(sdscoreglib)
 set_VMinDVR(sdscoreglib)
 -- Servicio SSH
 configureSSH(sdscoreglib)
+-- Ethernet Port
+configureETH(sdscoreglib)
 
 ----------------------------------------
 -- Gestión alarmas

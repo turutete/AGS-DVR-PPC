@@ -1,8 +1,16 @@
 require "functions"
 
-function vnc_restart()
-   os.execute("killall Xvnc")
+function vnc_start()
    os.execute("/usr/local/zigor/activa/tools/lanzar_Xvnc.sh")
+end
+
+function vnc_stop()
+   os.execute("killall Xvnc")
+end
+
+function vnc_restart()
+   vnc_stop()
+   vnc_start()
 end
 
 function lanzar_Xvnc_get(this, sds, oids)
@@ -27,9 +35,9 @@ local this  = {
    file     = "/usr/local/zigor/activa/tools/lanzar_Xvnc.sh",
    get      = lanzar_Xvnc_get,
    save     = tmpl_save,   
---  restart  = tmpl_service_restart,
-  restart  = vnc_restart,
---   _service = "snmpd",
+   start    = vnc_start,
+   stop     = vnc_stop,
+   restart  = vnc_restart,
    tmpl     = [[
 #!/bin/bash
 
@@ -38,6 +46,9 @@ local this  = {
 # Lanzador del servidor vnc (Xvnc)
 #
 # Created by AGS.
+
+# Variable de activacion, presente solo para forzar 
+# notificacion del cambio al guardar template $$zigorNetEnableVNC.0
 
 #Lanzar servidor VNC:
 

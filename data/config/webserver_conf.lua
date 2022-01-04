@@ -1,19 +1,32 @@
 require "functions"
 
-function lighttpd_restart()
-   os.execute("killall lighttpd")
+function lighttpd_start()
    os.execute("lighttpd -f /etc/lighttpd/lighttpd.conf")
+end
+
+function lighttpd_stop()
+   os.execute("killall lighttpd")
+end
+
+function lighttpd_restart()
+   lighttpd_stop()
+   lighttpd_start()
 end
 
 local this  = {
    file     = "/etc/lighttpd/lighttpd.conf",
    get      = tmpl_get,
    save     = tmpl_save,
+   start    = lighttpd_start,
+   stop     = lighttpd_stop,
    restart  = lighttpd_restart,
    tmpl     = [[
 # NO EDITAR ESTE FICHERO
 
 # Created by AGS.
+
+# Variable de activacion, presente solo para forzar 
+# notificacion del cambio al guardar template $$zigorNetEnableHTTP.0
 
 server.modules += ( "mod_proxy", "mod_websocket", "mod_cgi", "mod_alias" )
 

@@ -916,6 +916,30 @@ zigorNetEnableSSH OBJECT-TYPE
 		"Enable the SSH server remote access."
 	::= { zigorParamNet 19 }
 
+zigorNetEnableEthernet OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Enable the Ethernet port."
+	::= { zigorParamNet 20 }
+
+zigorNetEnableHTTP OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Enable the HTTP server."
+	::= { zigorParamNet 21 }
+
+zigorNetEnableVNC OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Enable the VNC server."
+	::= { zigorParamNet 22 }
+
 -- Control
 zigorCtrlParamState OBJECT-TYPE
 	SYNTAX		ParamState
