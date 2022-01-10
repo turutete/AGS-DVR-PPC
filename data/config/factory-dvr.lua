@@ -16,19 +16,23 @@ local param = {
    [ zigorSysContact .. ".0"        ] = "Schneider@SE.com",
    -- Password de "usuario basico" (solo lectura)
    [ zigorSysPasswordIndex .. ".1"  ] = 1,
-   [ zigorSysPasswordPass .. ".1"   ] = "1234",
+   --[ zigorSysPasswordPass .. ".1"   ] = "1111",
+   [ zigorSysPasswordPass .. ".1"   ] = "fc1a1e86c46d05ac15077a34657407ad03540ac4",
    [ zigorSysPasswordDescr .. ".1"  ] = _g("Password de usuario basico."),
    -- Password de "usuario" (lectura/escritura)
    [ zigorSysPasswordIndex .. ".2"  ] = 2,
-   [ zigorSysPasswordPass .. ".2"   ] = "4231",
+   --[ zigorSysPasswordPass .. ".2"   ] = "4231",
+   [ zigorSysPasswordPass .. ".2"   ] = "2af5f19c298db10056871310b071df07bf51f195",
    [ zigorSysPasswordDescr .. ".2"  ] = _g("Password de usuario avanzado."),
    -- Password de "mantenimiento" (lectura/escritura)
    [ zigorSysPasswordIndex .. ".3"  ] = 3,
-   [ zigorSysPasswordPass .. ".3"   ] = "0212",
+   --[ zigorSysPasswordPass .. ".3"   ] = "0212",
+   [ zigorSysPasswordPass .. ".3"   ] = "9d65645b98a4372f5bd836bc8bce11015f0988f3",
    [ zigorSysPasswordDescr .. ".3"  ] = _g("Password de zms."),
    -- Password de "administrador" (lectura y escritura)
    [ zigorSysPasswordIndex .. ".4"  ] = 4,
-   [ zigorSysPasswordPass .. ".4"   ] = "7788",
+   --[ zigorSysPasswordPass .. ".4"   ] = "7788",
+   [ zigorSysPasswordPass .. ".4"   ] = "548450640bd84ba0591da29d30c8f88641664c24",
    [ zigorSysPasswordDescr .. ".4"  ] = _g("Password de administrador."),
    --
    [ zigorSysCode .. ".0"           ] = "000000",
@@ -40,7 +44,7 @@ local param = {
    [ zigorSysLogoutTimeout .. ".0"  ] = 5,  -- minutes
    ---
    -- ParamNet
-   [ zigorNetIP .. ".0"             ] = "192.168.4.13",
+   [ zigorNetIP .. ".0"             ] = "192.168.33.178",
    [ zigorNetMask .. ".0"           ] = "255.255.0.0",
    [ zigorNetGateway .. ".0"        ] = "192.168.3.254",
 --   [ zigorNetPortVnc .. ".0"        ] = "5901",
@@ -60,7 +64,7 @@ local param = {
    [ zigorNetEmail4 .. ".0"         ] = "",
    [ zigorNetVncPassword .. ".0"    ] = "",
    [ zigorNetEnableSnmp .. ".0"     ] = 2, -- Deshabilitado por defecto
-   [ zigorNetEnableSSH .. ".0"     ] = 2, -- Deshabilitado por defecto?
+   [ zigorNetEnableSSH .. ".0"     ] = 1, -- Deshabilitado por defecto?
    -- ParamDialUp
    [ zigorDialUpPin .. ".0"         ] = "",
    [ zigorDialUpSmsNum1 .. ".0"     ] = "",
@@ -85,6 +89,7 @@ local param = {
    [ zigorDvrParamFactor .. ".0"	] = 1000,  -- 0.001
    [ zigorDvrParamFrecNom .. ".0"	] = 500,   -- 0.1
    [ zigorDvrParamHuecoNom .. ".0"      ] = 40,
+
 
    --
    -- Configuración de alarmas

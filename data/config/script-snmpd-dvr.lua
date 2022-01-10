@@ -1001,59 +1001,86 @@ local function setsig_handler(sds, k, v, data)
    end
 
    -- PASSWORDS
+   --Variable para contener el valor de la pass + la sal para hashear posteriormente.
+   local valor_salado
+   --Variable para contener el hash que va a ser guardado.
+   local valor_hasheado
+
+   --modulo necesario para llevar a cabo el hashing
+   local sha1 = require 'sha1'
+
    if k == zigorSysPasswordPass .. ".4"         then
-        print("setsig: ",k)
+
         local valor_previo = access.get(sds,k)
-        print("Valor anterior = ", valor_previo)
-        print("Valor actual = ", v)
+
         gobject.block(sds, set_handler_id)
-        --cmd=[[sed -i -e 's/com2sec   admin   default   .*/com2sec   admin   default   ZZZZ/' ]] .. "/etc/snmp/snmpd.conf"
-        --cmd = string.gsub(cmd,"ZZZZ", v)
-        --os.execute(cmd)
+        valor_salado = v .. "LEVEL4"
+        valor_hasheado = sha1.hex(valor_salado)
+
         local err = access.set(sds, k, v)
         local valor_releido = access.get(sds,k)
+        print("Valor previo = ", valor_previo)
+        print("Valor hasheado = ", valor_hasheado)
+
+        print("Valor salado = ", valor_salado)
         print("Valor releido = ", valor_releido)
 
         res = true
         gobject.unblock(sds, set_handler_id)
 
    elseif   k == zigorSysPasswordPass .. ".3"   then
-        print("setsig: ",k)
+
         local valor_previo = access.get(sds,k)
-        print("Valor anterior = ", valor_previo)
-        print("Valor actual = ", v)
         gobject.block(sds, set_handler_id)
-        --cmd=[[sed -i -e 's/com2sec   zms     default   .*/com2sec   zms     default   ZZZZ/' ]] .. "/etc/snmp/snmpd.conf"
-        --cmd = string.gsub(cmd,"ZZZZ", v)
+
+        valor_salado = v .. "LEVEL3"
+        valor_hasheado = sha1.hex(valor_salado)
+
         local err = access.set(sds, k, v)
-        --os.execute(cmd)
+        local valor_releido = access.get(sds,k)
+        print("Valor previo = ", valor_previo)
+        print("Valor hasheado = ", valor_hasheado)
+
+        print("Valor salado = ", valor_salado)
+        print("Valor releido = ", valor_releido)
+
         res = true
         gobject.unblock(sds, set_handler_id)
 
    elseif k == zigorSysPasswordPass .. ".2"     then
-        print("setsig: ",k)
+
         local valor_previo = access.get(sds,k)
-        print("Valor anterior = ", valor_previo)
-        print("Valor actual = ", v)
         gobject.block(sds, set_handler_id)
-        --cmd=[[sed -i -e 's/com2sec   user    default   .*/com2sec   user    default   ZZZZ/' ]] .. "/etc/snmp/snmpd.conf"
-        --cmd = string.gsub(cmd,"ZZZZ", v)
+
+        valor_salado = v .. "LEVEL2"
+        valor_hasheado = sha1.hex(valor_salado)
+
         local err = access.set(sds, k, v)
-        --os.execute(cmd)
+        local valor_releido = access.get(sds,k)
+        print("Valor previo = ", valor_previo)
+        print("Valor hasheado = ", valor_hasheado)
+
+        print("Valor salado = ", valor_salado)
+        print("Valor releido = ", valor_releido)
+
         res = true
         gobject.unblock(sds, set_handler_id)
 
    elseif k == zigorSysPasswordPass .. ".1"     then
-        print("setsig: ",k)
+
         local valor_previo = access.get(sds,k)
-        print("Valor anterior = ", valor_previo)
-        print("Valor actual = ", v)
+
         gobject.block(sds, set_handler_id)
-        --cmd=[[sed -i -e 's/com2sec   public  default   .*/com2sec   public  default   ZZZZ/' ]] .. "/etc/snmp/snmpd.conf"
-        --cmd = string.gsub(cmd,"ZZZZ", v)
-        --os.execute(cmd)
-        local err = access.set(sds, k, v)
+        valor_salado = v .. "LEVEL1"
+        valor_hasheado = sha1.hex(valor_salado)
+
+        local err = access.set(sds, k, valor_hasheado)
         local valor_releido = access.get(sds,k)
+
+        print("Valor previo = ", valor_previo)
+        print("Valor hasheado = ", valor_hasheado)
+
+        print("Valor salado = ", valor_salado)
         print("Valor releido = ", valor_releido)
 
 

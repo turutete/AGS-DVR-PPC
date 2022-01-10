@@ -507,6 +507,7 @@ local displays = {
    [ zigorNetEnableSnmp .. ".0"            ] = displays_dvr.display_SiNo_GR,
    [ zigorNetVncPassword .. ".0"           ] = displays_dvr.display_PasswordPass,
    [ zigorNetEnableSSH .. ".0"            ] = displays_dvr.display_SiNo_GR,
+
 }
 
 --- Actualizar la info de 'pic' si tabla de displays en otro fichero (y en ese fichero ahora el valor de pic convertir a texto)
@@ -1425,6 +1426,8 @@ gobject.connect(w_btClose_kb2, "clicked", btClose_kb2_handler)
 -- login window (XXX) --- de momento solo en local!
 --====================--
 local login_entry =gobject.get_data(loginui2, "login_entry2")
+local level_entry =gobject.get_data(loginui2, "comboboxentry1")
+
 
 local vbox1 = gobject.get_data(ui, "vbox1")
 local loginwindow = gobject.get_data(loginui2, "window3")
@@ -1482,7 +1485,18 @@ local function login_handler()
    print(">>>tabla_pass_id", tabla_pass_id)
 
    local password=gobject.get_property(login_entry, "text")
+
+   local level_entry_text = gtk.bin_get_child(level_entry)
+   local salt = gobject.get_property(level_entry_text, "text")
+
+   --modulo necesario para llevar a cabo el hashing
+   local sha1 = require 'sha1'
+   local valor_salado = password .. salt
+   local valor_hasheado = sha1.hex(valor_salado)
+
    print("password", password)
+   print("level: ", salt)
+   print("password hash", valor_hasheado)
 
    --
    ----gobject.set_property(sds, "community", password)  -- recorrer tabla de passwords con el nivel introducido!
@@ -1503,6 +1517,7 @@ local function login_handler()
 
    local pass_key = accessx.getnextkey(sds, zigorSysPasswordPass) -- si no es correcto se da Timeout por community inapropiada
    print("pass_key = ",pas_key)
+
    while( pass_key and is_substring(pass_key, zigorSysPasswordPass) and pass_key~=zigorSysPasswordPass ) do
       print("bucle pass")
       --local get_pass_id=gtk.statusbar_push(sb, "login", _g("Comprobando acceso nivel")..tostring(i).."...")
@@ -1510,29 +1525,22 @@ local function login_handler()
       pass=access.get(sds, pass_key)
       print("pass_key", pass_key)
       print("pass", pass)
-      --gtk.statusbar_pop(sb, "login", get_pass_id)
-      ----gtk.main_iteration_do(FALSE);
-
       -- Comprobar si es el nuestro
-      if pass and pass==password then
-         print("pass match!")
+      --if pass and pass==password then
+      if pass and pass==valor_hasheado then
+         print("pass match!", pass)
 	 _,_,access_level=string.find(pass_key, "%.(%d+)$")
 	 access_level_key=pass  -- XXX
 	 access_level=tonumber(access_level)
-     -- new! establecer env variable y salir!
-	 ----gobject.set_property(sds, "community", password)
-	 --gobject.set_property(w_label_level, "label", level_str..": "..tostring(access_level) )
-	 --gobject.set_property(loginwindow, "visible", false)
-	 --gobject.set_property(vbox1, "visible", true)
-	 ----return
-   script = os.getenv("LAUNCH")
-   cmd=[[sed -i -e 's/ACCESS_LEVEL=.*/ACCESS_LEVEL=ZZZ/' ]] .. script
-   cmd = string.gsub(cmd,"ZZZ", access_level)
-   print(cmd)
-   os.execute(cmd)
-   gobject.main_loop_quit(main_loop)
-   print("Exit para reinicio en otro nivel")
-   os.exit()  -- mas robustez?
+
+        script = os.getenv("LAUNCH")
+        cmd=[[sed -i -e 's/ACCESS_LEVEL=.*/ACCESS_LEVEL=ZZZ/' ]] .. script
+        cmd = string.gsub(cmd,"ZZZ", access_level)
+        print(cmd)
+        os.execute(cmd)
+        gobject.main_loop_quit(main_loop)
+        print("Exit para reinicio en otro nivel")
+        os.exit()  -- mas robustez?
 	 break
       end
       pass_key = accessx.getnextkey(sds, pass_key)
