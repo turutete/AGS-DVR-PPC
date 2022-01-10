@@ -16,22 +16,22 @@ local param = {
    [ zigorSysContact .. ".0"        ] = "Schneider@SE.com",
    -- Password de "usuario basico" (solo lectura)
    [ zigorSysPasswordIndex .. ".1"  ] = 1,
-   --[ zigorSysPasswordPass .. ".1"   ] = "1111",
+   --JC [ zigorSysPasswordPass .. ".1"   ] = "1111",
    [ zigorSysPasswordPass .. ".1"   ] = "fc1a1e86c46d05ac15077a34657407ad03540ac4",
    [ zigorSysPasswordDescr .. ".1"  ] = _g("Password de usuario basico."),
    -- Password de "usuario" (lectura/escritura)
    [ zigorSysPasswordIndex .. ".2"  ] = 2,
-   --[ zigorSysPasswordPass .. ".2"   ] = "4231",
+   --JC [ zigorSysPasswordPass .. ".2"   ] = "4231",
    [ zigorSysPasswordPass .. ".2"   ] = "2af5f19c298db10056871310b071df07bf51f195",
    [ zigorSysPasswordDescr .. ".2"  ] = _g("Password de usuario avanzado."),
    -- Password de "mantenimiento" (lectura/escritura)
    [ zigorSysPasswordIndex .. ".3"  ] = 3,
-   --[ zigorSysPasswordPass .. ".3"   ] = "0212",
+   --JC [ zigorSysPasswordPass .. ".3"   ] = "0212",
    [ zigorSysPasswordPass .. ".3"   ] = "9d65645b98a4372f5bd836bc8bce11015f0988f3",
    [ zigorSysPasswordDescr .. ".3"  ] = _g("Password de zms."),
    -- Password de "administrador" (lectura y escritura)
    [ zigorSysPasswordIndex .. ".4"  ] = 4,
-   --[ zigorSysPasswordPass .. ".4"   ] = "7788",
+   --JC [ zigorSysPasswordPass .. ".4"   ] = "7788",
    [ zigorSysPasswordPass .. ".4"   ] = "548450640bd84ba0591da29d30c8f88641664c24",
    [ zigorSysPasswordDescr .. ".4"  ] = _g("Password de administrador."),
    --
