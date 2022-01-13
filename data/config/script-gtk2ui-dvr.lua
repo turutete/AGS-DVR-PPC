@@ -1402,32 +1402,6 @@ local scancodes={
    F10    = string.char(68)..string.char(196),
    Left   = string.char(224)..string.char(75)..string.char(224)..string.char(203),
    Caps_Lock = string.char(58)..string.char(186),
---   A      = string.char(30)..string.char(158)..string.char(58)..string.char(186),
---   B      = string.char(48)..string.char(176)..string.char(58)..string.char(186),
---   C      = string.char(46)..string.char(174)..string.char(58)..string.char(186),
---   D      = string.char(32)..string.char(160)..string.char(58)..string.char(186),
---   E      = string.char(18)..string.char(146)..string.char(58)..string.char(186),
---   F      = string.char(33)..string.char(161)..string.char(58)..string.char(186),
---   G      = string.char(34)..string.char(162)..string.char(58)..string.char(186),
---   H      = string.char(35)..string.char(163)..string.char(58)..string.char(186),
---   I      = string.char(23)..string.char(151)..string.char(58)..string.char(186),
---   J      = string.char(36)..string.char(164)..string.char(58)..string.char(186),
---   K      = string.char(37)..string.char(165)..string.char(58)..string.char(186),
---   L      = string.char(38)..string.char(166)..string.char(58)..string.char(186),
---   M      = string.char(50)..string.char(178)..string.char(58)..string.char(186),
---   N      = string.char(49)..string.char(177)..string.char(58)..string.char(186),
---   O      = string.char(24)..string.char(152)..string.char(58)..string.char(186),
---   P      = string.char(25)..string.char(153)..string.char(58)..string.char(186),
---   Q      = string.char(16)..string.char(144)..string.char(58)..string.char(186),
---   R      = string.char(19)..string.char(147)..string.char(58)..string.char(186),
---   S      = string.char(31)..string.char(159)..string.char(58)..string.char(186),
---   T      = string.char(20)..string.char(148)..string.char(58)..string.char(186),
---   U      = string.char(22)..string.char(150)..string.char(58)..string.char(186),
---   V      = string.char(47)..string.char(175)..string.char(58)..string.char(186),
---   W      = string.char(17)..string.char(145)..string.char(58)..string.char(186),
---   X      = string.char(45)..string.char(173)..string.char(58)..string.char(186),
---   Y      = string.char(21)..string.char(149)..string.char(58)..string.char(186),
---   Z      = string.char(44)..string.char(172)..string.char(58)..string.char(186),
    a      = string.char(30)..string.char(158),
    b      = string.char(48)..string.char(176),
    c      = string.char(46)..string.char(174),
@@ -1736,23 +1710,12 @@ local function btkb1_handler(w, key)
 
       end
    else
-        -- no se el motivo, pero cuando me llega el parametro key del handler (hook), aunque el boton tenga como label la letra en mayuscula, me llega minuscula
-        -- por lo que hay que convertirla en el caso de mayusculas.
---        local key_definitivo
---        print("caps_lock-->",caps_lock)
---        if caps_lock == true then
---
---                key_definitivo = key
---                key_definitivo = key_definitivo:upper()
---                print ("key_definitivo -->", key_definitivo)
---
---        end
 
-        print ("Else...",scancodes[key])
+        --print ("Else...",scancodes[key])
         zkbd:write(scancodes[key])
 
-        local caja_texto = gobject.get_property(login_entry, "text")
-        print("nueva contrasena: ", caja_texto)
+        --local caja_texto = gobject.get_property(login_entry, "text")
+        --print("nueva contrasena: ", caja_texto)
 
    end
 
