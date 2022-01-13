@@ -9,6 +9,11 @@ loadlualib("gobject")
 loadlualib("access")
 require "treestore"
 
+
+-- variable para gestionar mayusculas y minusculas.
+-- se usa en este fichero .lua en los metodos btkb1_handler y MayusMinus_handler
+local caps_lock = false
+
 -- Forzar acceso síncrono (no usar cache)
 local cache=gobject.get_property(sds, "cache")
 gobject.set_property(sds, "cache", false)
@@ -1379,9 +1384,11 @@ local w_bt9_kb2 = gobject.get_data(ui, "bt9_kb2")
 local w_bt0_kb2 = gobject.get_data(ui, "bt0_kb2")
 local w_btDel_kb2 = gobject.get_data(ui, "btDel_kb2")
 local w_btClose_kb2 = gobject.get_data(ui, "btClose_kb2")
--- mejor ni usar el close:
---gobject.set_property(w_btClose_kb2, "visible", false)
 
+
+
+--Los scancodes son los valores numericos que se generan en la pulsacion o soltado de cada tecla del teclado.
+--Se pueden consultar en http://kbde.sourceforge.net/kbde/man/xt_kbde_scancode.7.html
 local scancodes={
    F1     = string.char(59)..string.char(187),
    F2     = string.char(60)..string.char(188),
@@ -1394,14 +1401,68 @@ local scancodes={
    F9     = string.char(67)..string.char(195),
    F10    = string.char(68)..string.char(196),
    Left   = string.char(224)..string.char(75)..string.char(224)..string.char(203),
-   --Return = string.char(28)..string.char(156),
+   Caps_Lock = string.char(58)..string.char(186),
+--   A      = string.char(30)..string.char(158)..string.char(58)..string.char(186),
+--   B      = string.char(48)..string.char(176)..string.char(58)..string.char(186),
+--   C      = string.char(46)..string.char(174)..string.char(58)..string.char(186),
+--   D      = string.char(32)..string.char(160)..string.char(58)..string.char(186),
+--   E      = string.char(18)..string.char(146)..string.char(58)..string.char(186),
+--   F      = string.char(33)..string.char(161)..string.char(58)..string.char(186),
+--   G      = string.char(34)..string.char(162)..string.char(58)..string.char(186),
+--   H      = string.char(35)..string.char(163)..string.char(58)..string.char(186),
+--   I      = string.char(23)..string.char(151)..string.char(58)..string.char(186),
+--   J      = string.char(36)..string.char(164)..string.char(58)..string.char(186),
+--   K      = string.char(37)..string.char(165)..string.char(58)..string.char(186),
+--   L      = string.char(38)..string.char(166)..string.char(58)..string.char(186),
+--   M      = string.char(50)..string.char(178)..string.char(58)..string.char(186),
+--   N      = string.char(49)..string.char(177)..string.char(58)..string.char(186),
+--   O      = string.char(24)..string.char(152)..string.char(58)..string.char(186),
+--   P      = string.char(25)..string.char(153)..string.char(58)..string.char(186),
+--   Q      = string.char(16)..string.char(144)..string.char(58)..string.char(186),
+--   R      = string.char(19)..string.char(147)..string.char(58)..string.char(186),
+--   S      = string.char(31)..string.char(159)..string.char(58)..string.char(186),
+--   T      = string.char(20)..string.char(148)..string.char(58)..string.char(186),
+--   U      = string.char(22)..string.char(150)..string.char(58)..string.char(186),
+--   V      = string.char(47)..string.char(175)..string.char(58)..string.char(186),
+--   W      = string.char(17)..string.char(145)..string.char(58)..string.char(186),
+--   X      = string.char(45)..string.char(173)..string.char(58)..string.char(186),
+--   Y      = string.char(21)..string.char(149)..string.char(58)..string.char(186),
+--   Z      = string.char(44)..string.char(172)..string.char(58)..string.char(186),
+   a      = string.char(30)..string.char(158),
+   b      = string.char(48)..string.char(176),
+   c      = string.char(46)..string.char(174),
+   d      = string.char(32)..string.char(160),
+   e      = string.char(18)..string.char(146),
+   f      = string.char(33)..string.char(161),
+   g      = string.char(34)..string.char(162),
+   h      = string.char(35)..string.char(163),
+   i      = string.char(23)..string.char(151),
+   j      = string.char(36)..string.char(164),
+   k      = string.char(37)..string.char(165),
+   l      = string.char(38)..string.char(166),
+   m      = string.char(50)..string.char(178),
+   n      = string.char(49)..string.char(177),
+   o      = string.char(24)..string.char(152),
+   p      = string.char(25)..string.char(153),
+   q      = string.char(16)..string.char(144),
+   r      = string.char(19)..string.char(147),
+   s      = string.char(31)..string.char(159),
+   t      = string.char(20)..string.char(148),
+   u      = string.char(22)..string.char(150),
+   v      = string.char(47)..string.char(175),
+   w      = string.char(17)..string.char(145),
+   x      = string.char(45)..string.char(173),
+   y      = string.char(21)..string.char(149),
+   z      = string.char(44)..string.char(172),
 }
 
 local function bt_kb2_handler(w, key)
    --gtk.widget_grab_focus(w_edit_val)   -- parece no hace falta / ojo! tb en propiedades de glade... (Focus on Click & Can Focus...)
    --gtk.main_iteration_do(FALSE)	-- pensaba para ejecutar keysnooper pero no hace falta
+
    zkbd:write(scancodes[key])
-   print(key)  -- dev
+   print("bt_kb2_handler", key)  -- dev
+
 end
 
 
@@ -1572,6 +1633,8 @@ local w_hbtbox1kb1 = gobject.get_data(loginui2, "hbtbox1kb1-2")
 local w_hbtbox2kb1 = gobject.get_data(loginui2, "hbtbox2kb1-2")
 local w_hbtbox3kb1 = gobject.get_data(loginui2, "hbtbox3kb1-2")
 local w_hbtbox4kb1 = gobject.get_data(loginui2, "hbtbox4kb1-2")
+
+
 local function enable_kb1(enable)
    gobject.set_property(w_hbtbox1kb1, "visible", enable)
    gobject.set_property(w_hbtbox2kb1, "visible", enable)
@@ -1579,23 +1642,6 @@ local function enable_kb1(enable)
    gobject.set_property(w_hbtbox4kb1, "visible", enable)
 end
 
---[[ no, mejor en ambos!
--- Mostrar teclado solo en local
-if remote==1 then
-  enable_kb1(false)
-end
---]]
-
---[[ en principio ya no usamos
-local function login_entry_press(w, event, data)
-   print("login_entry_press")
-   --enable_kb1(true)
-end
-
-if remote==0 then  -- mostrar teclado solo en local
-  gobject.connect(login_entry, "button-press-event", login_entry_press)
-end
---]]
 
 local w_bt1kb1 = gobject.get_data(loginui2, "bt1kb1")
 local w_bt2kb1 = gobject.get_data(loginui2, "bt2kb1")
@@ -1609,6 +1655,39 @@ local w_bt9kb1 = gobject.get_data(loginui2, "bt9kb1")
 local w_bt0kb1 = gobject.get_data(loginui2, "bt0kb1")
 local w_btDelkb1 = gobject.get_data(loginui2, "btDelkb1")
 local w_btClosekb1 = gobject.get_data(loginui2, "btClosekb1")
+
+--se introduce el teclado querty para la gestion de las passwords.
+local w_btnQ = gobject.get_data(loginui2, "btnQ")
+local w_btnW = gobject.get_data(loginui2, "btnW")
+local w_btnE = gobject.get_data(loginui2, "btnE")
+local w_btnR = gobject.get_data(loginui2, "btnR")
+local w_btnT = gobject.get_data(loginui2, "btnT")
+local w_btnY = gobject.get_data(loginui2, "btnY")
+local w_btnU = gobject.get_data(loginui2, "btnU")
+local w_btnI = gobject.get_data(loginui2, "btnI")
+local w_btnO = gobject.get_data(loginui2, "btnO")
+local w_btnP = gobject.get_data(loginui2, "btnP")
+local w_btnA = gobject.get_data(loginui2, "btnA")
+local w_btnS = gobject.get_data(loginui2, "btnS")
+local w_btnD = gobject.get_data(loginui2, "btnD")
+local w_btnF = gobject.get_data(loginui2, "btnF")
+local w_btnG = gobject.get_data(loginui2, "btnG")
+local w_btnH = gobject.get_data(loginui2, "btnH")
+local w_btnJ = gobject.get_data(loginui2, "btnJ")
+local w_btnK = gobject.get_data(loginui2, "btnK")
+local w_btnL = gobject.get_data(loginui2, "btnL")
+local w_btnEnie = gobject.get_data(loginui2, "btnEnie")
+local w_btnZ = gobject.get_data(loginui2, "btnZ")
+local w_btnX = gobject.get_data(loginui2, "btnX")
+local w_btnC = gobject.get_data(loginui2, "btnC")
+local w_btnV = gobject.get_data(loginui2, "btnV")
+local w_btnB = gobject.get_data(loginui2, "btnB")
+local w_btnN = gobject.get_data(loginui2, "btnN")
+local w_btnM = gobject.get_data(loginui2, "btnM")
+local w_btnMayus = gobject.get_data(loginui2, "btnMayus")
+local w_btnMinus = gobject.get_data(loginui2, "btnMinus")
+
+
 
 local numberkeys={
    F1     = "0",
@@ -1624,31 +1703,59 @@ local numberkeys={
 }
 
 local function btkb1_handler(w, key)
-   --[[
-   if key=="Left" then
-     print("Left")
-     gtk.widget_grab_focus(login_entry)	-- al final no hace falta, se gestiona en propiedades de glade
-   end
-   --]]
-   --gtk.main_iteration_do(FALSE)	-- pensaba para ejecutar keysnooper pero no hace falta
+
+
+   print("btkb1_handler(key)", key)
    if remote==1 then
+
       if key=="Left" then
          print("Left")
          local text = gobject.get_property(login_entry, "text")
 	 if string.len(text) > 0 then
 	    text = string.sub(text, 1, string.len(text)-1)
+
 	    gobject.set_property(login_entry, "text", text)
 	 end
       else
-         print(key, numberkeys[key])
-	 local text = gobject.get_property(login_entry, "text")
-	 text = string.format("%s%s", text, numberkeys[key])
-	 --gobject.set_property(login_entry, "text", numberkeys[key])
-	 gobject.set_property(login_entry, "text", text)
+
+        local text = gobject.get_property(login_entry, "text")
+
+        if key == "F1" or key == "F2" or key == "F3" or key == "F4" or key == "F5" or
+           key == "F6" or key == "F7" or key == "F8" or key == "F9" or key == "F10" then
+
+           text = string.format("%s%s", text, numberkeys[key])
+
+        else
+
+           text = string.format("%s%s", text, key)
+
+        end
+
+        print("Nuevo texto = ", text)
+        gobject.set_property(login_entry, "text", text)
+
       end
    else
-      zkbd:write(scancodes[key])
+        -- no se el motivo, pero cuando me llega el parametro key del handler (hook), aunque el boton tenga como label la letra en mayuscula, me llega minuscula
+        -- por lo que hay que convertirla en el caso de mayusculas.
+--        local key_definitivo
+--        print("caps_lock-->",caps_lock)
+--        if caps_lock == true then
+--
+--                key_definitivo = key
+--                key_definitivo = key_definitivo:upper()
+--                print ("key_definitivo -->", key_definitivo)
+--
+--        end
+
+        print ("Else...",scancodes[key])
+        zkbd:write(scancodes[key])
+
+        local caja_texto = gobject.get_property(login_entry, "text")
+        print("nueva contrasena: ", caja_texto)
+
    end
+
 end
 
 
@@ -1662,18 +1769,131 @@ local function btClosekb1_handler(w, data)
 end
 
 
-gobject.connect(w_bt1kb1, "clicked", btkb1_handler, "F2")
-gobject.connect(w_bt2kb1, "clicked", btkb1_handler, "F3")
-gobject.connect(w_bt3kb1, "clicked", btkb1_handler, "F4")
-gobject.connect(w_bt4kb1, "clicked", btkb1_handler, "F5")
-gobject.connect(w_bt5kb1, "clicked", btkb1_handler, "F6")
-gobject.connect(w_bt6kb1, "clicked", btkb1_handler, "F7")
-gobject.connect(w_bt7kb1, "clicked", btkb1_handler, "F8")
-gobject.connect(w_bt8kb1, "clicked", btkb1_handler, "F9")
-gobject.connect(w_bt9kb1, "clicked", btkb1_handler, "F10")
-gobject.connect(w_bt0kb1, "clicked", btkb1_handler, "F1")
-gobject.connect(w_btDelkb1, "clicked", btkb1_handler, "Left")
---gobject.connect(w_btDelkb1, "clicked", function() os.execute("/usr/local/zigor/activa/drivers/kbde -k ArrowL") end)
---gobject.connect(w_btDelkb1, "clicked", function() zkbd:write(string.char(224)..string.char(75)..string.char(224)..string.char(203)) end)
-gobject.connect(w_btClosekb1, "clicked", btClosekb1_handler)
+--Funcion para el cambio entre mayusculas y minusculas del teclado querty del formulario de login2
+local function MayusMinus_handler(w, key)
+
+        print("MayusMinus_handler")
+
+
+        if (key == "M") and (caps_lock == false) then
+
+                caps_lock = true
+                zkbd:write(scancodes["Caps_Lock"])
+                -- En caso de que se manda el key M mayuscula, se cambian las label de los botones de letras a mayusculas
+                gobject.set_property(w_btnQ , "label","Q")
+                gobject.set_property(w_btnW , "label","W")
+                gobject.set_property(w_btnE , "label","E")
+                gobject.set_property(w_btnR , "label","R")
+                gobject.set_property(w_btnT , "label","T")
+                gobject.set_property(w_btnY , "label","Y")
+                gobject.set_property(w_btnU , "label","U")
+                gobject.set_property(w_btnI , "label","I")
+                gobject.set_property(w_btnO , "label","O")
+                gobject.set_property(w_btnP , "label","P")
+                gobject.set_property(w_btnA , "label","A")
+                gobject.set_property(w_btnS , "label","S")
+                gobject.set_property(w_btnD , "label","D")
+                gobject.set_property(w_btnF , "label","F")
+                gobject.set_property(w_btnG , "label","G")
+                gobject.set_property(w_btnH , "label","H")
+                gobject.set_property(w_btnJ , "label","J")
+                gobject.set_property(w_btnK , "label","K")
+                gobject.set_property(w_btnL , "label","L")
+                gobject.set_property(w_btnEnie , "label","Ñ")
+                gobject.set_property(w_btnZ , "label","Z")
+                gobject.set_property(w_btnX , "label","X")
+                gobject.set_property(w_btnC , "label","C")
+                gobject.set_property(w_btnV , "label","V")
+                gobject.set_property(w_btnB , "label","B")
+                gobject.set_property(w_btnN , "label","N")
+                gobject.set_property(w_btnM , "label","M")
+
+
+        elseif (key == "m") and (caps_lock == true) then
+                caps_lock = false
+                zkbd:write(scancodes["Caps_Lock"])
+                -- En caso de que se manda el key m minuscula, se cambian las label de los botones de letras a minuscula
+                gobject.set_property(w_btnQ , "label","q")
+                gobject.set_property(w_btnW , "label","w")
+                gobject.set_property(w_btnE , "label","e")
+                gobject.set_property(w_btnR , "label","r")
+                gobject.set_property(w_btnT , "label","t")
+                gobject.set_property(w_btnY , "label","y")
+                gobject.set_property(w_btnU , "label","u")
+                gobject.set_property(w_btnI , "label","i")
+                gobject.set_property(w_btnO , "label","o")
+                gobject.set_property(w_btnP , "label","p")
+                gobject.set_property(w_btnA , "label","a")
+                gobject.set_property(w_btnS , "label","s")
+                gobject.set_property(w_btnD , "label","d")
+                gobject.set_property(w_btnF , "label","f")
+                gobject.set_property(w_btnG , "label","g")
+                gobject.set_property(w_btnH , "label","h")
+                gobject.set_property(w_btnJ , "label","j")
+                gobject.set_property(w_btnK , "label","k")
+                gobject.set_property(w_btnL , "label","l")
+                gobject.set_property(w_btnEnie , "label","ñ")
+                gobject.set_property(w_btnZ , "label","z")
+                gobject.set_property(w_btnX , "label","x")
+                gobject.set_property(w_btnC , "label","c")
+                gobject.set_property(w_btnV , "label","v")
+                gobject.set_property(w_btnB , "label","b")
+                gobject.set_property(w_btnN , "label","n")
+                gobject.set_property(w_btnM , "label","m")
+
+        end
+
+end
+
+
+gobject.connect(w_bt1kb1,       "clicked", btkb1_handler, "F2")
+gobject.connect(w_bt2kb1,       "clicked", btkb1_handler, "F3")
+gobject.connect(w_bt3kb1,       "clicked", btkb1_handler, "F4")
+gobject.connect(w_bt4kb1,       "clicked", btkb1_handler, "F5")
+gobject.connect(w_bt5kb1,       "clicked", btkb1_handler, "F6")
+gobject.connect(w_bt6kb1,       "clicked", btkb1_handler, "F7")
+gobject.connect(w_bt7kb1,       "clicked", btkb1_handler, "F8")
+gobject.connect(w_bt8kb1,       "clicked", btkb1_handler, "F9")
+gobject.connect(w_bt9kb1,       "clicked", btkb1_handler, "F10")
+gobject.connect(w_bt0kb1,       "clicked", btkb1_handler, "F1")
+gobject.connect(w_btDelkb1,     "clicked", btkb1_handler, "Left")
+gobject.connect(w_btClosekb1,   "clicked", btClosekb1_handler)
+
+gobject.connect(w_btnMayus, "clicked", MayusMinus_handler, "M")
+gobject.connect(w_btnMinus, "clicked", MayusMinus_handler, "m")
+
+gobject.connect(w_btnQ,       "clicked", btkb1_handler, gobject.get_property(w_btnQ , "label"))
+gobject.connect(w_btnW,       "clicked", btkb1_handler, gobject.get_property(w_btnW , "label"))
+gobject.connect(w_btnE,       "clicked", btkb1_handler, gobject.get_property(w_btnE , "label"))
+gobject.connect(w_btnR,       "clicked", btkb1_handler, gobject.get_property(w_btnR , "label"))
+gobject.connect(w_btnT,       "clicked", btkb1_handler, gobject.get_property(w_btnT , "label"))
+gobject.connect(w_btnY,       "clicked", btkb1_handler, gobject.get_property(w_btnY , "label"))
+gobject.connect(w_btnU,       "clicked", btkb1_handler, gobject.get_property(w_btnU , "label"))
+gobject.connect(w_btnI,       "clicked", btkb1_handler, gobject.get_property(w_btnI , "label"))
+gobject.connect(w_btnO,       "clicked", btkb1_handler, gobject.get_property(w_btnO , "label"))
+gobject.connect(w_btnP,       "clicked", btkb1_handler, gobject.get_property(w_btnP , "label"))
+gobject.connect(w_btnA,       "clicked", btkb1_handler, gobject.get_property(w_btnA , "label"))
+gobject.connect(w_btnS,       "clicked", btkb1_handler, gobject.get_property(w_btnS , "label"))
+gobject.connect(w_btnD,       "clicked", btkb1_handler, gobject.get_property(w_btnD , "label"))
+gobject.connect(w_btnF,       "clicked", btkb1_handler, gobject.get_property(w_btnF , "label"))
+gobject.connect(w_btnG,       "clicked", btkb1_handler, gobject.get_property(w_btnG , "label"))
+gobject.connect(w_btnH,       "clicked", btkb1_handler, gobject.get_property(w_btnH , "label"))
+gobject.connect(w_btnJ,       "clicked", btkb1_handler, gobject.get_property(w_btnJ , "label"))
+gobject.connect(w_btnK,       "clicked", btkb1_handler, gobject.get_property(w_btnK , "label"))
+gobject.connect(w_btnL,       "clicked", btkb1_handler, gobject.get_property(w_btnL , "label"))
+gobject.connect(w_btnEnie,       "clicked", btkb1_handler, gobject.get_property(w_btnEnie , "label"))
+gobject.connect(w_btnZ,       "clicked", btkb1_handler, gobject.get_property(w_btnZ , "label"))
+gobject.connect(w_btnX,       "clicked", btkb1_handler, gobject.get_property(w_btnX , "label"))
+gobject.connect(w_btnC,       "clicked", btkb1_handler, gobject.get_property(w_btnC , "label"))
+gobject.connect(w_btnV,       "clicked", btkb1_handler, gobject.get_property(w_btnV , "label"))
+gobject.connect(w_btnB,       "clicked", btkb1_handler, gobject.get_property(w_btnB , "label"))
+gobject.connect(w_btnN,       "clicked", btkb1_handler, gobject.get_property(w_btnN , "label"))
+gobject.connect(w_btnM,       "clicked", btkb1_handler, gobject.get_property(w_btnM , "label"))
+
+
+
+
+
+
+
 ------
