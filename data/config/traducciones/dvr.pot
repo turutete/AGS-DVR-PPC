@@ -382,6 +382,9 @@ msgstr ""
 msgid "Nivel"
 msgstr ""
 
+msgid "Nivel:"
+msgstr ""
+
 msgid "Elementos"
 msgstr ""
 
@@ -1160,3 +1163,8 @@ msgstr ""
 
 msgid "Desactivacion"
 msgstr ""
+
+msgid "Password actual:"
+msgid ""
+
+

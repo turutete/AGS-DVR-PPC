@@ -1,114 +1,9 @@
 
-_("DVR")
-_("Estado")
-_("Sistema")
-_("Nombre del equipo")
-_("Descripción del equipo")
-_("Localización")
-_("Contacto")
-_("Código del equipo")
-_("Firmware")
-_("Configuración")
-_("Estado módem")
-_("Medidas")
-_("Tensión de entrada fase R")
-_("Tensión de entrada fase S")
-_("Tensión de entrada fase T")
-_("Tensión de bus")
-_("Tensión de salida fase R")
-_("Tensión de salida fase S")
-_("Tensión de salida fase T")
-_("Corriente de salida fase R")
-_("Corriente de salida fase S")
-_("Corriente de salida fase T")
-_("Potencia de salida fase R")
-_("Potencia de salida fase S")
-_("Potencia de salida fase T")
-_("Estado")
-_("Estado de Control")
-_("Error de comunicación DSP")
-_("Parametros")
-_("Sistema")
-_("Descripción del equipo")
-_("Localización")
-_("Contacto")
-_("Fecha")
-_("Zona Horaria")
-_("Lenguaje para notificaciones")
-_("Backlight Timeout")
-_("Logout Timeout")
-_("Passwords")
-_("Comunicaciones")
-_("Dirección IP")
-_("Máscara de red")
-_("Gateway")
-_("DNS")
-_("Envio email: Servidor de correo SMTP")
-_("Envio email: Usuario")
-_("Envio email: Password")
-_("Envio email: Dirección de correo (* vs @)")
-_("Envio email: Autenticación (NO/SSL/TLS)")
-_("Envio email: Email Test Envio (* vs @)")
-_("Email 1 para envio de alarmas (* vs @)")
-_("Email 2 para envio de alarmas (* vs @)")
-_("Email 3 para envio de alarmas (* vs @)")
-_("Email 4 para envio de alarmas (* vs @)")
-_("Modo MODBUS")
-_("Modbus RTU: Direccion")
-_("Modbus RTU: Velocidad")
-_("Modbus RTU: Paridad")
-_("Modbus TCP: Puerto")
-_("Modbus TCP: Tiempo inactividad para Reset (s)")
-_("PIN del modem")
-_("Número 1 para envio SMS")
-_("Número 2 para envio SMS")
-_("Número 3 para envio SMS")
-_("Número 4 para envio SMS")
-_("Puerto TCP acceso HTTP")
-_("Puerto TCP aplicación a través de HTTP")
-_("DVR")
-_("Tensión de red nominal")
-_("Tensión mínima DVR")
-_("Equipos en paralelo")
-_("Factor de conversión para tensiones")
-_("Frecuencia nominal")
-_("Eventos")
-_("Niveles")
-_("Notificaciones")
-_("Nombre")
-_("Nombre")
-_("Valor")
-_("Código")
-_("Evento")
-_("Est.")
-_("Nivel")
-_("Fecha")
-_("Elementos")
-_("Reconocer")
-_("Rec.")
-_("Reset")
-_("Res.")
-_("Código")
-_("Evento")
-_("Est.")
-_("Nivel")
-_("Fecha")
-_("Elemento")
-_("Mínimo (%)")
-_("Media (%)")
-_("Duración (ms)")
-_("Fase")
-_("Fecha")
-_("DVR")
-_("Estado")
-_("Parametros")
-_("Introduce password")
-_("Comprobando password...")
-_("Comprobando acceso nivel")
-_("Error, introduce password")
 _("Inicio sistema")
 
 _("Cambio de password")
+
+_("Hueco registrado")
 
 /* Maximum 16 characters & ASCII only */
 _("ErrorVInst")
@@ -199,20 +94,12 @@ _("Error termostato")
 _("<Error termostato>")
 
 /* Maximum 16 characters & ASCII only */
-_("Limitando")
+_("Limitación de potencia interna")
 
-_("Limitando")
-
-/* SMS characters only [GSM 03.38] */
-_("<Limitando>")
-
-/* Maximum 16 characters & ASCII only */
-_("ErrorFusible")
-
-_("Error fusible")
+_("Limitación de potencia interna")
 
 /* SMS characters only [GSM 03.38] */
-_("<Error fusible>")
+_("<Limitación de potencia interna>")
 
 /* Maximum 16 characters & ASCII only */
 _("AlarmaPLL")
@@ -237,6 +124,14 @@ _("Cambio de estado")
 
 /* SMS characters only [GSM 03.38] */
 _("<Cambio de estado>")
+
+/* Maximum 16 characters & ASCII only */
+_("Temperatura alta")
+
+_("Alarma temperatura alta")
+
+/* SMS characters only [GSM 03.38] */
+_("<Temperatura alta>")
 
 /* 11 characters wide [use blanks] */
 _("   LEVE    ")
@@ -304,6 +199,11 @@ _("Alarma driver")
 /* Maximum 16 characters & ASCII only */
 _("_Alarma Driver_")
 
+_("Alarma tensión de bus máxima")
+
+/* Maximum 16 characters & ASCII only */
+_("_Alarma VBusMax_")
+
 _("Espera OFF")
 
 /* Maximum 16 characters & ASCII only */
@@ -334,15 +234,25 @@ _("Error driver")
 /* Maximum 16 characters & ASCII only */
 _("_Error Driver_")
 
-_("Error fusible")
+_("Error Fusible / Error condensador AC")
 
 /* Maximum 16 characters & ASCII only */
-_("_Error Fusible_")
+_("_Error Fus/C-AC_")
 
 _("Error temperatura")
 
 /* Maximum 16 characters & ASCII only */
 _("_Error Temp_")
+
+_("Error fusible")
+
+/* Maximum 16 characters & ASCII only */
+_("_Error Fusible_")
+
+_("Error Condensador AC")
+
+/* Maximum 16 characters & ASCII only */
+_("_Error Cond AC_")
 
 _("Activación")
 
@@ -496,7 +406,11 @@ _("Par")
 
 _("Impar")
 
+_("Estado")
+
 _("Nivel de acceso")
+
+_("Error de comunicación con DSP")
 
 _("Sistema")
 
@@ -527,12 +441,6 @@ _("Mínimo")
 _("Duración")
 
 _("Introduce password")
-
-_("Introduce password")
-
-_("Comprobando password...")
-
-_("Comprobando acceso nivel")
 
 _("Error, introduce de nuevo el password")
 
@@ -638,7 +546,13 @@ _("Valor establecido.")
 
 _("Error, no se pudo establecer valor.")
 
-_("Estado")
+_("F")
+
+_("Dur")
+
+_("Mín")
+
+_("Med")
 
 _("Prueba envio email")
 

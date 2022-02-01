@@ -391,6 +391,9 @@ msgstr "统计"
 msgid "Nivel"
 msgstr "等级"
 
+msgid "Nivel:"
+msgstr "等级:"
+
 msgid "Elementos"
 msgstr "成分"
 
@@ -1202,6 +1205,9 @@ msgstr "激活"
 msgid "Desactivacion"
 msgstr "停止"
 
+msgid "Password actual:"
+msgstr "密码 当前的:"
+
 # Manual translation texts
 ##########################
 
@@ -1225,3 +1231,4 @@ msgstr "最大母线电压报警"
 
 msgid "_Alarma VBusMax_"
 msgstr "最大母线电压报警"
+

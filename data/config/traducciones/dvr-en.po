@@ -439,6 +439,9 @@ msgstr "Stat."
 msgid "Nivel"
 msgstr "Level"
 
+msgid "Nivel:"
+msgstr "Level:"
+
 msgid "Elementos"
 msgstr "Elements"
 
@@ -1300,6 +1303,10 @@ msgstr "Activation"
 msgid "Desactivacion"
 msgstr "Deactivation"
 
+msgid "Password actual:"
+msgstr "Current password:"
+
+
 # Manual translation texts
 ##########################
 
@@ -1338,3 +1345,4 @@ msgstr "Maximum bus voltage alarm"
 
 msgid "_Alarma VBusMax_"
 msgstr "_Alarm VBusMax_"
+

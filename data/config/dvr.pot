@@ -8,10 +8,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-03-25 13:20+0100\n"
+"POT-Creation-Date: 2022-01-31 15:13+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -82,6 +83,9 @@ msgstr ""
 msgid "9 xyz"
 msgstr ""
 
+msgid "ABC.."
+msgstr ""
+
 msgid "Borrar histórico de eventos"
 msgstr ""
 
@@ -121,6 +125,18 @@ msgstr ""
 msgid "Histórico de HUECOS"
 msgstr ""
 
+msgid ""
+"LEVEL1\n"
+"LEVEL2\n"
+"LEVEL3"
+msgstr ""
+
+msgid ""
+"LEVEL1\n"
+"LEVEL2\n"
+"LEVEL3\n"
+msgstr ""
+
 msgid "LOGIN"
 msgstr ""
 
@@ -133,6 +149,9 @@ msgstr ""
 msgid "Marcha"
 msgstr ""
 
+msgid "Nivel: "
+msgstr ""
+
 msgid "OK"
 msgstr ""
 
@@ -140,6 +159,9 @@ msgid "Paro"
 msgstr ""
 
 msgid "Parámetros"
+msgstr ""
+
+msgid "Password Actual:"
 msgstr ""
 
 msgid "Password:"
@@ -157,274 +179,97 @@ msgstr ""
 msgid "Sinóptico"
 msgstr ""
 
-msgid "Test"
+msgid "a"
 msgstr ""
 
-msgid "DVR"
+msgid "abc.."
 msgstr ""
 
-msgid "Sistema"
+msgid "b"
 msgstr ""
 
-msgid "Nombre del equipo"
+msgid "c"
 msgstr ""
 
-msgid "Descripción del equipo"
+msgid "d"
 msgstr ""
 
-msgid "Localización"
+msgid "e"
 msgstr ""
 
-msgid "Contacto"
+msgid "f"
 msgstr ""
 
-msgid "Código del equipo"
+msgid "g"
 msgstr ""
 
-msgid "Firmware"
+msgid "h"
 msgstr ""
 
-msgid "Configuración"
+msgid "i"
 msgstr ""
 
-msgid "Estado módem"
+msgid "j"
 msgstr ""
 
-msgid "Medidas"
+msgid "k"
 msgstr ""
 
-msgid "Tensión de entrada fase R"
+msgid "l"
 msgstr ""
 
-msgid "Tensión de entrada fase S"
+msgid "m"
 msgstr ""
 
-msgid "Tensión de entrada fase T"
+msgid "n"
 msgstr ""
 
-msgid "Tensión de bus"
+msgid "o"
 msgstr ""
 
-msgid "Tensión de salida fase R"
+msgid "p"
 msgstr ""
 
-msgid "Tensión de salida fase S"
+msgid "q"
 msgstr ""
 
-msgid "Tensión de salida fase T"
+msgid "r"
 msgstr ""
 
-msgid "Corriente de salida fase R"
+msgid "s"
 msgstr ""
 
-msgid "Corriente de salida fase S"
+msgid "t"
 msgstr ""
 
-msgid "Corriente de salida fase T"
+msgid "u"
 msgstr ""
 
-msgid "Potencia de salida fase R"
+msgid "v"
 msgstr ""
 
-msgid "Potencia de salida fase S"
+msgid "w"
 msgstr ""
 
-msgid "Potencia de salida fase T"
+msgid "x"
 msgstr ""
 
-msgid "Estado de Control"
+msgid "y"
 msgstr ""
 
-msgid "Error de comunicación DSP"
+msgid "z"
 msgstr ""
 
-msgid "Parametros"
-msgstr ""
-
-msgid "Fecha"
-msgstr ""
-
-msgid "Zona Horaria"
-msgstr ""
-
-msgid "Lenguaje para notificaciones"
-msgstr ""
-
-msgid "Backlight Timeout"
-msgstr ""
-
-msgid "Logout Timeout"
-msgstr ""
-
-msgid "Passwords"
-msgstr ""
-
-msgid "Comunicaciones"
-msgstr ""
-
-msgid "Dirección IP"
-msgstr ""
-
-msgid "Máscara de red"
-msgstr ""
-
-msgid "Gateway"
-msgstr ""
-
-msgid "DNS"
-msgstr ""
-
-msgid "Envio email: Servidor de correo SMTP"
-msgstr ""
-
-msgid "Envio email: Usuario"
-msgstr ""
-
-msgid "Envio email: Password"
-msgstr ""
-
-msgid "Envio email: Dirección de correo (* vs @)"
-msgstr ""
-
-msgid "Envio email: Autenticación (NO/SSL/TLS)"
-msgstr ""
-
-msgid "Envio email: Email Test Envio (* vs @)"
-msgstr ""
-
-msgid "Email 1 para envio de alarmas (* vs @)"
-msgstr ""
-
-msgid "Email 2 para envio de alarmas (* vs @)"
-msgstr ""
-
-msgid "Email 3 para envio de alarmas (* vs @)"
-msgstr ""
-
-msgid "Email 4 para envio de alarmas (* vs @)"
-msgstr ""
-
-msgid "Modo MODBUS"
-msgstr ""
-
-msgid "Modbus RTU: Direccion"
-msgstr ""
-
-msgid "Modbus RTU: Velocidad"
-msgstr ""
-
-msgid "Modbus RTU: Paridad"
-msgstr ""
-
-msgid "Modbus TCP: Puerto"
-msgstr ""
-
-msgid "Modbus TCP: Tiempo inactividad para Reset (s)"
-msgstr ""
-
-msgid "PIN del modem"
-msgstr ""
-
-msgid "Número 1 para envio SMS"
-msgstr ""
-
-msgid "Número 2 para envio SMS"
-msgstr ""
-
-msgid "Número 3 para envio SMS"
-msgstr ""
-
-msgid "Número 4 para envio SMS"
-msgstr ""
-
-msgid "Puerto TCP acceso HTTP"
-msgstr ""
-
-msgid "Puerto TCP aplicación a través de HTTP"
-msgstr ""
-
-msgid "Tensión de red nominal"
-msgstr ""
-
-msgid "Tensión mínima DVR"
-msgstr ""
-
-msgid "Equipos en paralelo"
-msgstr ""
-
-msgid "Factor de conversión para tensiones"
-msgstr ""
-
-msgid "Frecuencia nominal"
-msgstr ""
-
-msgid "Niveles"
-msgstr ""
-
-msgid "Notificaciones"
-msgstr ""
-
-msgid "Nombre"
-msgstr ""
-
-msgid "Valor"
-msgstr ""
-
-msgid "Código"
-msgstr ""
-
-msgid "Evento"
-msgstr ""
-
-msgid "Est."
-msgstr ""
-
-msgid "Nivel"
-msgstr ""
-
-msgid "Elementos"
-msgstr ""
-
-msgid "Reconocer"
-msgstr ""
-
-msgid "Rec."
-msgstr ""
-
-msgid "Res."
-msgstr ""
-
-msgid "Elemento"
-msgstr ""
-
-msgid "Mínimo (%)"
-msgstr ""
-
-msgid "Media (%)"
-msgstr ""
-
-msgid "Duración (ms)"
-msgstr ""
-
-msgid "Fase"
-msgstr ""
-
-msgid "Introduce password"
-msgstr ""
-
-msgid "Comprobando password..."
-msgstr ""
-
-msgid "Comprobando acceso nivel"
-msgstr ""
-
-msgid "Error, introduce password"
+msgid "ñ"
 msgstr ""
 
 msgid "Inicio sistema"
 msgstr ""
 
 msgid "Cambio de password"
+msgstr ""
+
+msgid "Hueco registrado"
 msgstr ""
 
 #. Maximum 16 characters & ASCII only
@@ -546,22 +391,11 @@ msgid "<Error termostato>"
 msgstr ""
 
 #. Maximum 16 characters & ASCII only
-msgid "Limitando"
+msgid "Limitación de potencia interna"
 msgstr ""
 
 #. SMS characters only [GSM 03.38]
-msgid "<Limitando>"
-msgstr ""
-
-#. Maximum 16 characters & ASCII only
-msgid "ErrorFusible"
-msgstr ""
-
-msgid "Error fusible"
-msgstr ""
-
-#. SMS characters only [GSM 03.38]
-msgid "<Error fusible>"
+msgid "<Limitación de potencia interna>"
 msgstr ""
 
 #. Maximum 16 characters & ASCII only
@@ -595,6 +429,17 @@ msgstr ""
 
 #. SMS characters only [GSM 03.38]
 msgid "<Cambio de estado>"
+msgstr ""
+
+#. Maximum 16 characters & ASCII only
+msgid "Temperatura alta"
+msgstr ""
+
+msgid "Alarma temperatura alta"
+msgstr ""
+
+#. SMS characters only [GSM 03.38]
+msgid "<Temperatura alta>"
 msgstr ""
 
 #. 11 characters wide [use blanks]
@@ -678,6 +523,13 @@ msgstr ""
 msgid "_Alarma Driver_"
 msgstr ""
 
+msgid "Alarma tensión de bus máxima"
+msgstr ""
+
+#. Maximum 16 characters & ASCII only
+msgid "_Alarma VBusMax_"
+msgstr ""
+
 msgid "Espera OFF"
 msgstr ""
 
@@ -714,8 +566,11 @@ msgstr ""
 msgid "_Error Driver_"
 msgstr ""
 
+msgid "Error Fusible / Error condensador AC"
+msgstr ""
+
 #. Maximum 16 characters & ASCII only
-msgid "_Error Fusible_"
+msgid "_Error Fus/C-AC_"
 msgstr ""
 
 msgid "Error temperatura"
@@ -723,6 +578,20 @@ msgstr ""
 
 #. Maximum 16 characters & ASCII only
 msgid "_Error Temp_"
+msgstr ""
+
+msgid "Error fusible"
+msgstr ""
+
+#. Maximum 16 characters & ASCII only
+msgid "_Error Fusible_"
+msgstr ""
+
+msgid "Error Condensador AC"
+msgstr ""
+
+#. Maximum 16 characters & ASCII only
+msgid "_Error Cond AC_"
 msgstr ""
 
 msgid "Activación"
@@ -854,6 +723,9 @@ msgstr ""
 msgid "Nivel de acceso"
 msgstr ""
 
+msgid "Sistema"
+msgstr ""
+
 msgid "Borrando histórico..."
 msgstr ""
 
@@ -882,6 +754,9 @@ msgid "Mínimo"
 msgstr ""
 
 msgid "Duración"
+msgstr ""
+
+msgid "Introduce password"
 msgstr ""
 
 msgid "Error, introduce de nuevo el password"
@@ -1135,7 +1010,28 @@ msgstr ""
 msgid "Error, no se pudo establecer valor."
 msgstr ""
 
+msgid "F"
+msgstr ""
+
+msgid "Dur"
+msgstr ""
+
+msgid "Mín"
+msgstr ""
+
+msgid "Med"
+msgstr ""
+
 msgid "Prueba envio email"
+msgstr ""
+
+msgid "Nombre del equipo"
+msgstr ""
+
+msgid "Descripción del equipo"
+msgstr ""
+
+msgid "Localización"
 msgstr ""
 
 msgid ""
@@ -1149,10 +1045,19 @@ msgstr ""
 msgid "Alarma"
 msgstr ""
 
+msgid "Código"
+msgstr ""
+
 msgid "Condición"
 msgstr ""
 
+msgid "Elementos"
+msgstr ""
+
 msgid "Severidad"
+msgstr ""
+
+msgid "Fecha"
 msgstr ""
 
 msgid "Activacion"
