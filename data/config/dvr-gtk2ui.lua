@@ -90,8 +90,8 @@ local columns_treeview = {
       -- "Cells" columna 1
       cells = {
 	 ["1"] = { name = "pic",  },
-	 ["2"] = { name = "name", 
-	    -- properties = { ["family"] = "Monospace", }, 
+	 ["2"] = { name = "name",
+	    -- properties = { ["family"] = "Monospace", },
 	    properties = { height = 45 },   -- (jur) altura de las filas de los menus gtktreeview
 	 },
       },
@@ -105,7 +105,7 @@ local columns_infoview = {
       -- "Cells" columna 1
       cells = {
 	 ["1"] = { name = "pic",  },
-	 ["2"] = { name = "name", 
+	 ["2"] = { name = "name",
 	    -- properties = { ["family"] = "Monospace", },
 	 },
       },
@@ -488,8 +488,8 @@ ags = {
       columns = columns_treeview,
 
       visible_column = "node-visible",
-      visible_rules = { 
-	 ["1"] = { type = "node", }, 
+      visible_rules = {
+	 ["1"] = { type = "node", },
       },
       root_rules = {
 	 ["1"] = { name = "Estado", },  -- i18n
@@ -509,9 +509,9 @@ ags = {
       columns = columns_infoview,
 
       visible_column = "var-visible",
-      visible_rules = { 
+      visible_rules = {
 	 --["1"] = { type = "var", edit = "0", }, --solo si estado y param de un mismo nodo
-	 ["1"] = { type = "var", }, 
+	 ["1"] = { type = "var", },
       },
    },
    -------------------------------------
@@ -551,9 +551,9 @@ ags = {
 
       --visible_column = "param-visible", --solo si estado y param de un mismo nodo
       visible_column = "var-visible",
-      visible_rules = { 
+      visible_rules = {
 	 --["1"] = { type = "var", edit = "1", }, --solo si estado y param de un mismo nodo
-	 ["1"] = { type = "var", }, 
+	 ["1"] = { type = "var", },
       },
    },
    -------------------------------------
@@ -581,8 +581,8 @@ ags = {
       sort_order  = GTK_SORT_DESCENDING,
 
 --       visible_column = "var-visible",
---       visible_rules = { 
--- 	 ["1"] = { type = "var", }, 
+--       visible_rules = {
+-- 	 ["1"] = { type = "var", },
 --       },
    },
    -------------------------------------
@@ -731,37 +731,55 @@ zkbd=io.open("/dev/kbde", "w")
 
 -- intento ocultar cursor en display local (Xfbdev) en pantalla de login (uso xsetroot -cursor)
 os.execute("/usr/local/zigor/activa/tools/hide_cursor.sh")
-	    
+
 local login_button=gobject.get_data(loginui, "login_button")
 local login_entry =gobject.get_data(loginui, "login_entry")
 --local logo        =gobject.get_data(loginui, "image2")
 local sb          =gobject.get_data(loginui, "statusbar2")
 local w_toggle_bt   =gobject.get_data(loginui, "tbtkb1")
 
-gobject.set_property(w_toggle_bt, "visible", false)	    
+local nivel_str=_g("Nivel:")
+local w_label_nivel = gobject.get_data(loginui, "label56")
+gobject.set_property(w_label_nivel, "label", nivel_str)
+
+gobject.set_property(w_toggle_bt, "visible", false)
 --gobject.set_property(logo, "pixbuf", gobject.get_data(pixbufs, "logo") )
 local top_id=gtk.statusbar_push(sb, "login", _g("Introduce password"))
-    
+
 local function login_handler()
+
    local password=gobject.get_property(login_entry, "text")
-   gobject.set_property(sds, "community", password)
+   local level_entry =gobject.get_data(loginui, "comboboxentry2")
+   local level_entry_text = gtk.bin_get_child(level_entry)
+   local salt = gobject.get_property(level_entry_text, "text")
+   print("Sal en remoto = " .. salt)
+   --gobject.set_property(sds, "community", password)
+   gobject.set_property(sds, "community", "zadmin")
 
    -- comprobar "password" vÃ¡lido
    require "oids-parameter"
-   
+
    local tabla_pass_id=gtk.statusbar_push(sb, "login", _g("Comprobando password..."))
    gtk.main_iteration_do(FALSE);
    i=1
-   local pass_key = accessx.getnextkey(sds, zigorSysPasswordPass) 
+   local pass_key = accessx.getnextkey(sds, zigorSysPasswordPass)
+   print("pass_key en remoto = ", pass_key)
+   local sha1 = require 'sha1'
+   local valor_salado = password .. salt
+   print("valor_salado en remoto = " .. valor_salado)
+   local valor_hasheado = sha1.hex(valor_salado)
+   print("valor_hasheado en remoto = " .. valor_hasheado)
+
    while( pass_key and is_substring(pass_key, zigorSysPasswordPass) and pass_key~=zigorSysPasswordPass ) do
       local get_pass_id=gtk.statusbar_push(sb, "login", _g("Comprobando acceso nivel").. tostring(i) .."...")
       gtk.main_iteration_do(FALSE);
       local pass=access.get(sds, pass_key)
       gtk.statusbar_pop(sb, "login", get_pass_id)
       gtk.main_iteration_do(FALSE);
-      
+
       -- Comprobar si es el nuestro
-      if pass and pass==password then
+      -- if pass and pass==password then
+      if pass and pass==valor_hasheado then
 	 -- extraer el id (nÃºmero de instancia) para saber el nivel de acceso
 	 -- (NOTA: access_level es global y numÃ©rica)
 	 _,_,access_level=string.find(pass_key, "%.(%d+)$")
@@ -774,17 +792,17 @@ local function login_handler()
 	 -- eliminar ventana de login
 	 local loginwindow=gobject.get_data(loginui, "window2")
 	 gtk.object_destroy(loginwindow)
-	 
+
 	 zkbd:close()
-	 
+
 	 return
       end
-      
+
       i=i+1
       pass_key = accessx.getnextkey(sds, pass_key)
    end
    gtk.statusbar_pop(sb, "login", tabla_pass_id)
-   
+
    gtk.statusbar_pop(sb, "login", top_id)
 
    gobject.set_property(login_entry, "text", "")
@@ -848,21 +866,21 @@ end
       layout_root = "window3",
    },
    -------------------------------------
-   -- 
-   -- Watchdog 
-   -- 
+   --
+   -- Watchdog
+   --
    --[[
-   watchdog = { 
-      mod_new = "cmwatchdog", 
-      depends = { 
-      }, 
-      -- ConfiguraciÃ³n mÃ³dulo 
-      wd_filename =   "/dev/watchdog",			-- nombre del dispositivo 
+   watchdog = {
+      mod_new = "cmwatchdog",
+      depends = {
+      },
+      -- ConfiguraciÃ³n mÃ³dulo
+      wd_filename =   "/dev/watchdog",			-- nombre del dispositivo
       pid_filename =  "/var/log/dvr-gtk2ui.log",	-- nombre del fichero de log con pid
-      refresh_time = 10000,				-- tiempo en ms entre llamadas de refresco 
-      expiration_time = 100,				-- tiempo en s para llamada ioctl 
-   }, 
+      refresh_time = 10000,				-- tiempo en ms entre llamadas de refresco
+      expiration_time = 100,				-- tiempo en s para llamada ioctl
+   },
    --]]
-   ------------------------------------- 
+   -------------------------------------
 
 }

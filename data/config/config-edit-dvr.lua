@@ -49,7 +49,7 @@ local edit_config_dvr = {
    [zigorSysVersion]    = {
       check = check_string,
       check_args = { len=255, }, },
-   
+
    [zigorNetIP] = {
       check = check_ip,
    },
@@ -86,27 +86,27 @@ local edit_config_dvr = {
       check_args = { len=255, re="[%d%+%*%#]*", },
       null = true
    },
-   
+
    [zigorSysPasswordPass] = {
       check = check_string, -- XXX
       check_args = {},
-      hide = true,
+      --JC hide = true,
    },
    [zigorSysDate..".0"] = {
       check = check_date,
-      check_args = { 
-	 re="^(%d%d)/(%d%d)/(%d%d%d%d) *(%d%d):(%d%d):(%d%d)$", 
+      check_args = {
+	 re="^(%d%d)/(%d%d)/(%d%d%d%d) *(%d%d):(%d%d):(%d%d)$",
 	 fields={ day=1, month=2, year=3, hour=4, min=5, sec=6, }, },
       format = format_date,
       format_args = {
-	 re="^(%d%d)/(%d%d)/(%d%d%d%d) *(%d%d):(%d%d):(%d%d)$", 
+	 re="^(%d%d)/(%d%d)/(%d%d%d%d) *(%d%d):(%d%d):(%d%d)$",
 	 fields={ day=1, month=2, year=3, hour=4, min=5, sec=6, }, },
    },
    [zigorAlarmCfgSeverity] = {
       check = check_enum,
    },
    [zigorSysTimeZone] =  {
-      check = check_enum, 
+      check = check_enum,
       check_args = {}, },
 
    [zigorSysNotificationLang] = {
@@ -124,10 +124,10 @@ local edit_config_dvr = {
    ---
 
    [zigorNetPortVnc] =  {
-      check = check_number, 
+      check = check_number,
       check_args = {min=0, max=65535}, },
    [zigorNetPortHttp] =  {
-      check = check_number, 
+      check = check_number,
       check_args = {min=0, max=65535}, },
 
    [zigorNetDNS] = {
@@ -154,7 +154,7 @@ local edit_config_dvr = {
       null = true, },
    [zigorNetEmail4 .. ".0"] = {
       check = check_string,
-      --check_args = { len=100, re="[%w%p]+@[%w%p]+%.[%w%p]+", }, 
+      --check_args = { len=100, re="[%w%p]+@[%w%p]+%.[%w%p]+", },
       check_args = { len=100, re="[%w%p]+[@%*][%w%p]+%.[%w%p]+", },  -- ojo se admiten tanto * como @ (Uso de * por pb introduccion @ en gtk!)
       format = format_email,  -- para incluir el @ por el *
       null = true, },
@@ -234,22 +234,22 @@ local edit_config_dvr = {
 
    --- modbus
    [zigorModbusAddress] =  {
-      check = check_number, 
+      check = check_number,
       check_args = {min=1, max=247}, },
    [zigorModbusBaudrate] =  {
-      check = check_enum, 
+      check = check_enum,
       check_args = {}, },
    [zigorModbusParity] =  {
-      check = check_enum, 
+      check = check_enum,
       check_args = {}, },
    [zigorModbusMode] =  {
-      check = check_enum, 
+      check = check_enum,
       check_args = {}, },
    [zigorModbusTCPPort] =  {
-      check = check_number, 
+      check = check_number,
       check_args = {min=1, max=65535}, },
    [zigorModbusTCPTimeout] =  {
-      check = check_number, 
+      check = check_number,
       check_args = {min=1, max=65535}, },
    ---
    [zigorCtrlParamDemo] =  {

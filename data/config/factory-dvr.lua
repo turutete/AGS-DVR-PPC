@@ -64,10 +64,10 @@ local param = {
    [ zigorNetEmail4 .. ".0"         ] = "",
    [ zigorNetVncPassword .. ".0"    ] = "",
    [ zigorNetEnableSnmp .. ".0"     ] = 2,
-   [ zigorNetEnableSSH .. ".0"      ] = 2,
-   [ zigorNetEnableEthernet .. ".0" ] = 2,
+   [ zigorNetEnableSSH .. ".0"      ] = 1,
+   [ zigorNetEnableEthernet .. ".0" ] = 1,
    [ zigorNetEnableHTTP .. ".0"     ] = 2,
-   [ zigorNetEnableVNC .. ".0"      ] = 2,
+   [ zigorNetEnableVNC .. ".0"      ] = 1,
    -- ParamDialUp
    [ zigorDialUpPin .. ".0"         ] = "",
    [ zigorDialUpSmsNum1 .. ".0"     ] = "",

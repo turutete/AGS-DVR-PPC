@@ -44,9 +44,15 @@ local w_button_huecos_heventos = gobject.get_data(ui, "button_huecos_heventos")
 local w_label_section      = gobject.get_data(ui, "label_section")
 gobject.set_property(w_label_section, "visible", false)
 local w_label_level        = gobject.get_data(ui, "label_level")
---gobject.set_property(w_logo, "pixbuf", pb_logo)
+
+local pass_actual_str=_g("Password actual:")
+local w_label_pass_actual = gobject.get_data(ui, "edit_last_pass")
+gobject.set_property(w_label_pass_actual, "label", pass_actual_str)
+
+
 local level_str=_g("Nivel de acceso")
 gobject.set_property(w_label_level, "label", level_str..": "..tostring(access_level) )
+
 
 local w_alarm_state_image = gobject.get_data(ui, "alarm_state_image")
 local w_param_state_image = gobject.get_data(ui, "param_state_image")
@@ -150,7 +156,8 @@ local function action_params(object, action)
    local algo = access.get(sds,zigorSysPasswordPass .. "." .. tostring(access_level))
    print("algo:", algo)
 
-   if(access_level_key ~= access.get(sds,zigorSysPasswordPass .. "." .. tostring(access_level))) then
+   -- solo comprobamos la password en caso de que sea para guardarlo.
+   if(access_level_key ~= access.get(sds,zigorSysPasswordPass .. "." .. tostring(access_level)) and action == 1) then
       print("Acces_level_key distinto.")
       -- Para que se pase la configuración a active-dvr.lua
       access.set(sds, zigorCtrlParamState .. ".0", tonumber(action) )
@@ -1325,7 +1332,7 @@ end
 --]]
 
 local function edit_press(w, event, data)
-   --print(">>>edit_press!!!")
+   print(">>>edit_press!!!")
    enable_kb2(true)
 
    ----gtk.widget_grab_focus(w)
@@ -1358,19 +1365,7 @@ end
 -- ahora ya hacemos con gestion de 'button-press-event'
 w_btkb2 = gobject.get_data(ui, "btkb2")
 gobject.set_property(w_btkb2, "visible", false)
---[[
-local toggle=0
-if remote==1 then  -- mostrar teclado solo en local
-   gobject.set_property(w_btkb2, "visible", false)
-else
-   gobject.connect(w_btkb2, "clicked", function()
-	 if toggle==0 then toggle=1 else toggle=0 end
-	 if toggle==1 then enable_kb2(true) else enable_kb2(false) end
-         ----gtk.widget_grab_focus(w_edit_val)
-      end)
-end
---]]
-------------------
+
 
 local w_bt1_kb2 = gobject.get_data(ui, "bt1_kb2")
 local w_bt2_kb2 = gobject.get_data(ui, "bt2_kb2")
@@ -1431,8 +1426,6 @@ local scancodes={
 }
 
 local function bt_kb2_handler(w, key)
-   --gtk.widget_grab_focus(w_edit_val)   -- parece no hace falta / ojo! tb en propiedades de glade... (Focus on Click & Can Focus...)
-   --gtk.main_iteration_do(FALSE)	-- pensaba para ejecutar keysnooper pero no hace falta
 
    zkbd:write(scancodes[key])
    print("bt_kb2_handler", key)  -- dev
@@ -1464,6 +1457,11 @@ gobject.connect(w_btClose_kb2, "clicked", btClose_kb2_handler)
 --====================--
 local login_entry =gobject.get_data(loginui2, "login_entry2")
 local level_entry =gobject.get_data(loginui2, "comboboxentry1")
+
+-- lblLevel
+local nivel_str=_g("Nivel:")
+local w_label_nivel = gobject.get_data(loginui2, "lblLevel")
+gobject.set_property(w_label_nivel, "label", nivel_str)
 
 
 local vbox1 = gobject.get_data(ui, "vbox1")
@@ -1545,23 +1543,18 @@ local function login_handler()
    i=1
    local pass
 
-   --gtk.statusbar_pop(sb, "login", top_id)
-   --gtk.statusbar_pop(sb, "login")
-
-   ----local tabla_pass_id=gtk.statusbar_push(sb, "login", _g("Comprobando password..."))
-   ----gtk.main_iteration_do(FALSE);  -- entiendo es para q pase por el bucle y se refresque la statusbar!
    print("Comienzo login")
 
    local pass_key = accessx.getnextkey(sds, zigorSysPasswordPass) -- si no es correcto se da Timeout por community inapropiada
    print("pass_key = ",pas_key)
 
    while( pass_key and is_substring(pass_key, zigorSysPasswordPass) and pass_key~=zigorSysPasswordPass ) do
+
       print("bucle pass")
-      --local get_pass_id=gtk.statusbar_push(sb, "login", _g("Comprobando acceso nivel")..tostring(i).."...")
-      ----gtk.main_iteration_do(FALSE);
+
       pass=access.get(sds, pass_key)
-      print("pass_key", pass_key)
-      print("pass", pass)
+
+      print("pass_key " .. pass_key .. " = " .. pass)
       -- Comprobar si es el nuestro
       --if pass and pass==password then
       if pass and pass==valor_hasheado then
@@ -1582,6 +1575,7 @@ local function login_handler()
       end
       pass_key = accessx.getnextkey(sds, pass_key)
       i=i+1
+
    end  -- while
    gobject.set_property(login_entry, "text", "")
    gtk.statusbar_pop(sb, "login", tabla_pass_id)

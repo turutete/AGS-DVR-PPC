@@ -11,6 +11,8 @@ require "alarms-dvr"
 
 require "functions"  -- i18n
 
+require 'sha1'
+
 --- gaplog:
 require "functions"
 loadlualib("accessx")
@@ -907,44 +909,6 @@ local function setsig_handler(sds, k, v, data)
       res=true -- no hacer el set, ya hecho
    end
 
-   --[[ Actualizar fichero de log html si cambio de idioma de notificaciones con el idioma elegido
-   if (k == zigorSysNotificationLang .. ".0") then
-      if log_init==1 then
-         log_init=0
-      else
-        print("cambio de idioma de notificaciones -> update_log_html")
-        ---
-        gobject.block(sds, set_handler_id)
-        access.set(sds, k, v)
-        res=true -- no hacer el set, ya hecho
-        gobject.unblock(sds, set_handler_id)
-        gobject.stop(sds, "setsig")  --XXX
-        ---
-        ----alt.update_html_log(sds)
-	--update_gaplog_html(sds)  -- XXX (solo de test porque no es necesario multi-idioma)
-	-- XXX
-	setlocale(sdscoreglib)
-	print("Test locale (Estado):" .. _g("Estado"))
-	---
-      end
-   end
-   --]]
-
-   --[[ ya no se usa char2scancode asociado a pulsaciones de tecla desde linea serie
-   -- New: Tratamiento Backlight Timeout (informar proceso char2scancode2 via signal):
-   if k==zigorSysBacklightTimeout .. ".0" then
-      print("Captura set de zigorSysBacklightTimeout")
-
-      --forzar el set:
-      gobject.block(sds, set_handler_id)
-      access.set(sds, k, v)
-      gobject.unblock(sds, set_handler_id)
-      res=true  -- no hacer el set, ya hecho
-
-      os.execute("killall -SIGUSR1 char2scancode2")
-   end
-   --]]
-
    -- Test de envio email
    if (k == zigorNetSmtpTest .. ".0") then
       --send_email(sds, "Test email", "Test de envio de email.", v)
@@ -1013,91 +977,94 @@ local function setsig_handler(sds, k, v, data)
 
    -- PASSWORDS
    --Variable para contener el valor de la pass + la sal para hashear posteriormente.
-   local valor_salado
+   -- local valor_salado
    --Variable para contener el hash que va a ser guardado.
-   local valor_hasheado
+   -- local valor_hasheado
 
    --modulo necesario para llevar a cabo el hashing
-   local sha1 = require 'sha1'
+   --local sha1 = require 'sha1'
 
-   if k == zigorSysPasswordPass .. ".4"         then
-
-        local valor_previo = access.get(sds,k)
-
-        gobject.block(sds, set_handler_id)
-        valor_salado = v .. "LEVEL4"
-        valor_hasheado = sha1.hex(valor_salado)
-
-        local err = access.set(sds, k, v)
-        local valor_releido = access.get(sds,k)
-        print("Valor previo = ", valor_previo)
-        print("Valor hasheado = ", valor_hasheado)
-
-        print("Valor salado = ", valor_salado)
-        print("Valor releido = ", valor_releido)
-
-        res = true
-        gobject.unblock(sds, set_handler_id)
-
-   elseif   k == zigorSysPasswordPass .. ".3"   then
-
-        local valor_previo = access.get(sds,k)
-        gobject.block(sds, set_handler_id)
-
-        valor_salado = v .. "LEVEL3"
-        valor_hasheado = sha1.hex(valor_salado)
-
-        local err = access.set(sds, k, v)
-        local valor_releido = access.get(sds,k)
-        print("Valor previo = ", valor_previo)
-        print("Valor hasheado = ", valor_hasheado)
-
-        print("Valor salado = ", valor_salado)
-        print("Valor releido = ", valor_releido)
-
-        res = true
-        gobject.unblock(sds, set_handler_id)
-
-   elseif k == zigorSysPasswordPass .. ".2"     then
-
-        local valor_previo = access.get(sds,k)
-        gobject.block(sds, set_handler_id)
-
-        valor_salado = v .. "LEVEL2"
-        valor_hasheado = sha1.hex(valor_salado)
-
-        local err = access.set(sds, k, v)
-        local valor_releido = access.get(sds,k)
-        print("Valor previo = ", valor_previo)
-        print("Valor hasheado = ", valor_hasheado)
-
-        print("Valor salado = ", valor_salado)
-        print("Valor releido = ", valor_releido)
-
-        res = true
-        gobject.unblock(sds, set_handler_id)
-
-   elseif k == zigorSysPasswordPass .. ".1"     then
-
-        local valor_previo = access.get(sds,k)
-
-        gobject.block(sds, set_handler_id)
-        valor_salado = v .. "LEVEL1"
-        valor_hasheado = sha1.hex(valor_salado)
-
-        local err = access.set(sds, k, valor_hasheado)
-        local valor_releido = access.get(sds,k)
-
-        print("Valor previo = ", valor_previo)
-        print("Valor hasheado = ", valor_hasheado)
-
-        print("Valor salado = ", valor_salado)
-        print("Valor releido = ", valor_releido)
-
-
-        res = true
-        gobject.unblock(sds, set_handler_id)
-   end
+--   if k == zigorSysPasswordPass .. ".4"         then
+--
+--        local valor_previo = access.get(sds,k)
+--
+--        gobject.block(sds, set_handler_id)
+--        valor_salado = v .. "LEVEL4"
+--        valor_hasheado = sha1.hex(valor_salado)
+--
+--
+--        local err = access.set(sds, k, v)
+--        local valor_releido = access.get(sds,k)
+--        print("Valor previo = ", valor_previo)
+--        print("Valor hasheado = ", valor_hasheado)
+--
+--        print("Valor salado = ", valor_salado)
+--        print("Valor releido = ", valor_releido)
+--
+--        res = true
+--        gobject.unblock(sds, set_handler_id)
+--
+--   elseif   k == zigorSysPasswordPass .. ".3"   then
+--
+--        local valor_previo = access.get(sds,k)
+--        gobject.block(sds, set_handler_id)
+--
+--        valor_salado = v .. "LEVEL3"
+--        valor_hasheado = sha1.hex(valor_salado)
+--
+--
+--        local err = access.set(sds, k, v)
+--        local valor_releido = access.get(sds,k)
+--        print("Valor previo = ", valor_previo)
+--        print("Valor hasheado = ", valor_hasheado)
+--
+--        print("Valor salado = ", valor_salado)
+--        print("Valor releido = ", valor_releido)
+--
+--        res = true
+--        gobject.unblock(sds, set_handler_id)
+--
+--   elseif k == zigorSysPasswordPass .. ".2"     then
+--
+--        local valor_previo = access.get(sds,k)
+--        gobject.block(sds, set_handler_id)
+--
+--        valor_salado = v .. "LEVEL2"
+--        valor_hasheado = sha1.hex(valor_salado)
+--
+--
+--        local err = access.set(sds, k, v)
+--        local valor_releido = access.get(sds,k)
+--        print("Valor previo = ", valor_previo)
+--        print("Valor hasheado = ", valor_hasheado)
+--
+--        print("Valor salado = ", valor_salado)
+--        print("Valor releido = ", valor_releido)
+--
+--        res = true
+--        gobject.unblock(sds, set_handler_id)
+--
+--   elseif k == zigorSysPasswordPass .. ".1"     then
+--
+--        local valor_previo = access.get(sds,k)
+--
+--        gobject.block(sds, set_handler_id)
+--        valor_salado = v .. "LEVEL1"
+--        valor_hasheado = sha1.hex(valor_salado)
+--
+--        local err = access.set(sds, k, valor_hasheado)
+--        local valor_releido = access.get(sds,k)
+--
+--        print("Valor previo = ", valor_previo)
+--        print("Valor hasheado = ", valor_hasheado)
+--
+--        print("Valor salado = ", valor_salado)
+--        print("Valor releido = ", valor_releido)
+--
+--
+--        res = true
+--        gobject.unblock(sds, set_handler_id)
+--   end
   end  --FIN (if setsig_init==0)
   ------
 
