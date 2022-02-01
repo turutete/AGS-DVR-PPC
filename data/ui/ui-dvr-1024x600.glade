@@ -874,6 +874,87 @@
 		      </child>
 
 		      <child>
+			<widget class="GtkHBox" id="hbox_last_pass">
+			  <property name="height_request">45</property>
+			  <property name="sensitive">False</property>
+			  <property name="homogeneous">False</property>
+			  <property name="spacing">0</property>
+
+			  <child>
+			    <widget class="GtkLabel" id="edit_last_pass">
+			      <property name="visible">True</property>
+			      <property name="label" translatable="yes">Password Actual:</property>
+			      <property name="use_underline">False</property>
+			      <property name="use_markup">False</property>
+			      <property name="justify">GTK_JUSTIFY_LEFT</property>
+			      <property name="wrap">False</property>
+			      <property name="selectable">False</property>
+			      <property name="xalign">0</property>
+			      <property name="yalign">0.5</property>
+			      <property name="xpad">0</property>
+			      <property name="ypad">0</property>
+			    </widget>
+			    <packing>
+			      <property name="padding">4</property>
+			      <property name="expand">True</property>
+			      <property name="fill">True</property>
+			    </packing>
+			  </child>
+
+			  <child>
+			    <widget class="GtkEntry" id="last_pass_entry">
+			      <property name="width_request">250</property>
+			      <property name="visible">True</property>
+			      <property name="can_focus">True</property>
+			      <property name="has_focus">True</property>
+			      <property name="events">GDK_BUTTON_PRESS_MASK</property>
+			      <property name="extension_events">GDK_EXTENSION_EVENTS_ALL</property>
+			      <property name="editable">True</property>
+			      <property name="visibility">True</property>
+			      <property name="max_length">8</property>
+			      <property name="text" translatable="yes"></property>
+			      <property name="has_frame">True</property>
+			      <property name="invisible_char">*</property>
+			      <property name="activates_default">True</property>
+			      <property name="width_chars">11</property>
+			    </widget>
+			    <packing>
+			      <property name="padding">0</property>
+			      <property name="expand">True</property>
+			      <property name="fill">True</property>
+			    </packing>
+			  </child>
+
+			  <child>
+			    <widget class="GtkLabel" id="label57">
+			      <property name="width_request">100</property>
+			      <property name="visible">True</property>
+			      <property name="label" translatable="yes"></property>
+			      <property name="use_underline">False</property>
+			      <property name="use_markup">False</property>
+			      <property name="justify">GTK_JUSTIFY_LEFT</property>
+			      <property name="wrap">False</property>
+			      <property name="selectable">False</property>
+			      <property name="xalign">0.5</property>
+			      <property name="yalign">0.5</property>
+			      <property name="xpad">0</property>
+			      <property name="ypad">0</property>
+			    </widget>
+			    <packing>
+			      <property name="padding">0</property>
+			      <property name="expand">True</property>
+			      <property name="fill">True</property>
+			    </packing>
+			  </child>
+			</widget>
+			<packing>
+			  <property name="padding">0</property>
+			  <property name="expand">False</property>
+			  <property name="fill">True</property>
+			</packing>
+		      </child>
+
+		      <child>
 			<widget class="GtkHBox" id="hbox_edit">
 			  <property name="visible">True</property>
 			  <property name="homogeneous">False</property>
@@ -1220,7 +1301,7 @@
 					      <property name="wrap">False</property>
 					      <property name="selectable">False</property>
 					      <property name="xalign">0.5</property>
-					      <property name="yalign">0.5</property>
+					      <property name="yalign">0.509999990463</property>
 					      <property name="xpad">0</property>
 					      <property name="ypad">0</property>
 					    </widget>
@@ -3805,6 +3886,55 @@ Spanish
 	      </child>
 
 	      <child>
+		<widget class="GtkHBox" id="hbox50">
+		  <property name="border_width">5</property>
+		  <property name="visible">True</property>
+		  <property name="homogeneous">False</property>
+		  <property name="spacing">5</property>
+
+		  <child>
+		    <widget class="GtkLabel" id="label56">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">Nivel: </property>
+		      <property name="use_underline">False</property>
+		      <property name="use_markup">False</property>
+		      <property name="justify">GTK_JUSTIFY_LEFT</property>
+		      <property name="wrap">False</property>
+		      <property name="selectable">False</property>
+		      <property name="xalign">0.5</property>
+		      <property name="yalign">0.5</property>
+		      <property name="xpad">0</property>
+		      <property name="ypad">0</property>
+		    </widget>
+		    <packing>
+		      <property name="padding">0</property>
+		      <property name="expand">False</property>
+		      <property name="fill">False</property>
+		    </packing>
+		  </child>
+
+		  <child>
+		    <widget class="GtkComboBoxEntry" id="comboboxentry2">
+		      <property name="visible">True</property>
+		      <property name="items" translatable="yes">LEVEL1
+LEVEL2
+LEVEL3</property>
+		    </widget>
+		    <packing>
+		      <property name="padding">0</property>
+		      <property name="expand">True</property>
+		      <property name="fill">True</property>
+		    </packing>
+		  </child>
+		</widget>
+		<packing>
+		  <property name="padding">5</property>
+		  <property name="expand">False</property>
+		  <property name="fill">False</property>
+		</packing>
+	      </child>
+
+	      <child>
 		<widget class="GtkAlignment" id="alignment1">
 		  <property name="visible">True</property>
 		  <property name="xalign">0.5</property>
@@ -3855,7 +3985,7 @@ Spanish
 			  <property name="extension_events">GDK_EXTENSION_EVENTS_ALL</property>
 			  <property name="editable">True</property>
 			  <property name="visibility">False</property>
-			  <property name="max_length">10</property>
+			  <property name="max_length">8</property>
 			  <property name="text" translatable="yes"></property>
 			  <property name="has_frame">True</property>
 			  <property name="invisible_char">*</property>
@@ -4324,7 +4454,7 @@ Spanish
 		  <child>
 		    <widget class="GtkLabel" id="lblLevel">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">Level: </property>
+		      <property name="label" translatable="yes">Nivel: </property>
 		      <property name="use_underline">False</property>
 		      <property name="use_markup">False</property>
 		      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -4976,18 +5106,6 @@ LEVEL3
 		      <property name="use_underline">True</property>
 		      <property name="relief">GTK_RELIEF_NORMAL</property>
 		      <property name="focus_on_click">False</property>
-		    </widget>
-		  </child>
-
-		  <child>
-		    <widget class="GtkButton" id="button48">
-		      <property name="visible">True</property>
-		      <property name="can_default">True</property>
-		      <property name="can_focus">True</property>
-		      <property name="label" translatable="yes">button20</property>
-		      <property name="use_underline">True</property>
-		      <property name="relief">GTK_RELIEF_NORMAL</property>
-		      <property name="focus_on_click">True</property>
 		    </widget>
 		  </child>
 		</widget>

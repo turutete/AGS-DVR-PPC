@@ -31,10 +31,10 @@ local xml = [[
       <var key="$zigorDvrObjVSecundarioT.0" units="V" name="Tensión de salida fase T" factor="10" />
       <var key="$zigorDvrObjISecundarioR.0" units="A" name="Corriente de salida fase R" factor="10" />
       <var key="$zigorDvrObjISecundarioS.0" units="A" name="Corriente de salida fase S" factor="10" />
-      <var key="$zigorDvrObjISecundarioT.0" units="A" name="Corriente de salida fase T" factor="10" />                
+      <var key="$zigorDvrObjISecundarioT.0" units="A" name="Corriente de salida fase T" factor="10" />
       <var key="$zigorDvrObjPSalidaR.0" units="kW" name="Potencia de salida fase R" factor="10" />
       <var key="$zigorDvrObjPSalidaS.0" units="kW" name="Potencia de salida fase S" factor="10" />
-      <var key="$zigorDvrObjPSalidaT.0" units="kW" name="Potencia de salida fase T" factor="10" />                                
+      <var key="$zigorDvrObjPSalidaT.0" units="kW" name="Potencia de salida fase T" factor="10" />
     </node>
     <node pic="dsp" name="Estado" >
       <var key="$zigorDvrObjEstadoControl.0" name="Estado de Control" />
@@ -53,7 +53,8 @@ local xml = [[
       <var key="$zigorSysLogoutTimeout.0" name="Logout Timeout" units="minutos" />
       <node name="Passwords" >
 
-$passwords
+
+	  <var key="$zigorSysPasswordPass" id="1" name="Password de usuario basico."/>
 
       </node>
     </node>
@@ -81,31 +82,8 @@ local display_imp  =displays_dvr.display_imp
 loadlualib("gobject")
 local cache=gobject.get_property(sds, "cache")
 gobject.set_property(sds, "cache", false)
-
--- Obtener XML de passwords
-local passwords="" -- passwords
-do
-   local pass_key = accessx.getnextkey(sds, zigorSysPasswordPass) 
-   while( pass_key and is_substring(pass_key, zigorSysPasswordPass) and pass_key~=zigorSysPasswordPass ) do
-      local pass=access.get(sds, pass_key)
-      _,_,row=string.find(pass_key, "%.(%d+)$")
-      local descr=access.get(sds, zigorSysPasswordDescr.."."..row )
-
-      local aux=[[
-	    <var key="$zigorSysPasswordPass" id="$id" name="$display" />
-      ]]
-      aux = string.gsub(aux, "$id", row)
-      passwords = passwords .. string.gsub(aux, "$display", descr)
-
-      pass_key = accessx.getnextkey(sds, pass_key)
-   end
-end
-
 -- Restaurar configuración cache
 gobject.set_property(sds, "cache", cache)
-
--- Añadir XMLs passwords a XML final
-xml=string.gsub(xml, "$passwords", passwords)
 
 local tmpl={}
 tmpl.tmpl=xml
