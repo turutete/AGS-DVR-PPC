@@ -146,7 +146,6 @@ end
 --         devuelve false en el caso de que lo que se quiera cambiar sea la password pero no se haya validado correctamente la pass actual.
 function check_password_change(key, valor)
 
-        local access_level              --nivel de acceso en el que esta el usuario. Se toma de una variable de entorno.
         local level_key                 --OID de tipo password concatenado con el nivel del usuario.
         local current_pass              --valor de la clave actual que se debe validar y que se escribe en una caja de texto en la interfaz.
         local current_pass_salted       --la pass actual con el string de sal concatenado
@@ -158,18 +157,16 @@ function check_password_change(key, valor)
 
         if is_substring(key, zigorSysPasswordPass) then
 
-                access_level = os.getenv("ACCESS_LEVEL")
-                level_key = zigorSysPasswordPass .. "." .. access_level
-                print ("access_level del env: " .. access_level .. " --> " .. level_key )
+                local nivel_de_acceso
+                _,_,nivel_de_acceso=string.find(key, "%.(%d+)$")
+                print("nivel de acceso = " .. nivel_de_acceso)
+
+                level_key = zigorSysPasswordPass .. "." .. nivel_de_acceso
 
                 --En caso de cambiar la pass, chequeamos la validacion del campo del valor de la pass actual.
                 current_pass=gobject.get_property(w_last_pass_entry, "text") -- tipo "string"
-
-                current_pass_salted = current_pass .. "LEVEL" .. access_level
-
+                current_pass_salted = current_pass .. "LEVEL" .. nivel_de_acceso
                 current_pass_hashed = sha1.hex(current_pass_salted)
-                print ("last_pass_entry: " .. current_pass .. " --> " .. current_pass_salted .. " --> " .. current_pass_hashed )
-
                 hash_actual = access.get(sds, level_key)
 
 
