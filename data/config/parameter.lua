@@ -166,6 +166,31 @@ function check_string(s, args)
    return true
 end
 
+-- funciona para comprobar la validez de una pass
+-- se comprueba la longitud, si es que se pasa como parametro
+-- se comprueba mediante match un exprecion regular que tiene que existir obligatoriamente.
+function check_pass(s, args)
+   -- comprobamos longitud de cadena
+   if args.len and string.len(s) ~= args.len then
+      return false
+   end
+
+   -- comprobamos expresi�n regular
+   if args.re then
+      local a,b=string.find(s, args.re)
+      if a~=1 or b~=string.len(s) then
+         return false
+      end
+   else
+        --si no viene la expresion regular no permito editar.
+        return false
+   end
+
+   -- por defecto permitimos edici�n
+   return true
+end
+
+
 function check_number(s, args)
    -- pasamos a n�mero
    val=tonumber(s)

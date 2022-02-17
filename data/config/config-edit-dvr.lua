@@ -32,7 +32,7 @@ end
 -- XXX usar ',' o '.' en función de locale en regexp.
 local edit_config_dvr = {
    [zigorSysName]       = {
-      check = check_string,
+                check = check_string,
       check_args = { len=255, }, },
    [zigorSysDescr]      = {
       check = check_string,
@@ -88,8 +88,9 @@ local edit_config_dvr = {
    },
 
    [zigorSysPasswordPass] = {
-      check = check_string, -- XXX
-      check_args = {},
+      check = check_pass, -- XXX
+      --JC check_args = {},
+      check_args = { len=8, re="[A-Za-z0-9]+", },  -- ojo se admiten tanto * como @ (Uso de * por pb introduccion @ en gtk!)
       --JC hide = true,
    },
    [zigorSysDate..".0"] = {
@@ -251,6 +252,12 @@ local edit_config_dvr = {
    [zigorModbusTCPTimeout] =  {
       check = check_number,
       check_args = {min=1, max=65535}, },
+   [zigorModbusValidClient1] = {
+      check = check_ip,
+   },
+   [zigorModbusValidClient2] = {
+      check = check_ip,
+   },
    ---
    [zigorCtrlParamDemo] =  {
       check = check_enum,
