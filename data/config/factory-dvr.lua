@@ -16,23 +16,23 @@ local param = {
    [ zigorSysContact .. ".0"        ] = "Schneider@SE.com",
    -- Password de "usuario basico" (solo lectura)
    [ zigorSysPasswordIndex .. ".1"  ] = 1,
-   --JC [ zigorSysPasswordPass .. ".1"   ] = "1111",
-   [ zigorSysPasswordPass .. ".1"   ] = "fc1a1e86c46d05ac15077a34657407ad03540ac4",
+   --JC [ zigorSysPasswordPass .. ".1"   ] = "11111111",
+   [ zigorSysPasswordPass .. ".1"   ] = "975f63a1031d1001a47e2de49bbd2764ee951b8a",
    [ zigorSysPasswordDescr .. ".1"  ] = _g("Password de usuario basico."),
    -- Password de "usuario" (lectura/escritura)
    [ zigorSysPasswordIndex .. ".2"  ] = 2,
-   --JC [ zigorSysPasswordPass .. ".2"   ] = "4231",
-   [ zigorSysPasswordPass .. ".2"   ] = "2af5f19c298db10056871310b071df07bf51f195",
+   --JC [ zigorSysPasswordPass .. ".2"   ] = "22222222",
+   [ zigorSysPasswordPass .. ".2"   ] = "f79609b8db20ca97f165e7f6d63b2fbf9af7c8b4",
    [ zigorSysPasswordDescr .. ".2"  ] = _g("Password de usuario avanzado."),
    -- Password de "mantenimiento" (lectura/escritura)
    [ zigorSysPasswordIndex .. ".3"  ] = 3,
-   --JC [ zigorSysPasswordPass .. ".3"   ] = "0212",
-   [ zigorSysPasswordPass .. ".3"   ] = "9d65645b98a4372f5bd836bc8bce11015f0988f3",
+   --JC [ zigorSysPasswordPass .. ".3"   ] = "33333333",
+   [ zigorSysPasswordPass .. ".3"   ] = "ea50660c2040434591f70bf08d01fc0599a42463",
    [ zigorSysPasswordDescr .. ".3"  ] = _g("Password de zms."),
    -- Password de "administrador" (lectura y escritura)
    [ zigorSysPasswordIndex .. ".4"  ] = 4,
-   --JC [ zigorSysPasswordPass .. ".4"   ] = "7788",
-   [ zigorSysPasswordPass .. ".4"   ] = "548450640bd84ba0591da29d30c8f88641664c24",
+   --JC [ zigorSysPasswordPass .. ".4"   ] = "44444444",
+   [ zigorSysPasswordPass .. ".4"   ] = "6406ac7662b748cc570a91d9927aeb243b7ab835",
    [ zigorSysPasswordDescr .. ".4"  ] = _g("Password de administrador."),
    --
    [ zigorSysCode .. ".0"           ] = "000000",
@@ -81,6 +81,10 @@ local param = {
    [ zigorModbusMode .. ".0"             ] = 1,  -- RTU
    [ zigorModbusTCPPort .. ".0"          ] = 502,  -- default port of modbus
    [ zigorModbusTCPTimeout .. ".0"       ] = 600,  -- timeout en segundos
+   [ zigorModbusValidClient1 .. ".0"       ] = "",  -- Ip cliente desde la que se puede acceder a Modbus
+   [ zigorModbusValidClient2 .. ".0"       ] = "",  -- Ip cliente redundante desde la que se puede acceder a Modbus
+
+
    --
    [ zigorCtrlParamDemo .. ".0"     ] = 2,  -- desactivado por defecto
    --
