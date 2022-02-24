@@ -107,6 +107,10 @@ local xml = [[
         <var key="$zigorModbusParity.0" enum="enum_MBParity"  name="Modbus RTU: Paridad" />
         <var key="$zigorModbusTCPPort.0" name="Modbus TCP: Puerto" />
         <var key="$zigorModbusTCPTimeout.0" name="Modbus TCP: Tiempo inactividad para Reset (s)" />
+
+        <var key="$zigorModbusValidClient1.0" name="Modbus TCP: Cliente válido" />
+        <var key="$zigorModbusValidClient2.0" name="Modbus TCP: Cliente válido (Redundante)" />
+
         <var key="$zigorDialUpPin.0" name="PIN del modem" />
         <var key="$zigorDialUpSmsNum1.0" name="Número 1 para envio SMS" />
         <var key="$zigorDialUpSmsNum2.0" name="Número 2 para envio SMS" />

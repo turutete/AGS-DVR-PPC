@@ -46,7 +46,7 @@ ParamState ::= TEXTUAL-CONVENTION
 		               5 minutes after last modification,
 		               the system returns to the last active state.
 
-		   active (2)  The parameters shown are 
+		   active (2)  The parameters shown are
 		               active (have not been edited)
 		               The system is synchronized with
 		               parameters shown.
@@ -635,7 +635,7 @@ ZigorSysPasswordEntry ::= SEQUENCE {
 
 zigorSysPasswordIndex OBJECT-TYPE
 	SYNTAX		NonNegativeInteger
-	MAX-ACCESS	not-accessible	
+	MAX-ACCESS	not-accessible
 	STATUS		current
 	DESCRIPTION
 		"The auxiliary variable used for identifying instances of
@@ -907,7 +907,7 @@ zigorNetEnableSnmp OBJECT-TYPE
 	DESCRIPTION
 		"Enable the SNMP server external connections."
 	::= { zigorParamNet 18 }
-	
+
 zigorNetEnableSSH OBJECT-TYPE
 	SYNTAX		TruthValue
 	MAX-ACCESS	read-write
@@ -1007,5 +1007,21 @@ zigorModbusTCPTimeout OBJECT-TYPE
 	DESCRIPTION
 		"MODBUS TCP Inactivity Timeout for Connection Reset"
 	::= { zigorParamModbus 6 }
+
+zigorModbusValidClient1 OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"IP Adrress for valid client"
+	::= { zigorParamModbus 7 }
+
+zigorModbusValidClient2 OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"IP Adrress for valid client"
+	::= { zigorParamModbus 8 }
 
 END
