@@ -1065,3 +1065,6 @@ msgstr ""
 
 msgid "Desactivacion"
 msgstr ""
+
+msgid "Después de guardar la IP será "
+msgstr ""

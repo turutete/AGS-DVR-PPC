@@ -1232,3 +1232,5 @@ msgstr "最大母线电压报警"
 msgid "_Alarma VBusMax_"
 msgstr "最大母线电压报警"
 
+msgid "Después de guardar la IP será "
+msgstr "保存IP後會 "

@@ -4,6 +4,7 @@ require "functions"
 require "oids-dvr"
 require "oids-parameter" --XXX
 require "oids-alarm"
+require "parameter"     -- read_specific_param
 
 loadlualib("gobject")
 loadlualib("access")
@@ -203,6 +204,14 @@ function func_CtrlParamState(w, iter)
          gobject.set_property(w_factory_params_button, "sensitive", true)
       end
    elseif state == 3 then -- factory(3)
+
+      local msg = _g("Después de guardar la IP será ")
+      msg = msg .. read_specific_param("factory-dvr", sdscoreglib,zigorNetIP .. ".0")
+
+      local bar_id=gtk.statusbar_push(w_statusbar, "bar", msg)
+
+
+
       gobject.set_property(w_save_params_button,    "sensitive", true)
       gobject.set_property(w_cancel_params_button,  "sensitive", true)
       gobject.set_property(w_factory_params_button, "sensitive", false)

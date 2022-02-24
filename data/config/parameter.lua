@@ -1,6 +1,8 @@
 -- Control par�metros
 loadlualib("access")
+
 function load_param(p, sds)
+
    package.loaded[p] = nil -- Forzamos recarga desde disco
    local param = require(p)
 
@@ -16,6 +18,36 @@ function load_param(p, sds)
       return nil
    end
 end
+
+-- Funcion para la lectura de un parametro de fabrica
+function read_specific_param(p, sds, param_oid)
+
+   print("read_specific_param")
+
+   package.loaded[p] = nil -- Forzamos recarga desde disco
+   local param = require(p)
+
+   print("param_oid = " .. param_oid)
+   if param and param_oid then
+      for k,v in pairs(param) do
+        print("k = " .. k .. " v = " .. v)
+        if k == param_oid then
+
+           print("Retorno algo... = " .. v)
+           return v
+        end
+      end
+   else
+      print ("Retorno nil....")
+      return nil
+   end
+
+
+
+end
+
+
+
 
 function save_param_data(param, sds, filename, extra)
 

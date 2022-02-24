@@ -1346,3 +1346,5 @@ msgstr "Maximum bus voltage alarm"
 msgid "_Alarma VBusMax_"
 msgstr "_Alarm VBusMax_"
 
+msgid "Después de guardar la IP será "
+msgstr "After saving new IP will be "
