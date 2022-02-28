@@ -1316,6 +1316,9 @@ msgstr "Deactivation"
 msgid "Password actual:"
 msgstr "Current password:"
 
+msgid "Nueva password:"
+msgstr "New password:"
+
 
 # Manual translation texts
 ##########################

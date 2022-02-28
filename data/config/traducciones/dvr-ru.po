@@ -1174,5 +1174,8 @@ msgstr ""
 msgid "Password actual:"
 msgstr "Current password en Ru:"
 
+msgid "Nueva password:"
+msgstr "Nueva password en Ru:"
+
 msgid "Después de guardar la IP será "
 msgstr "Después de guardar la IP será en Ru "

@@ -1218,6 +1218,9 @@ msgstr "停止"
 msgid "Password actual:"
 msgstr "密码 当前的:"
 
+msgid "Nueva password:"
+msgstr "新密碼："
+
 # Manual translation texts
 ##########################
 
