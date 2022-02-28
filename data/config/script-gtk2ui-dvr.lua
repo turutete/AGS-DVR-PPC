@@ -1567,6 +1567,7 @@ local function login_handler()
 
 
    --primero se comprueba si el acceso esta bloqueado por varios fallos de intento de login. En tal caso, salimos.
+   gobject.set_property(sds, "community", "zadmin")
    local estado_bloqueo = access.get(sds, zigorCtrlLoginBlocked .. ".0")
    print("Es estado actual de bloqueo es " .. estado_bloqueo)
 
@@ -1593,10 +1594,6 @@ local function login_handler()
    print("password", password)
    print("level: ", salt)
    print("password hash", valor_hasheado)
-
-   --
-   ----gobject.set_property(sds, "community", password)  -- recorrer tabla de passwords con el nivel introducido!
-   gobject.set_property(sds, "community", "zadmin")
 
    -- comprobar "password" vÃ¡lido
    require "oids-parameter"
