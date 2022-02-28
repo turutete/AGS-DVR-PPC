@@ -19,6 +19,7 @@ local factor_prefix = {
 local edit_data = {}
 local w_hbox_last_pass     = gobject.get_data(ui, "hbox_last_pass")
 local w_last_pass_entry    = gobject.get_data(ui, "last_pass_entry")
+local w_edit_name          = gobject.get_data(ui, "edit_name")
 
 gobject.set_property(w_hbox_last_pass, "visible", false)
 gobject.set_property(w_last_pass_entry, "text", "")
@@ -117,7 +118,7 @@ function edit_row_changed(object, iter, store)
       edit_data.model = nil
    end
 
-   -- si la clave que se va a editar es alguna password, se visibiliza la edicion de la pass actual.
+   -- si la clave que se va a editar es alguna password, se visibiliza la edicion de la pass actual y se cambia el texto a "New Password"
    if   key == zigorSysPasswordPass .. ".4" or
         key == zigorSysPasswordPass .. ".3" or
         key == zigorSysPasswordPass .. ".2" or
@@ -127,6 +128,7 @@ function edit_row_changed(object, iter, store)
                 gobject.set_property(w_hbox_last_pass, "visible", true)
                 gobject.set_property(w_hbox_last_pass, "sensitive", true)
                 gobject.set_property(w_edit, "text", "")
+                gobject.set_property(w_edit_name, "label", _g("Nueva password:"))
    else
                 gobject.set_property(w_hbox_last_pass, "visible", false)
                 gobject.set_property(w_last_pass_entry, "text", "")
