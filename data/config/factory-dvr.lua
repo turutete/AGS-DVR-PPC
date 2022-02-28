@@ -42,11 +42,13 @@ local param = {
    --
    [ zigorSysBacklightTimeout .. ".0" ] = 5,  -- minutes
    [ zigorSysLogoutTimeout .. ".0"  ] = 5,  -- minutes
+   [ zigorSysPassTimeout .. ".0"  ] = 1,  -- minutes
+   [ zigorSysPassRetries .. ".0"  ] = 3,  -- number of retries
    ---
    -- ParamNet
    [ zigorNetIP .. ".0"             ] = "192.168.33.178",
    [ zigorNetMask .. ".0"           ] = "255.255.0.0",
-   [ zigorNetGateway .. ".0"        ] = "192.168.3.254",
+   [ zigorNetGateway .. ".0"        ] = "192.168.2.250",
 --   [ zigorNetPortVnc .. ".0"        ] = "5901",
 --   [ zigorNetPortHttp .. ".0"       ] = "80",
    [ zigorNetPortVnc .. ".0"        ] = 5901,
@@ -87,6 +89,10 @@ local param = {
 
    --
    [ zigorCtrlParamDemo .. ".0"     ] = 2,  -- desactivado por defecto
+   [ zigorCtrlLoginBlocked .. ".0"  ] = 0,  -- desactivado por defecto
+   [ zigorCtrlElapsedTime .. ".0"  ] = 0,   -- cero por defecto
+
+
    --
    -- Par�metros particulares
    --

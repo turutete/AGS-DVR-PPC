@@ -716,6 +716,25 @@ zigorSysLogoutTimeout OBJECT-TYPE
 		"Timeout for GUI Logout (remote)."
 	::= { zigorParamSystem 12 }
 
+
+zigorSysPassTimeout OBJECT-TYPE
+	SYNTAX		INTEGER (0..65535)
+	UNITS		"minutes"
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Timeout for GUI access after authentication failure."
+	::= { zigorParamSystem 13 }
+
+
+zigorSysPassRetries OBJECT-TYPE
+	SYNTAX		INTEGER (0..65535)
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Retries in authentication."
+	::= { zigorParamSystem 14 }
+
 -- DialUp
 zigorDialUpPin OBJECT-TYPE
 	SYNTAX		DisplayString
@@ -956,6 +975,24 @@ zigorCtrlParamDemo OBJECT-TYPE
 	DESCRIPTION
 		""
 	::= { zigorParamControl 2 }
+
+zigorCtrlLoginBlocked OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		""
+	::= { zigorParamControl 4 }
+
+zigorCtrlElapsedTime OBJECT-TYPE
+	SYNTAX		INTEGER (0..65535)
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Elapsed time since login failure"
+	::= { zigorParamControl 3 }
+
+
 
 -- MODBUS
 zigorModbusAddress OBJECT-TYPE

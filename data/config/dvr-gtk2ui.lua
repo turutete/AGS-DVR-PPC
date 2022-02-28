@@ -745,6 +745,7 @@ gobject.set_property(w_label_nivel, "label", nivel_str)
 gobject.set_property(w_toggle_bt, "visible", false)
 --gobject.set_property(logo, "pixbuf", gobject.get_data(pixbufs, "logo") )
 local top_id=gtk.statusbar_push(sb, "login", _g("Introduce password"))
+local login_fallidos = 0
 
 local function login_handler()
 
@@ -753,8 +754,15 @@ local function login_handler()
    local level_entry_text = gtk.bin_get_child(level_entry)
    local salt = gobject.get_property(level_entry_text, "text")
    print("Sal en remoto = " .. salt)
-   --gobject.set_property(sds, "community", password)
+
    gobject.set_property(sds, "community", "zadmin")
+
+   local estado_bloqueo = access.get(sds, zigorCtrlLoginBlocked .. ".0")
+   if estado_bloqueo == 1 then
+        -- el acceso se encuentra bloqueado. Lo mostramos en la barra de estado del login.
+        gtk.statusbar_push(sb, "login", _g("Acceso temporalmente bloqueado"))
+        return --salimos sin mas. No se puede acceder
+   end
 
    -- comprobar "password" vÃ¡lido
    require "oids-parameter"
@@ -794,7 +802,7 @@ local function login_handler()
 	 gtk.object_destroy(loginwindow)
 
 	 zkbd:close()
-
+        login_fallidos = 0
 	 return
       end
 
@@ -804,9 +812,17 @@ local function login_handler()
    gtk.statusbar_pop(sb, "login", tabla_pass_id)
 
    gtk.statusbar_pop(sb, "login", top_id)
-
    gobject.set_property(login_entry, "text", "")
-   top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce password"))
+   login_fallidos = login_fallidos + 1
+   local max_intentos = access.get(sds, zigorSysPassRetries..".0")
+   print("login_fallidos_remotos = " .. login_fallidos)
+   print("max_intentos_remotos = " .. max_intentos)
+   if login_fallidos == max_intentos then
+       top_id=gtk.statusbar_push(sb, "login", _g("Acceso temporalmente bloqueado "))
+       access.set(sds, zigorCtrlLoginBlocked .. ".0", 1)
+   else
+        top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce password"))
+   end
 end
 
 -- Gestion del login!

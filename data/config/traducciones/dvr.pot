@@ -256,6 +256,16 @@ msgstr ""
 msgid "Logout Timeout"
 msgstr ""
 
+msgid "Tiempo de bloqueo de acceso"
+msgstr ""
+
+msgid "Intentos de acceso"
+msgstr ""
+
+msgid "Acceso temporalmente bloqueado"
+msgstr ""
+
+
 msgid "Passwords"
 msgstr ""
 

@@ -122,6 +122,14 @@ local edit_config_dvr = {
    [zigorSysLogoutTimeout] = {
       check = check_number,
       check_args = {min=0, max=65535}, },
+
+   [zigorSysPassTimeout] = {
+      check = check_number,
+      check_args = {min=0, max=65535}, },
+
+   [zigorSysPassRetries] = {
+      check = check_number,
+      check_args = {min=0, max=65535}, },
    ---
 
    [zigorNetPortVnc] =  {

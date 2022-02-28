@@ -256,6 +256,16 @@ msgstr "背光超时"
 msgid "Logout Timeout"
 msgstr "退出超时"
 
+msgid "Tiempo de bloqueo de acceso"
+msgstr "访问锁定时间"
+
+msgid "Intentos de acceso"
+msgstr "访问尝试"
+
+msgid "Acceso temporalmente bloqueado"
+msgstr "访问暂时被阻止"
+
+
 msgid "Passwords"
 msgstr "密码"
 

@@ -20,6 +20,8 @@ zigorSysTimeZone   = zigorParamSystem .. ".9"
 zigorSysNotificationLang = zigorParamSystem .. ".10"
 zigorSysBacklightTimeout = zigorParamSystem .. ".11"
 zigorSysLogoutTimeout = zigorParamSystem .. ".12"
+zigorSysPassTimeout = zigorParamSystem .. ".13" -- tiempo de espera tras reintentos fallido de autenticacion. Visible para Level4
+zigorSysPassRetries = zigorParamSystem .. ".14" -- numero de reintentos admitidos hasta bloque de acceso.     Visible para Level4
 --
 zigorParamNet = zigorParameter .. ".2"
 zigorNetIP = zigorParamNet .. ".1"
@@ -55,6 +57,9 @@ zigorDialUpSmsNum4 = zigorParamDialUp .. ".5"
 zigorParamControl = zigorParameter .. ".4"
 zigorCtrlParamState = zigorParamControl .. ".1"
 zigorCtrlParamDemo  = zigorParamControl .. ".2"
+zigorCtrlElapsedTime = zigorParamControl .. ".3"        -- tiempo trascurrido desde el bloqueo del acceso. No se muestra en pantalla, se usa como global para
+                                                        -- para ambos accesos remotos y locales.
+zigorCtrlLoginBlocked = zigorParamControl .. ".4"       -- indicador de login bloqueado.
 
 -- modbus
 zigorParamModbus = zigorParameter .. ".5"

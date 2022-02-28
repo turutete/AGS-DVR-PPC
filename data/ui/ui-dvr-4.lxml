@@ -80,6 +80,10 @@ local xml = [[
       <var enum="enum_NotificationLang" key="$zigorSysNotificationLang.0" name="Lenguaje para notificaciones" />
       <var key="$zigorSysBacklightTimeout.0" name="Backlight Timeout" units="minutos" />
       <var key="$zigorSysLogoutTimeout.0" name="Logout Timeout" units="minutos" />
+
+      <var key="$zigorSysPassTimeout.0" name="Tiempo de bloqueo de acceso" units="minutos" />
+      <var key="$zigorSysPassRetries.0" name="Intentos de acceso" />
+
       <var key="$zigorCtrlParamDemo.0" enum="enum_SiNo" name="Demo" />
       <node name="Passwords" >
 

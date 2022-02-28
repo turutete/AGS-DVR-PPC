@@ -11,6 +11,10 @@ loadlualib("access")
 require "treestore"
 
 
+
+local login_fallidos = 0        -- variable para gestionar el numero de intentos fallido de login
+local elapsed = 0               -- tiempo trascurrido desde el bloqueo.
+
 -- variable para gestionar mayusculas y minusculas.
 -- se usa en este fichero .lua en los metodos btkb1_handler y MayusMinus_handler
 local caps_lock = false
@@ -1239,6 +1243,7 @@ trapsig_handler_id=gobject.connect(sds, "trapsig", trapsig_handler)
 local last_date
 local hb_pb=pb_gray -- "heartbeat pixbuf"
 local function heartbeat_update(sds)
+   print("heartbeat_update")
    local date=access.get(sds, zigorSysDate..".0")
    if date==last_date then
       -- Error de comunicación
@@ -1519,11 +1524,58 @@ end
 
 --gobject.set_property(logo, "pixbuf", gobject.get_data(pixbufs, "logo") )
 
+
 ----------
+-- Gestion del tiempo de bloqueo del login en caso de fallo.
+--
+local function check_blocked_time()
+
+        gobject.set_property(sds, "community", "zadmin")
+        local estado_bloqueo = access.get(sds, zigorCtrlLoginBlocked .. ".0")
+        print("check_blocked_time")
+        if estado_bloqueo == 1 then
+
+                local max_time = access.get(sds, zigorSysPassTimeout .. ".0") * 60      -- conversion a segundos
+
+                access.set(sds, zigorCtrlElapsedTime .. ".0", elapsed)                  -- segundos
+                print("elapsed = " .. elapsed .. " maxtime = " .. max_time)
+                if elapsed and max_time then
+--                   for i=1,max_time do
+                      elapsed = elapsed + 1
+                      access.set(sds, zigorCtrlElapsedTime .. ".0", elapsed)
+--                      os.execute("sleep 1")
+                     print("Written elapsed = " .. elapsed)
+--                   end
+                     if elapsed == max_time then
+                        access.set(sds, zigorCtrlElapsedTime .. ".0", 0)
+                        access.set(sds, zigorCtrlLoginBlocked .. ".0",0)
+                        print ("Login fallidos = 0")
+                        login_fallidos = 0
+                        elapsed = 0
+                     end
+                end
+        end
+        gobject.set_property(sds, "community", access.get(sds, zigorSysPasswordPass.."."..access_level))  -- reestablecer community
+        return true --necesario para que la temporización cada seguno siga adelante. si no se devuelve true, se para.
+end
+gobject.timeout_add(1000, check_blocked_time, nil)
+
+
 -- Gestion Click en Login!
 local function login_handler()
    print("login_handler")
-   --gtk.window_set_keep_above(window2, false)
+
+
+   --primero se comprueba si el acceso esta bloqueado por varios fallos de intento de login. En tal caso, salimos.
+   local estado_bloqueo = access.get(sds, zigorCtrlLoginBlocked .. ".0")
+   print("Es estado actual de bloqueo es " .. estado_bloqueo)
+
+   if estado_bloqueo == 1 then
+        -- el acceso se encuentra bloqueado. Lo mkostramos en la barra de estado del login.
+        gtk.statusbar_push(sb, "login", _g("Acceso temporalmente bloqueado"))
+        print("login_handler: BLOQUEADO")
+        return --salimos sin mas. No se puede acceder
+   end
 
    local tabla_pass_id=gtk.statusbar_push(sb, "login", "cacaaa")
    print(">>>tabla_pass_id", tabla_pass_id)
@@ -1568,6 +1620,7 @@ local function login_handler()
       --if pass and pass==password then
       if pass and pass==valor_hasheado then
          print("pass match!", pass)
+         login_fallidos = 0
 	 _,_,access_level=string.find(pass_key, "%.(%d+)$")
 	 access_level_key=pass  -- XXX
 	 access_level=tonumber(access_level)
@@ -1591,9 +1644,18 @@ local function login_handler()
    --gtk.statusbar_pop(sb, "login", top_id)
    if pass~=password then
       print("pass NOT matched and exit")
+      local max_intentos = access.get(sds, zigorSysPassRetries..".0")
+      print("Intento de login fallidos = " .. login_fallidos .. " de " .. max_intentos)
+      login_fallidos = login_fallidos + 1
+      if login_fallidos == max_intentos then
+                top_id=gtk.statusbar_push(sb, "login", _g("Acceso temporalmente bloqueado "))
+                access.set(sds, zigorCtrlLoginBlocked .. ".0", 1)
+                -- os.execute("slee 1")
+                -- check_blocked_time()
+      else
+                top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce de nuevo"))
+      end
       gobject.set_property(sds, "community", access.get(sds, zigorSysPasswordPass.."."..access_level))  -- reestablecer community
-      --top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce de nuevo el password"))
-      top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce de nuevo"))
    end
    --
    print("fin login_handler")
