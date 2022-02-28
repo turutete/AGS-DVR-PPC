@@ -20,6 +20,8 @@ local edit_data = {}
 local w_hbox_last_pass     = gobject.get_data(ui, "hbox_last_pass")
 local w_last_pass_entry    = gobject.get_data(ui, "last_pass_entry")
 local w_edit_name          = gobject.get_data(ui, "edit_name")
+local w_save_params_button    = gobject.get_data(ui, "save_params_button")
+local w_cancel_params_button  = gobject.get_data(ui, "cancel_params_button")
 
 gobject.set_property(w_hbox_last_pass, "visible", false)
 gobject.set_property(w_last_pass_entry, "text", "")
@@ -155,7 +157,10 @@ function check_password_change(key, valor)
         local hash_actual               --Clave actual leida del OID
         local new_pass                  --nueva pass hasheada a devolver
 
-        print("check_password_change: " ..  key .. "=" .. valor)
+        print("check_password_change: ")
+        print("---------------------->OID a cambiar: " ..  key)
+        print("---------------------->Nuevo valor  : " ..  valor)
+
 
         if is_substring(key, zigorSysPasswordPass) then
 
@@ -183,6 +188,7 @@ function check_password_change(key, valor)
 
         else
                 --si no se va a cambiar la pass, devolvemos true para no afectar al proceso.
+                print ("No es password")
                 return true,nil
         end
 
@@ -195,7 +201,7 @@ function edit(object, sds)
 
 
    local key=edit_data.key
-   print("edit.lua -> edit: Key = ", key)
+   print("Edit")
 
    -- Si combobox
    local w_edit = nil
@@ -250,19 +256,29 @@ function edit(object, sds)
             edit_id=gtk.statusbar_push(w_statusbar, "edit", _g("Estableciendo valor..."))
             gtk.main_iteration_do(FALSE);
             local err=access.set(sds, key, val)
-            print("key a escribir = " .. key .. "" .. "val a escribir = " .. val)
+            print("Valor Establecido en EDIT ")
+            print("----------------------> KEY = " .. key)
+            print("----------------------> VAL = " .. val)
 
             gtk.statusbar_pop(w_statusbar, "set", edit_id)
             local msg
             if err==0 then
       	         msg=_g("Valor establecido.")
+      	         print("Valor establecido")
+      	         if new_pass then
+                        -- solución directa al cambio de community que da problemas.
+                        --gobject.set_property(w_save_params_button,    "sensitive", true)
+                        --gobject.set_property(w_cancel_params_button,  "sensitive", true)
+                        access.set(sds, zigorCtrlParamState .. ".0", 1)
+                 end
             else
       	         msg=_g("Error, no se pudo establecer valor.")
+      	         print("Valor NO establecido")
             end
             gtk.statusbar_push(w_statusbar, "edit", msg)
         end
    end
-
+   print("*Edit*")
 end --end de funcion.
 
 function edit_val_changed()

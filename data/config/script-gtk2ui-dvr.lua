@@ -154,7 +154,7 @@ local NIVEL_MIN_RESET_ALARMAS=2
 --
 local function action_params(object, action)
    --XXX
-   print("action_params: object", object)
+
    print("action_params: action", action)
    print("access_level_key: ", access_level_key)
    print("access_level:", access_level)
@@ -172,7 +172,7 @@ local function action_params(object, action)
       gobject.main_loop_quit(main_loop)
       os.exit()  -- mas robustez?
    end
-   --
+   print("action_param --> zigorCtrlParamState = " .. action)
    access.set(sds, zigorCtrlParamState .. ".0", tonumber(action) )
 end
 
@@ -186,12 +186,15 @@ gobject.connect(w_cancel_params_button,  "clicked", action_params, 2)
 --gobject.connect(w_factory_params_button, "clicked", action_params, 3)
 
 function func_CtrlParamState(w, iter)
+
+   print("func_CtrlParamState:")
    local pb   =treestore.get(w, iter, "pic")
    local lb   =treestore.get(w, iter, "display")
    local state=treestore.get(w, iter, "val")
    gobject.set_property(w_param_state_image, "pixbuf", pb)
    gobject.set_property(w_param_state_label, "label", lb)
 
+   print("------------------------> state = " .. state)
    -- Cambiar estado botones de configuración
    if     state == 1 then -- temp(1)
       gobject.set_property(w_save_params_button,    "sensitive", true)
@@ -220,6 +223,8 @@ function func_CtrlParamState(w, iter)
       gobject.set_property(w_cancel_params_button,  "sensitive", true)
       gobject.set_property(w_factory_params_button, "sensitive", false)
    end
+
+   print("*func_CtrlParamState*")
 end
 
 
@@ -1243,7 +1248,7 @@ trapsig_handler_id=gobject.connect(sds, "trapsig", trapsig_handler)
 local last_date
 local hb_pb=pb_gray -- "heartbeat pixbuf"
 local function heartbeat_update(sds)
-   print("heartbeat_update")
+   --print("heartbeat_update")
    local date=access.get(sds, zigorSysDate..".0")
    if date==last_date then
       -- Error de comunicación
@@ -1532,7 +1537,7 @@ local function check_blocked_time()
 
         gobject.set_property(sds, "community", "zadmin")
         local estado_bloqueo = access.get(sds, zigorCtrlLoginBlocked .. ".0")
-        print("check_blocked_time")
+        --print("check_blocked_time")
         if estado_bloqueo == 1 then
 
                 local max_time = access.get(sds, zigorSysPassTimeout .. ".0") * 60      -- conversion a segundos
