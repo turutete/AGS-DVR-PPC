@@ -1650,7 +1650,7 @@ local function login_handler()
       print("Intento de login fallidos = " .. login_fallidos .. " de " .. max_intentos)
       login_fallidos = login_fallidos + 1
       if login_fallidos == max_intentos then
-                top_id=gtk.statusbar_push(sb, "login", _g("Acceso temporalmente bloqueado "))
+                top_id=gtk.statusbar_push(sb, "login", _g("Acceso temporalmente bloqueado"))
                 access.set(sds, zigorCtrlLoginBlocked .. ".0", 1)
                 -- os.execute("slee 1")
                 -- check_blocked_time()
