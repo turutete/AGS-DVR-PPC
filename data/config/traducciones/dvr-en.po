@@ -311,7 +311,7 @@ msgid "Intentos de acceso"
 msgstr "Login retries"
 
 msgid "Acceso temporalmente bloqueado"
-msgstr "Access temporaly blocked"
+msgstr "Access temporarily blocked"
 
 
 msgid "Passwords"
