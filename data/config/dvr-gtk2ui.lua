@@ -818,7 +818,7 @@ local function login_handler()
    print("login_fallidos_remotos = " .. login_fallidos)
    print("max_intentos_remotos = " .. max_intentos)
    if login_fallidos == max_intentos then
-       top_id=gtk.statusbar_push(sb, "login", _g("Acceso temporalmente bloqueado "))
+       top_id=gtk.statusbar_push(sb, "login", _g("Acceso temporalmente bloqueado"))
        access.set(sds, zigorCtrlLoginBlocked .. ".0", 1)
    else
         top_id=gtk.statusbar_push(sb, "login", _g("Error, introduce password"))
