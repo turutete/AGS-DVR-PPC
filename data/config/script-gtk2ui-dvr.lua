@@ -1415,6 +1415,8 @@ local scancodes={
    F9     = string.char(67)..string.char(195),
    F10    = string.char(68)..string.char(196),
    Left   = string.char(224)..string.char(75)..string.char(224)..string.char(203),
+   --Right  = string.char(224)..string.char(77)..string.char(224)..string.char(205),
+   Right  = string.char(224)..string.char(79)..string.char(224)..string.char(207),
    Caps_Lock = string.char(58)..string.char(186),
    a      = string.char(30)..string.char(158),
    b      = string.char(48)..string.char(176),
@@ -1746,7 +1748,7 @@ local numberkeys={
 local function btkb1_handler(w, key)
 
 
-   print("btkb1_handler(key)", key)
+   print("btkb1_handler(key) = " ..  key)
    if remote==1 then
 
       if key=="Left" then
@@ -1778,11 +1780,46 @@ local function btkb1_handler(w, key)
       end
    else
 
-        --print ("Else...",scancodes[key])
-        zkbd:write(scancodes[key])
+        print ("key = " .. key)
+        --zkbd:write(scancodes[key])
+        if (gobject.get_property(login_entry, "has-focus") == true) then
 
-        --local caja_texto = gobject.get_property(login_entry, "text")
-        --print("nueva contrasena: ", caja_texto)
+                local text = gobject.get_property(login_entry, "text")
+                if key=="Left" then
+                        print("Left")
+                        if string.len(text) > 0 then
+                                text = string.sub(text, 1, string.len(text)-1)
+                                gobject.set_property(login_entry, "text", text)
+                                print("Nueva Pass = " .. text)
+                        end
+                else
+                        if key == "F1" or key == "F2" or key == "F3" or key == "F4" or key == "F5" or
+                           key == "F6" or key == "F7" or key == "F8" or key == "F9" or key == "F10" then
+
+                                text = string.format("%s%s", text, numberkeys[key])
+
+                        else
+
+                                if caps_lock == true then
+
+                                        key = string.upper(key)
+                                        print ("Pasado a mayusculas " .. key)
+                                end
+
+                                text = string.format("%s%s", text, key)
+
+                        end
+
+                        print("Nueva pass = ", text)
+                        gobject.set_property(login_entry, "text", text)
+
+                end
+
+                zkbd:write(scancodes["Right"])
+      else
+                --si el foco no esta en la caja de texto, que actue como deba.
+                zkbd:write(scancodes[key])
+      end
 
    end
 
@@ -1802,13 +1839,24 @@ end
 --Funcion para el cambio entre mayusculas y minusculas del teclado querty del formulario de login2
 local function MayusMinus_handler(w, key)
 
-        print("MayusMinus_handler")
 
+        local s = gobject.get_property(login_entry, "caps-lock-warning")
+
+        print("El estado de login_entry es: " .. tostring(s))
+
+        print("MayusMinus_handler: " .. "key = " .. key .. "caps_lock = " .. tostring(caps_lock))
+        -- os.execute("kbdinfo gkbled")
+        if caps_lock == nil then
+
+                caps_lock = false
+        end
 
         if (key == "M") and (caps_lock == false) then
 
                 caps_lock = true
-                zkbd:write(scancodes["Caps_Lock"])
+                -- zkbd:write(scancodes["Caps_Lock"])
+
+                print("Capslock = " .. tostring(caps_lock) .. "y scancode ejecutado")
                 -- En caso de que se manda el key M mayuscula, se cambian las label de los botones de letras a mayusculas
                 gobject.set_property(w_btnQ , "label","Q")
                 gobject.set_property(w_btnW , "label","W")
@@ -1841,7 +1889,10 @@ local function MayusMinus_handler(w, key)
 
         elseif (key == "m") and (caps_lock == true) then
                 caps_lock = false
-                zkbd:write(scancodes["Caps_Lock"])
+
+                -- zkbd:write(scancodes["Caps_Lock"])
+                print("Capslock = " .. tostring(caps_lock) .. "y scancode ejecutado")
+
                 -- En caso de que se manda el key m minuscula, se cambian las label de los botones de letras a minuscula
                 gobject.set_property(w_btnQ , "label","q")
                 gobject.set_property(w_btnW , "label","w")
