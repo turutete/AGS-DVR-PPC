@@ -100,6 +100,7 @@ end
 -- Salva fichero de configuraci�n desde plantilla
 -- devuelve true si se actualiz� el fichero
 function tmpl_save(this, sds, oids)
+
    print("tmpl_save this", this.file)
 
    local t=this:get(sds, oids)
@@ -112,22 +113,12 @@ function tmpl_save(this, sds, oids)
         end
   end
 
-
-
-   if s~=t then
-        print("tmpl_save s~=t TRUE")
-        StringDifference(s,t)
-   else
-        print("tmpl_save s~=t FALSE")
-        print("************************************************************iguales t y s*************************************************************************************")
-
-   end
-   if s and t and s~=t then
+  if s and t and s~=t then
       file_save(this.file,  t)
-      print("tmpl_save return true")
+      print("tmpl_save return true --> actualizar fichero")
       return true
    else
-      print("tmpl_save return false")
+      print("tmpl_save return false--> No actualizar fichero")
       return false
    end
 end
