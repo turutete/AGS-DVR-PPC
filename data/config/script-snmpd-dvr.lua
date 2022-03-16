@@ -652,7 +652,8 @@ local function setsig_handler(sds, k, v, data)
 	    print("zigorCtrlParamState = 3")
 	    load_factory()
 	    print("*Vuelta de load_factory")
-	    -- access.set(sds, zigorCtrlParamState .. ".0", 1) --que se ejecute el cambio
+	    access.set(sds, zigorCtrlParamState .. ".0", 1) --que se ejecute el cambio
+	    print("zigorCtrlParamState = 1")
 	    --gobject.main_loop_quit(main_loop)
             --os.exit()  -- mas robustez?
 	    --gobject.unblock(sds, set_handler_id)
@@ -1572,32 +1573,21 @@ end
 ---------
 gobject.timeout_add(20000, sms_handler, nil)
 ----------------------------------------
+
+--Este trozo de código comentado sirve para monitorizar el estado de de la variable de snmp zigorCtrlParamState que
+--controla el estado de los parametros: configuracion activa, de fábrica y temporal.
+--la variable se modifica a través de acción de la capa de presentación (script-gtk2ui-dvr) y el servidor actúa en consecuencia
+--a través del metodo setsig_handler.
 --
---
---
-local function zgrctrlparameter_check(sds)
-        local valor = access.get(sds, zigorCtrlParamState .. ".0")
-        print ("zigorCtrlParamState = " .. tostring(valor))
-        return true
-end
-gobject.timeout_add(1000, zgrctrlparameter_check, sdscoreglib)
+--local function zgrctrlparameter_check(sds)
+--        local valor = access.get(sds, zigorCtrlParamState .. ".0")
+--        print ("zigorCtrlParamState = " .. tostring(valor))
+--        return true
+--end
+--gobject.timeout_add(1000, zgrctrlparameter_check, sdscoreglib)
 
 
 
--- JC
---                   gobject.timeout_add(0,
---                               function(sds)
---                                   save_system_data(sds)
---                                   return false
---                                end,
---                                sds)
-            -- Establecemos estado=active(2)
---            gobject.block(sds, set_handler_id)
---            access.set(sds, zigorCtrlParamState .. ".0", 2)
---            gobject.unblock(sds, set_handler_id)
---            res=true -- no hacer el set de temp(
---            temp_timeout=nil
-            -- ** JC **
 
 
 
