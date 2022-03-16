@@ -41,10 +41,13 @@ local testmail_init=1
 ----------------------------------------
 -- "helpers" de carga de configuración
 local function load_factory()
+   print("load_factory")
    return load_param("factory-dvr", sdscoreglib)
 end
+
 local function load_active()
-   return load_param("active-dvr", sdscoreglib) or load_factory()
+        print("load_active")
+        return load_param("active-dvr", sdscoreglib) or load_factory()
 end
 
 
@@ -576,13 +579,15 @@ local log_init=1
 -- Gestión de eventos "set" y "get"  del SDS
 --------------------------------------------
 local demo_handler_id = nil
+-- print("(ANTES 1)setsig_init= " .. setsig_init )
 local setsig_init=1
+print("(DESPUES 1)setsig_init= " .. setsig_init )
+
 local changes={} -- tabla para guardar registro de los cambios en temp(1)
 
 local function setsig_handler(sds, k, v, data)
    local res=false -- por defecto, no manejamos 'set'
 
-   -- Actuaciones
 
    -- Parámetros
    if is_substring(k, zigorParameter) or is_substring(k, zigorAlarmConfig) or is_substring(k, zigorDvrObjParams)  then
@@ -590,7 +595,6 @@ local function setsig_handler(sds, k, v, data)
 	 -- "Commit" configuración
 	 if v==1 then     -- temp(1)
 	    -- grabar configuración AGS (parámetros)
-	    print("Se establecen parametros en active-dvr.lua")
 	    local p="active-"..profile
 	    local f="factory-"..profile
 	    local param=require(p) or require(f)
@@ -622,7 +626,7 @@ local function setsig_handler(sds, k, v, data)
 	    --
 	    changes={}
 	    -- grabar configuración sistema y reiniciar servicios en la próxima iteración del "mainloop"
-	    print("Grabar configuracion del sistema -> save_system_data")
+	    print("setsig_handler -> save_system_data")
  	    gobject.timeout_add(0,
  				function(sds)
  				   save_system_data(sds)
@@ -631,21 +635,29 @@ local function setsig_handler(sds, k, v, data)
  				sds)
 	    -- Establecemos estado=active(2)
 	    gobject.block(sds, set_handler_id)
+	    print("setsig_handler:: Establecemos zigorCtrlParamState a 2")
 	    access.set(sds, zigorCtrlParamState .. ".0", 2)
 	    gobject.unblock(sds, set_handler_id)
 	    res=true -- no hacer el set de temp(1) (ya hemos puesto active(2))
 	    temp_timeout=nil -- anulamos cuenta de expiración
 	 elseif v==2 then -- active(2)
 	    -- (XXX duda xq se bloqueo...) gobject.block(sds, set_handler_id)
+	    print("zigorCtrlParamState = 2")
 	    load_active()
 	    changes={}       -- anulamos registro de cambios temporales
 	    --gobject.unblock(sds, set_handler_id)
 	    temp_timeout=nil -- anulamos cuenta de expiración
 	 elseif v==3 then -- factory(3)
 	    -- (XXX duda xq se bloqueo...) gobject.block(sds, set_handler_id)
+	    print("zigorCtrlParamState = 3")
 	    load_factory()
+	    print("*Vuelta de load_factory")
+	    -- access.set(sds, zigorCtrlParamState .. ".0", 1) --que se ejecute el cambio
+	    --gobject.main_loop_quit(main_loop)
+            --os.exit()  -- mas robustez?
 	    --gobject.unblock(sds, set_handler_id)
 	    temp_timeout=0 -- XXX inicializar cuenta de expiración (?)
+
 	 end
       elseif access.get(sds, k)~=v then
 	 -- Edición de un parámetro.
@@ -655,6 +667,9 @@ local function setsig_handler(sds, k, v, data)
 	    changes={}
 	    -- Establecemos estado=temp(1)
 	    gobject.block(sds, set_handler_id)
+	    print("Edicion de un parametro. Establecemos zigorCtrlParamState a 1")
+	    print("Parametro = " .. k .. " valor " .. v)
+	    print("(DURANTE)setsig_init= " .. setsig_init )
 	    access.set(sds, zigorCtrlParamState .. ".0", 1)
 	    gobject.unblock(sds, set_handler_id)
 	 end
@@ -975,96 +990,7 @@ local function setsig_handler(sds, k, v, data)
          end
    end
 
-   -- PASSWORDS
-   --Variable para contener el valor de la pass + la sal para hashear posteriormente.
-   -- local valor_salado
-   --Variable para contener el hash que va a ser guardado.
-   -- local valor_hasheado
 
-   --modulo necesario para llevar a cabo el hashing
-   --local sha1 = require 'sha1'
-
---   if k == zigorSysPasswordPass .. ".4"         then
---
---        local valor_previo = access.get(sds,k)
---
---        gobject.block(sds, set_handler_id)
---        valor_salado = v .. "LEVEL4"
---        valor_hasheado = sha1.hex(valor_salado)
---
---
---        local err = access.set(sds, k, v)
---        local valor_releido = access.get(sds,k)
---        print("Valor previo = ", valor_previo)
---        print("Valor hasheado = ", valor_hasheado)
---
---        print("Valor salado = ", valor_salado)
---        print("Valor releido = ", valor_releido)
---
---        res = true
---        gobject.unblock(sds, set_handler_id)
---
---   elseif   k == zigorSysPasswordPass .. ".3"   then
---
---        local valor_previo = access.get(sds,k)
---        gobject.block(sds, set_handler_id)
---
---        valor_salado = v .. "LEVEL3"
---        valor_hasheado = sha1.hex(valor_salado)
---
---
---        local err = access.set(sds, k, v)
---        local valor_releido = access.get(sds,k)
---        print("Valor previo = ", valor_previo)
---        print("Valor hasheado = ", valor_hasheado)
---
---        print("Valor salado = ", valor_salado)
---        print("Valor releido = ", valor_releido)
---
---        res = true
---        gobject.unblock(sds, set_handler_id)
---
---   elseif k == zigorSysPasswordPass .. ".2"     then
---
---        local valor_previo = access.get(sds,k)
---        gobject.block(sds, set_handler_id)
---
---        valor_salado = v .. "LEVEL2"
---        valor_hasheado = sha1.hex(valor_salado)
---
---
---        local err = access.set(sds, k, v)
---        local valor_releido = access.get(sds,k)
---        print("Valor previo = ", valor_previo)
---        print("Valor hasheado = ", valor_hasheado)
---
---        print("Valor salado = ", valor_salado)
---        print("Valor releido = ", valor_releido)
---
---        res = true
---        gobject.unblock(sds, set_handler_id)
---
---   elseif k == zigorSysPasswordPass .. ".1"     then
---
---        local valor_previo = access.get(sds,k)
---
---        gobject.block(sds, set_handler_id)
---        valor_salado = v .. "LEVEL1"
---        valor_hasheado = sha1.hex(valor_salado)
---
---        local err = access.set(sds, k, valor_hasheado)
---        local valor_releido = access.get(sds,k)
---
---        print("Valor previo = ", valor_previo)
---        print("Valor hasheado = ", valor_hasheado)
---
---        print("Valor salado = ", valor_salado)
---        print("Valor releido = ", valor_releido)
---
---
---        res = true
---        gobject.unblock(sds, set_handler_id)
---   end
   end  --FIN (if setsig_init==0)
   ------
 
@@ -1197,11 +1123,14 @@ dsp_handler_id=gobject.connect(wbuffer_dsp, "changed", buffer_handler, nil)
 -- Inicializaciones
 ----------------------------------------
 -- Inicialización de configuración (carga de "active")
+print("Inicialización de configuración (carga de active)")
 access.set(sdscoreglib, zigorCtrlParamState .. ".0", 2)
 -- Sincronización de sistema a configuración (forzamos guardar)
+print("Sincronización de sistema a configuración (forzamos guardar) zigorCtrlParamState a 11111111111111111111111111111111111111111111")
 access.set(sdscoreglib, zigorCtrlParamState .. ".0", 1)
-
+print("(ANTES 0)setsig_init= " .. setsig_init )
 setsig_init=0  -- usado para evitar sets de ciertas variables en arranque
+print("(DESPUES 0)setsig_init= " .. setsig_init )
 
 --gaplog:
 gaplog_init(sdscoreglib)
@@ -1213,6 +1142,10 @@ set_VMinDVR(sdscoreglib)
 configureSSH(sdscoreglib)
 -- Ethernet Port
 configureETH(sdscoreglib)
+
+print("Finalización  de configuración (carga de active)")
+access.set(sdscoreglib, zigorCtrlParamState .. ".0", 2)
+
 
 ----------------------------------------
 -- Gestión alarmas
@@ -1231,6 +1164,7 @@ local function alarm_manager(data)
       if temp_timeout < 150 then
 	 temp_timeout = temp_timeout +1
       else
+	 print("Timeout de configuracion ---> zigorCtrlParamState = 2")
 	 access.set(sdscoreglib, zigorCtrlParamState .. ".0", 2)
 	 temp_timeout=nil
       end
@@ -1638,3 +1572,33 @@ end
 ---------
 gobject.timeout_add(20000, sms_handler, nil)
 ----------------------------------------
+--
+--
+--
+local function zgrctrlparameter_check(sds)
+        local valor = access.get(sds, zigorCtrlParamState .. ".0")
+        print ("zigorCtrlParamState = " .. tostring(valor))
+        return true
+end
+gobject.timeout_add(1000, zgrctrlparameter_check, sdscoreglib)
+
+
+
+-- JC
+--                   gobject.timeout_add(0,
+--                               function(sds)
+--                                   save_system_data(sds)
+--                                   return false
+--                                end,
+--                                sds)
+            -- Establecemos estado=active(2)
+--            gobject.block(sds, set_handler_id)
+--            access.set(sds, zigorCtrlParamState .. ".0", 2)
+--            gobject.unblock(sds, set_handler_id)
+--            res=true -- no hacer el set de temp(
+--            temp_timeout=nil
+            -- ** JC **
+
+
+
+

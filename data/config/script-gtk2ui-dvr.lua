@@ -156,24 +156,38 @@ local function action_params(object, action)
    --XXX
 
    print("action_params: action", action)
-   print("access_level_key: ", access_level_key)
-   print("access_level:", access_level)
-   local algo = access.get(sds,zigorSysPasswordPass .. "." .. tostring(access_level))
-   print("algo:", algo)
+   --print("access_level_key: ", access_level_key)
+   --print("access_level:", access_level)
+   --local algo = access.get(sds,zigorSysPasswordPass .. "." .. tostring(access_level))
+   --print("algo:", algo)
 
    -- solo comprobamos la password en caso de que sea para guardarlo.
-   if(access_level_key ~= access.get(sds,zigorSysPasswordPass .. "." .. tostring(access_level)) and action == 1) then
-      print("Acces_level_key distinto.")
-      -- Para que se pase la configuración a active-dvr.lua
-      access.set(sds, zigorCtrlParamState .. ".0", tonumber(action) )
-      --cambio de password de nivel actual -> reiniciar
-      access.set(sds, zigorSysPasswordPass .. "." .. tostring(access_level), algo)
-      print("Main loop quit")
-      gobject.main_loop_quit(main_loop)
-      os.exit()  -- mas robustez?
+   --if(access_level_key ~= access.get(sds,zigorSysPasswordPass .. "." .. tostring(access_level)) and action == 1) then
+   if (access_level_key) then
+      if(access_level_key ~= access.get(sds,zigorSysPasswordPass .. "." .. tostring(access_level))) then
+         print("Acces_level_key distinto.")
+         access.set(sds, zigorCtrlParamState .. ".0", tonumber(action))
+         -- Para que se pase la configuración a active-dvr.lua
+         -- Ya vengo de hacerlo en setsig access.set(sds, zigorCtrlParamState .. ".0", tonumber(action) )
+         --cambio de password de nivel actual -> reiniciar
+         --todavia no se porque lo comento  access.set(sds, zigorSysPasswordPass .. "." .. tostring(access_level), algo)
+         print("Main loop quit")
+         gobject.main_loop_quit(main_loop)
+         os.exit()  -- mas robustez?
+      end
+    else
+        print ("access_level_key NIL")
+    end
+
+   access.set(sds, zigorCtrlParamState .. ".0", tonumber(action))
+   --tras guardar los parametros (action=1), el servidor reinicia el sistema. reiniciamos interfaz.
+   if action == 1 then
+        print("Reinicio por save.")
+         gobject.main_loop_quit(main_loop)
+         os.exit()  -- mas robustez?
    end
-   print("action_param --> zigorCtrlParamState = " .. action)
-   access.set(sds, zigorCtrlParamState .. ".0", tonumber(action) )
+   print("*action_params")
+
 end
 
 local w_save_params_button    = gobject.get_data(ui, "save_params_button")
@@ -187,14 +201,14 @@ gobject.connect(w_cancel_params_button,  "clicked", action_params, 2)
 
 function func_CtrlParamState(w, iter)
 
-   print("func_CtrlParamState:")
+
    local pb   =treestore.get(w, iter, "pic")
    local lb   =treestore.get(w, iter, "display")
    local state=treestore.get(w, iter, "val")
    gobject.set_property(w_param_state_image, "pixbuf", pb)
    gobject.set_property(w_param_state_label, "label", lb)
 
-   print("------------------------> state = " .. state)
+   print("func_CtrlParamState------------------> state = " .. state)
    -- Cambiar estado botones de configuración
    if     state == 1 then -- temp(1)
       gobject.set_property(w_save_params_button,    "sensitive", true)
@@ -212,10 +226,10 @@ function func_CtrlParamState(w, iter)
       end
    elseif state == 3 then -- factory(3)
 
-      local msg = _g("Después de guardar la IP será ")
-      msg = msg .. read_specific_param("factory-dvr", sdscoreglib,zigorNetIP .. ".0")
+     -- local msg = _g("Después de guardar la IP será ")
+     -- msg = msg .. read_specific_param("factory-dvr", sdscoreglib,zigorNetIP .. ".0")
 
-      local bar_id=gtk.statusbar_push(w_statusbar, "bar", msg)
+      -- local bar_id=gtk.statusbar_push(w_statusbar, "bar", msg)
 
 
 
@@ -224,7 +238,6 @@ function func_CtrlParamState(w, iter)
       gobject.set_property(w_factory_params_button, "sensitive", false)
    end
 
-   print("*func_CtrlParamState*")
 end
 
 
@@ -386,22 +399,36 @@ gobject.connect(treeview, "changed_rowsig", treeseleccion)
 --
 local confirma_params = {}
 local function confirma_cancel(w)
+   print("confirma_cancel")
    gobject.set_property(w_hbuttonbox_menu, "sensitive", true)
    gobject.set_property(w_notebook, "page", confirma_params.oldpage)
+   print("*confirma_cancel")
+
 end
 local function confirma_ok(w)
+        print("confirma_ok")
    if confirma_params.f then
       confirma_params.f(w, unpack(confirma_params.params) )
    end
    gobject.set_property(w_hbuttonbox_menu, "sensitive", true)
    gobject.set_property(w_notebook, "page", confirma_params.oldpage)
+   print("*confirma_ok")
 end
 local function confirma(w, args)
+
+   print("confirma")
+   if args.f == action_params then
+        local msg = _g("Después de guardar la IP será ")
+        msg = msg .. read_specific_param("factory-dvr", sdscoreglib,zigorNetIP .. ".0")
+        local bar_id=gtk.statusbar_push(w_statusbar, "bar", msg)
+   end
+
    confirma_params.f      = args.f
    confirma_params.params = args.params
    confirma_params.oldpage  = gobject.get_property(w_notebook, "page")
    gobject.set_property(w_hbuttonbox_menu, "sensitive", false)
    gobject.set_property(w_notebook, "page", 4)
+   print("*confirma")
 end
 
 --
