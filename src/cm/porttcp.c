@@ -32,7 +32,7 @@
 
  /**********************************************************
  *	Linux TCP support.
- *	Based on Walter's project. 
+ *	Based on Walter's project.
  *	Modified by Steven Guo <gotop167@163.com>
  ***********************************************************/
 
@@ -84,6 +84,8 @@ static UCHAR    aucTCPBuf[MB_TCP_BUF_SIZE];
 static USHORT   usTCPBufPos;
 static USHORT   usTCPFrameBytesLeft;
 
+char* ips_validas[NUM_IPS_VALIDAS]={"",""}; //ips entrantes validas para modbus.
+
 /* ----------------------- External functions -------------------------------*/
 CHAR           *WsaError2String( int dwError );
 
@@ -113,7 +115,7 @@ xMBTCPPortInit( USHORT usTCPPort )
     USHORT          usPort;
     struct sockaddr_in serveraddr;
     int yes=1;  //jur
-    
+
     if( usTCPPort == 0 )
     {
         usPort = MB_TCP_DEFAULT_PORT;
@@ -134,7 +136,7 @@ xMBTCPPortInit( USHORT usTCPPort )
     //else if( bind( xListenSocket, ( struct sockaddr * )&serveraddr, sizeof( serveraddr ) ) == -1 )
     else {
        //(jur) intento evitar 'bind socket failed' (uso de SO_REUSEADDR)
-       if (setsockopt(xListenSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+       if (setsockopt(xListenSocket, SOL_SOCKET, SO_REUSEADDR , &yes, sizeof(yes)) == -1) {
           fprintf( stderr, "setsockopt SO_REUSEADDR failed.\r\n" );
        }
        if( bind( xListenSocket, ( struct sockaddr * )&serveraddr, sizeof( serveraddr ) ) == -1 )
@@ -150,16 +152,16 @@ xMBTCPPortInit( USHORT usTCPPort )
     }  //else
     FD_ZERO( &allset );
     FD_SET( xListenSocket, &allset );
-    
+
     //signal(SIGALRM, alarm_handler);  //(jur) KO
-    
+
     return TRUE;
 }
 
 void
 vMBTCPPortClose(  )
 {
-    // Close all client sockets. 
+    // Close all client sockets.
     if( xClientSocket != SOCKET_ERROR )
     {
         prvvMBPortReleaseClient(  );
@@ -187,8 +189,8 @@ vMBTCPPortDisable( void )
  *   for new events.
  * \internal
  *
- * This function checks if new clients want to connect or if already connected 
- * clients are sending requests. If a new client is connected and there are 
+ * This function checks if new clients want to connect or if already connected
+ * clients are sending requests. If a new client is connected and there are
  * still client slots left (The current implementation supports only one)
  * then the connection is accepted and an event object for the new client
  * socket is activated (See prvbMBPortAcceptClient() ).
@@ -198,7 +200,7 @@ vMBTCPPortDisable( void )
  * and if a complete frame has been received the Modbus Stack is notified.
  *
  * \return FALSE in case of an internal I/O error. For example if the internal
- *   event objects are in an invalid state. Note that this does not include any 
+ *   event objects are in an invalid state. Note that this does not include any
  *   client errors. In all other cases returns TRUE.
  */
 BOOL
@@ -213,15 +215,21 @@ xMBPortTCPPool( void )
     tval.tv_usec = 5000;
     int             ret;
     USHORT          usLength;
-    
+
     //jur:
     int optval;
     socklen_t optlen = sizeof(optval);
     int count=0;
     static int sec_count=0;
-    
-    printd(2, "xMBPortTCPPool\n"); fflush(stdout);
 
+    //printd(2, "xMBPortTCPPool\n"); fflush(stdout);
+    printf("xMBPortTCPPool\n" ); fflush(stdout);  //JC
+
+
+
+    //Añado esta variable porque en el caso de que prvbMBPortAcceptClient retorne false porque la IP entrante no es valida, no debemos
+    //entrar al while porque de lo contrario la aplicacion se bloquea.JC.
+    BOOL estamos_conectados = TRUE;
 
     if( xClientSocket == INVALID_SOCKET )
     {
@@ -240,24 +248,29 @@ xMBPortTCPPool( void )
         }
         if( FD_ISSET( xListenSocket, &allset ) )
         {
-            ( void )prvbMBPortAcceptClient(  );
+        	//( void )prvbMBPortAcceptClient(  );JC
+        	estamos_conectados = prvbMBPortAcceptClient(  );
         }
+
     }
-    while( TRUE )
+    printf("Entro en el while.estamos_conectados = %d\n", estamos_conectados ); fflush(stdout);  //JC
+    //while( TRUE )JC
+    while(TRUE && estamos_conectados)
     {
-       //(jur) nuestra implementacion de "KEEPALIVE". Cerrar socket ante ese timeout de inactividad de tramas
-       count=count+1;
-       if(count>200000) {  //aprox. 1seg con ese delay para el select
-	  count=0;
-          sec_count=sec_count+1;
-	  if(sec_count>=com_reset_timeout) {
+    	//(jur) nuestra implementacion de "KEEPALIVE". Cerrar socket ante ese timeout de inactividad de tramas
+    	count=count+1;
+    	if(count>200000) {  //aprox. 1seg con ese delay para el select
+    			count=0;
+    			sec_count=sec_count+1;
+    			if(sec_count>=com_reset_timeout) {
                     sec_count=0;
-		    close( xClientSocket );
+                    close( xClientSocket );
                     xClientSocket = INVALID_SOCKET;
-		    printd(2, "return por inactividad!\n"); fflush(stdout);
+                    //printd(2, "return por inactividad!\n"); fflush(stdout);
+                    printf("return del while por inactividad.\n" ); fflush(stdout);  //JC
                     return TRUE;
-	  }
-          printd(2, "while true (%d/%d)\n", sec_count, com_reset_timeout); fflush(stdout);  //jur
+    			}
+    			printd(2, "while true (%d/%d)\n", sec_count, com_reset_timeout); fflush(stdout);  //jur
        }
 
        /*(jur) test
@@ -279,8 +292,7 @@ xMBPortTCPPool( void )
             //fprintf( stderr, "ret>0.\n" ); fflush(stdout);  //jur
             if( FD_ISSET( xClientSocket, &fread ) )
             {
-                if( ( ( ret =
-                        recv( xClientSocket, &aucTCPBuf[usTCPBufPos], usTCPFrameBytesLeft,
+                if( ( ( ret =recv( xClientSocket, &aucTCPBuf[usTCPBufPos], usTCPFrameBytesLeft,
                               0 ) ) == SOCKET_ERROR ) || ( !ret ) )
                 {
                     //fprintf( stderr, "recv ERROR.\n" );
@@ -294,13 +306,14 @@ xMBPortTCPPool( void )
                     // Al final uso de timeout de inactividad ;-)
 
                     sec_count=0;
-		    close( xClientSocket );
+                    close( xClientSocket );
                     xClientSocket = INVALID_SOCKET;
+                    printf("return del while y cierre de socket.\n" ); fflush(stdout);  //JC
                     return TRUE;
                 }
-		//alarm(15);  //(jur) Refresco del timeout de recepcion de tramas. KO
-		sec_count=0;
-		
+                //alarm(15);  //(jur) Refresco del timeout de recepcion de tramas. KO
+                sec_count=0;
+
                 usTCPBufPos += ret;
                 usTCPFrameBytesLeft -= ret;
                 if( usTCPBufPos >= MB_TCP_FUNC )
@@ -320,6 +333,7 @@ xMBPortTCPPool( void )
                     {
                         printd(2, "The frame is complete.\n" ); fflush(stdout); //jur
                         ( void )xMBPortEventPost( EV_FRAME_RECEIVED );
+                        printf("return del while por frame completo.\n" ); fflush(stdout);  //JC
                         return TRUE;
                     }
                     /* This can not happend because we always calculate the number of bytes
@@ -327,18 +341,24 @@ xMBPortTCPPool( void )
                     else
                     {
                         printd(2, "before assert!\n"); fflush(stdout);
-			assert( usTCPBufPos <= ( MB_TCP_UID + usLength ) );
+                        printf("assert.\n" ); fflush(stdout);  //JC
+                        assert( usTCPBufPos <= ( MB_TCP_UID + usLength ) );
                     }
                 }
             }
-	    else {
-	       fprintf( stderr, "not FD_ISSET.\n" );  //jur
-	    }
-        }
-	else {
-	   fprintf( stderr, "not ret>0.\n" );  //jur. Aqui no llegara en realidad sino al 'continue' (o con <1)
+			else
+			{
+				printf("not FD_ISSET.\n" ); fflush(stdout);  //JC
+				fprintf( stderr, "not FD_ISSET.\n" );  //jur
+			}
+    }
+	else
+	{
+		printf("not ret>0.\n" ); fflush(stdout);  //JC
+		fprintf( stderr, "not ret>0.\n" );  //jur. Aqui no llegara en realidad sino al 'continue' (o con <1)
 	}
     }
+    printf("Ya fuera del while.\n" ); fflush(stdout);  //JC
     printd(2, "after while(true)\n"); fflush(stdout);
     return TRUE;
 }
@@ -347,11 +367,11 @@ xMBPortTCPPool( void )
  * \ingroup port_win32tcp
  * \brief Receives parts of a Modbus TCP frame and if complete notifies
  *    the protocol stack.
- * \internal 
+ * \internal
  *
  * This function reads a complete Modbus TCP frame from the protocol stack.
  * It starts by reading the header with an initial request size for
- * usTCPFrameBytesLeft = MB_TCP_FUNC. If the header is complete the 
+ * usTCPFrameBytesLeft = MB_TCP_FUNC. If the header is complete the
  * number of bytes left can be calculated from it (See Length in MBAP header).
  * Further read calls are issued until the frame is complete.
  *
@@ -432,6 +452,9 @@ prvbMBPortAcceptClient(  )
     socklen_t optlen = sizeof(optval);
     int yes=1;
 
+    struct sockaddr_in address;
+    int addrlen = sizeof(address);
+
 
     /* Check if we can handle a new connection. */
     printf("prvbMBPortAcceptClient.\n" ); fflush(stdout);  //jur
@@ -441,17 +464,86 @@ prvbMBPortAcceptClient(  )
         fprintf( stderr, "can't accept new client. all connections in use.\n" );
         bOkay = FALSE;
     }
-    else if( ( xNewSocket = accept( xListenSocket, NULL, NULL ) ) == INVALID_SOCKET )
-    {
-        bOkay = FALSE;
-    }
+    //JC comentado>>>>>   else if( ( xNewSocket = accept( xListenSocket, NULL, NULL ) ) == INVALID_SOCKET )
     else
     {
-        printd(2, "xClientSocket = xNewSocket.\n" ); fflush(stdout);  //jur
-        xClientSocket = xNewSocket;
-        usTCPBufPos = 0;
-        usTCPFrameBytesLeft = MB_TCP_FUNC;
-        bOkay = TRUE;
+    	xNewSocket = accept( xListenSocket, 	( struct sockaddr * )&address, (socklen_t*)&addrlen);
+
+    	if( xNewSocket < 0)
+    	{
+    		if((errno == ENETDOWN || errno == EPROTO || errno == ENOPROTOOPT || errno == EHOSTDOWN ||errno == ENONET || errno == EHOSTUNREACH || errno == EOPNOTSUPP || errno == ENETUNREACH))
+    		{
+    			printf("prvbMBPortAcceptClient. Fallo en el accept no grave.accept=%d, errno = %d.\n",xNewSocket,errno ); fflush(stdout);  //JC
+    		}
+    		else
+    		{
+    			printf("prvbMBPortAcceptClient. Fallo en el accept grave.accept=%d, errno = %d.\n",xNewSocket,errno ); fflush(stdout);  //JC
+    		}
+    		bOkay = FALSE;
+    	}
+    	else
+    	{
+			//Si no hay IPs entrantes configuradas, no hay que chequear nada.
+			BOOL check_ips 	= FALSE;
+			BOOL ip_valida 	= FALSE;
+
+			if(ips_validas != NULL)
+			{
+				int i=0;
+				for(i=0; i < NUM_IPS_VALIDAS; i++)
+				{
+					if(strcmp(ips_validas[i], "") != 0)
+					{
+						check_ips = TRUE;
+						break;
+					}
+
+				}
+			}
+
+			if (check_ips)
+			{
+				//Se comprueba la validez de las IPs entrantes
+				char ip_string[16]={0};
+				inet_ntop(AF_INET, &(address.sin_addr),ip_string,sizeof(ip_string));
+				printf("prvbMBPortAcceptClient. ip_valida de entrada = %s \n",ip_string ); fflush(stdout);  //JC
+				int i=0;
+				for(i=0; i < NUM_IPS_VALIDAS; i++)
+				{
+					if(strcmp(ips_validas[i], ip_string) == 0)
+					{
+						//al menos hay una ip configurada para ser chequeada.
+						printf("match de ip %s.\n",ip_string ); fflush(stdout);  //jur
+						ip_valida = TRUE;
+						break;
+					}
+				}
+			}
+			else
+			{
+				//si no hay que chequear la ip es porque no hay ninguna ip configurada y cualquiera se admite.
+				ip_valida = TRUE;
+			}
+
+			if(ip_valida)
+			{
+				printf("prvbMBPortAcceptClient. ip_valida, conectado\n" ); fflush(stdout);  //JC
+
+				printd(2, "xClientSocket = xNewSocket.\n" ); fflush(stdout);  //jur
+				xClientSocket = xNewSocket;
+				usTCPBufPos = 0;
+				usTCPFrameBytesLeft = MB_TCP_FUNC;
+				bOkay = TRUE;
+			}
+			else
+			{
+
+				printf("prvbMBPortAcceptClient. (???)Rechazo de la conexion. IP no valida\n" ); fflush(stdout);  //JC
+				close( xClientSocket );
+				xClientSocket = INVALID_SOCKET;
+				bOkay = FALSE;
+
+			}
 
        // -->>jur
        /* Intento de uso de TCP keepalive para deteccion conexion perdida
@@ -459,14 +551,14 @@ prvbMBPortAcceptClient(  )
        // (quiza como se leia en articulo, por culpa de los switches/routers de la red...)
        getsockopt(xClientSocket, SOL_SOCKET, SO_KEEPALIVE, &optval, &optlen);
        printf("SO_KEEPALIVE is %s\n", (optval ? "ON" : "OFF")); fflush(stdout);
-       
+
        if (setsockopt(xClientSocket, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes)) == -1) {
           fprintf( stderr, "setsockopt SO_KEEPALIVE failed.\r\n" );
        }
-       
+
        getsockopt(xClientSocket, SOL_SOCKET, SO_KEEPALIVE, &optval, &optlen);
        printf("SO_KEEPALIVE is %s\n", (optval ? "ON" : "OFF")); fflush(stdout);
-       
+
        // time:
        yes=10;
        if (setsockopt(xClientSocket, SOL_TCP, TCP_KEEPIDLE, &yes, sizeof(yes)) == -1) {
@@ -483,10 +575,36 @@ prvbMBPortAcceptClient(  )
           fprintf( stderr, "setsockopt TCP_KEEPCNT failed.\r\n" );
        }
        */
-       
+
        /* Al final mejor uso de timer de inactividad para resetear conexion */
        //alarm(5);  // seconds. KO
        // <<--jur
+    	}
     }
+
+    if (bOkay)
+    	printf("prvbMBPortAcceptClient. Return TRUE\n" );
+	else
+		printf("prvbMBPortAcceptClient. Return FALSE\n" );
+
+    fflush(stdout);
+
     return bOkay;
+}
+
+void xMBTCPValidIps(char** ips, int num_of_ips)
+{
+	if (ips != NULL)
+	{
+		int i=0;
+		for(i=0; i<NUM_IPS_VALIDAS; i++)
+		{
+			if (ips_validas[i] != NULL)
+			{
+				ips_validas[i] = ips[i];
+				printf("ip_validas[%d] = %s\n",i,ips_validas[i] ); fflush(stdout);
+
+			}
+		}
+	}
 }

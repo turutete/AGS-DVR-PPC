@@ -983,7 +983,9 @@ local function setsig_handler(sds, k, v, data)
       k == zigorModbusBaudrate .. ".0" or
       k == zigorModbusParity .. ".0" or
       k == zigorModbusMode .. ".0" or
-      k == zigorModbusTCPTimeout .. ".0" then
+      k == zigorModbusTCPTimeout .. ".0" or
+      k == zigorModbusValidClient1 .. ".0" or
+      k == zigorModbusValidClient2 .. ".0" then
          print("Cambios en parametros de Modbus") io.flush()
          if access.get(sds,k)~=v then
 	    print("Envio de SIGUSR2 para releer")

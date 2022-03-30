@@ -52,6 +52,8 @@
 #define zigorParamMBTCPPort                                ".1.3.6.1.4.1.4576.4.3.5.5"
 #define zigorParamMBTCPTimeout                             ".1.3.6.1.4.1.4576.4.3.5.6"
 #define zigorCtrlParamState                                ".1.3.6.1.4.1.4576.4.3.4.1"
+#define zigorModbusValidClient1							   ".1.3.6.1.4.1.4576.4.3.5.7"
+#define zigorModbusValidClient2							   ".1.3.6.1.4.1.4576.4.3.5.8"
 
 #define zigorDvrMIB                                        ".1.3.6.1.4.1.4576.4.10"
 #define zigorDvrObjects                                    ".1.3.6.1.4.1.4576.4.10.1"

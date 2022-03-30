@@ -1,4 +1,4 @@
-/* 
+/*
  * FreeModbus Libary: A portable Modbus implementation for Modbus ASCII/RTU.
  * Copyright (c) 2006 Christian Walter <wolti@sil.at>
  * All rights reserved.
@@ -114,6 +114,8 @@ extern          BOOL( *pxMBPortCBTimerExpired ) ( void );
 
 /* ----------------------- TCP port functions -------------------------------*/
 BOOL            xMBTCPPortInit( USHORT usTCPPort );
+
+void			xMBTCPValidIps(char** ips, int num_of_ips);
 
 void            vMBTCPPortClose( void );
 
