@@ -57,6 +57,18 @@ local xml = [[
 
 
       </node>
+      <node name="Comunicaciones" >
+		<var key="$zigorNetIP.0" name="Dirección IP" />
+        <var key="$zigorNetMask.0" name="Máscara de red" />
+        <var key="$zigorNetGateway.0" name="Gateway" />
+        <var key="$zigorNetDNS.0" name="DNS" />
+        <var key="$zigorModbusMode.0" enum="enum_MBMode"  name="Modo MODBUS" />
+        <var key="$zigorModbusTCPPort.0" name="Modbus TCP: Puerto" />
+        <var key="$zigorModbusTCPTimeout.0" name="Modbus TCP: Tiempo inactividad para Reset (s)" />
+        <var key="$zigorModbusValidClient1.0" name="Modbus TCP: Cliente válido" />
+        <var key="$zigorModbusValidClient2.0" name="Modbus TCP: Cliente válido (Redundante)" />
+      </node>
+
     </node>
     <node pic="cfg" name="DVR" >
       <var key="$zigorDvrParamVRedNom.0" units="V" name="Tensión de red nominal (LL)" factor="10" />
