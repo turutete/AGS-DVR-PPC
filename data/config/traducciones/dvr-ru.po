@@ -1179,3 +1179,8 @@ msgstr "Nueva password en Ru:"
 
 msgid "Después de guardar la IP será "
 msgstr "Después de guardar la IP será en Ru "
+
+msgid "Modbus TCP: Cliente válido"
+msgstr ""
+msgid "Modbus TCP: Cliente válido (Redundante)"
+msgstr ""

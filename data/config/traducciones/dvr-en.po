@@ -1361,3 +1361,8 @@ msgstr "_Alarm VBusMax_"
 
 msgid "Después de guardar la IP será "
 msgstr "After saving new IP will be "
+
+msgid "Modbus TCP: Cliente válido"
+msgstr "Modbus TCP: Valid Client"
+msgid "Modbus TCP: Cliente válido (Redundante)"
+msgstr "Modbus TCP: Valid Client (Redundant)"
