@@ -89,7 +89,6 @@ $passwords
     <node pic="cfg" name="DVR" >
       <var key="$zigorDvrParamVRedNom.0" units="V" name="Tensión de red nominal (LL)" factor="10" />
       <var key="$zigorDvrParamHuecoNom.0" units="%" name="Hueco nominal" />
-      <var key="$zigorDvrParamNumEquipos.0" name="Equipos en paralelo" />
       <var key="$zigorDvrParamFrecNom.0" units="Hz" name="Frecuencia nominal" factor="10" />
     </node>
   </node>
