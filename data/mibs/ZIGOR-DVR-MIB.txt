@@ -440,7 +440,7 @@ zigorDvrObjErrorFusCondAC OBJECT-TYPE
 	MAX-ACCESS	read-only
 	STATUS		current
 	DESCRIPTION
-		"Error Fusible / Error condensador AC"
+		"Error Fusible"
 	::= { zigorDvrObjEstado 42}
 
 zigorDvrObjRegHueco OBJECT-TYPE

@@ -73,10 +73,9 @@ displays_dvr = {
       [23]    = { display = _g("Error tensión de bus máxima"),	display_lcd=_g("_Error VBusMax_","Maximum 16 characters & ASCII only") },
       [24]    = { display = _g("Error termostato"),		display_lcd=_g("_Error Termo_","Maximum 16 characters & ASCII only") },
       [25]    = { display = _g("Error driver"),		display_lcd=_g("_Error Driver_","Maximum 16 characters & ASCII only") },
-      [26]    = { display = _g("Error Fusible / Error condensador AC"),		display_lcd=_g("_Error Fus/C-AC_","Maximum 16 characters & ASCII only") }, -- Error CON13
+      [26]    = { display = _g("Error Fusible"),		display_lcd=_g("_Error Fusible_","Maximum 16 characters & ASCII only") }, -- Error CON13
       [27]    = { display = _g("Error temperatura"),	display_lcd=_g("_Error Temp_","Maximum 16 characters & ASCII only") },
       [28]    = { display = _g("Error fusible"),                display_lcd=_g("_Error Fusible_","Maximum 16 characters & ASCII only") },
-      [29]    = { display = _g("Error Condensador AC"),                display_lcd=_g("_Error Cond AC_","Maximum 16 characters & ASCII only") },
    },
    -- Mantener estas tablas sincronizadas con MIB (*)
    display_condicion = {

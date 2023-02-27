@@ -587,11 +587,11 @@ msgstr "保险丝故障"
 msgid "Error fusible"
 msgstr "保险丝故障"
 
-msgid "Error Fusible / Error condensador AC"
-msgstr "保险丝故障 / 交流电容器故障"
+msgid "Error Fusible"
+msgstr "保险丝故障"
 
 msgid "_Error Fus/C-AC_"
-msgstr "_保险丝故障/交流电容器故障_"
+msgstr "_保险丝故障_"
 
 #. SMS characters only [GSM 03.38]
 msgid "<Error fusible>"
@@ -753,12 +753,6 @@ msgstr "保险丝故障"
 
 msgid "Error temperatura"
 msgstr "温度故障"
-
-msgid "Error Condensador AC"
-msgstr "交流电容器故障"
-
-msgid "_Error Cond AC_"
-msgstr "_交流电容器故障_"
 
 #. Maximum 16 characters & ASCII only
 msgid "_Error Temp_"

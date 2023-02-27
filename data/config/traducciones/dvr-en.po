@@ -635,11 +635,11 @@ msgstr "FuseFailure"
 msgid "Error fusible"
 msgstr "Fuse failure"
 
-msgid "Error Fusible / Error condensador AC"
-msgstr "Fuse failure / AC Capacitor failure"
+msgid "Error Fusible"
+msgstr "Fuse failure"
 
-msgid "_Error Fus/C-AC_"
-msgstr "_Fus/C-AC Fail_"
+msgid "_Error Fus"
+msgstr "_Fus Fail_"
 
 #. SMS characters only [GSM 03.38]
 msgid "<Error fusible>"
@@ -801,12 +801,6 @@ msgstr "Fuse Failure"
 
 msgid "Error temperatura"
 msgstr "Temperature failure"
-
-msgid "Error Condensador AC"
-msgstr "AC Capacitor failure"
-
-msgid "_Error Cond AC_"
-msgstr "_AC Cap Failure_"
 
 #. Maximum 16 characters & ASCII only
 msgid "_Error Temp_"
