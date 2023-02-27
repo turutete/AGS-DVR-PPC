@@ -1061,7 +1061,7 @@ local fichero_dsp_buf = {
 --      zigorDvrParamVRedNom .. ".0",
       zigorDvrObjVRedNom .. ".0",
       zigorDvrObjVMinDVR .. ".0",
-      zigorDvrParamFrecNom .. ".0",
+--      zigorDvrParamFrecNom .. ".0",
    },
 }
 
