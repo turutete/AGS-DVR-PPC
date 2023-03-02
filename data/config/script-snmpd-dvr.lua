@@ -885,7 +885,7 @@ local function setsig_handler(sds, k, v, data)
       local factor=access.get(sds, zigorDvrParamFactor .. ".0")  -- 0.001
       if factor then
          --v = v*(factor/10)
-         v = v*(factor/1000)
+         v = v*(factor/1000)*(3^(1/2))
       end
       -- Metemos la variable en el SDS
       gobject.block(sds, set_handler_id)
