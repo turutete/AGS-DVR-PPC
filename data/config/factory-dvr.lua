@@ -7,7 +7,7 @@ require "functions"  -- i18n
 
 local param = {
    --
-   -- Parámetros generales
+   -- Parï¿½metros generales
    --
    -- ParamSystem
    [ zigorSysName ..  ".0"          ] = "",
@@ -33,7 +33,7 @@ local param = {
    --
    [ zigorSysCode .. ".0"           ] = "000000",
    [ zigorSysTimeZone .. ".0"       ] = 354,  -- Europe/Madrid
-   [ zigorSysVersion .. ".0"        ] = "DVR-1.3.0",
+   [ zigorSysVersion .. ".0"        ] = "DVR_MT_HMI 2.0.0.0",
    [ zigorSysNotificationLang .. ".0" ] = 1,  -- en
    --
    [ zigorSysBacklightTimeout .. ".0" ] = 5,  -- minutes
@@ -77,7 +77,7 @@ local param = {
    --
    [ zigorCtrlParamDemo .. ".0"     ] = 2,  -- desactivado por defecto
    --
-   -- Parámetros particulares
+   -- Parï¿½metros particulares
    --
    [ zigorDvrParamVRedNom .. ".0"	] = 4000,  -- 0.1
    [ zigorDvrParamVMinDVR .. ".0"	] = 1380,  -- 0.1
@@ -87,7 +87,7 @@ local param = {
    [ zigorDvrParamHuecoNom .. ".0"      ] = 40,
 
    --
-   -- Configuración de alarmas
+   -- Configuraciï¿½n de alarmas
    --
    [ zigorAlarmCfgId .. ".1"              ] = 1,
    [ zigorAlarmCfgDescr .. ".1"           ] = zigorAlarmaStart,
