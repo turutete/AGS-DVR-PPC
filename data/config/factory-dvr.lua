@@ -85,7 +85,7 @@ local param = {
    [ zigorDvrParamFactor            .. ".0"	   ] = 1000,  -- 0.001
    [ zigorDvrParamFrecNom           .. ".0"	   ] = 500,   -- 0.1
    [ zigorDvrParamHuecoNom          .. ".0"     ] = 40,
-   [ zigorDvrParamFactorCorriente   .. ".0"	   ] = 1000,  -- 0.001
+   [ zigorDvrParamFactorCorriente   .. ".0"	   ] = 10000,  -- 0.001
 
    --
    -- Configuraci�n de alarmas
