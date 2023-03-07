@@ -80,7 +80,8 @@
 #define zigorDvrParamNumEquipos                            ".1.3.6.1.4.1.4576.4.10.1.2.3"
 #define zigorDvrParamFactor                                ".1.3.6.1.4.1.4576.4.10.1.2.4"
 #define zigorDvrParamFrecNom                               ".1.3.6.1.4.1.4576.4.10.1.2.5"
-#define zigorDvrParamHuecoNom                               ".1.3.6.1.4.1.4576.4.10.1.2.6"
+#define zigorDvrParamHuecoNom                              ".1.3.6.1.4.1.4576.4.10.1.2.6"
+#define zigorDvrParamFactorCorriente                       ".1.3.6.1.4.1.4576.4.10.1.2.7"
 
 #define zigorDvrAlarms                                     ".1.3.6.1.4.1.4576.4.10.2"
 #define zigorAlarmaErrorVInst                              ".1.3.6.1.4.1.4576.4.10.2.1"

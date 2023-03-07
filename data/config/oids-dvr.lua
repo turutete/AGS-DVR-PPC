@@ -69,14 +69,15 @@ zigorDvrObjVMinDVR = zigorDvrObjEstado..".48"
 --
 -- Parametros Sistema
 --
-zigorDvrObjParams = zigorDvrObjects..".2"
+zigorDvrObjParams               = zigorDvrObjects..".2"
 
-zigorDvrParamVRedNom = zigorDvrObjParams..".1"
-zigorDvrParamVMinDVR = zigorDvrObjParams..".2"
-zigorDvrParamNumEquipos = zigorDvrObjParams..".3"
-zigorDvrParamFactor = zigorDvrObjParams..".4"
-zigorDvrParamFrecNom = zigorDvrObjParams..".5"
-zigorDvrParamHuecoNom = zigorDvrObjParams..".6"
+zigorDvrParamVRedNom            = zigorDvrObjParams..".1"
+zigorDvrParamVMinDVR            = zigorDvrObjParams..".2"
+zigorDvrParamNumEquipos         = zigorDvrObjParams..".3"
+zigorDvrParamFactor             = zigorDvrObjParams..".4"
+zigorDvrParamFrecNom            = zigorDvrObjParams..".5"
+zigorDvrParamHuecoNom           = zigorDvrObjParams..".6"
+zigorDvrParamFactorCorriente    = zigorDvrObjParams..".7"
 
 --
 -- Alarmas

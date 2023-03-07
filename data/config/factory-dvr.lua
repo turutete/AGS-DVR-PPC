@@ -79,12 +79,13 @@ local param = {
    --
    -- Par�metros particulares
    --
-   [ zigorDvrParamVRedNom .. ".0"	] = 4000,  -- 0.1
-   [ zigorDvrParamVMinDVR .. ".0"	] = 1380,  -- 0.1
-   [ zigorDvrParamNumEquipos .. ".0"	] = 1,
-   [ zigorDvrParamFactor .. ".0"	] = 1000,  -- 0.001
-   [ zigorDvrParamFrecNom .. ".0"	] = 500,   -- 0.1
-   [ zigorDvrParamHuecoNom .. ".0"      ] = 40,
+   [ zigorDvrParamVRedNom           .. ".0"	   ] = 4000,  -- 0.1
+   [ zigorDvrParamVMinDVR           .. ".0"	   ] = 1380,  -- 0.1
+   [ zigorDvrParamNumEquipos        .. ".0"	   ] = 1,
+   [ zigorDvrParamFactor            .. ".0"	   ] = 1000,  -- 0.001
+   [ zigorDvrParamFrecNom           .. ".0"	   ] = 500,   -- 0.1
+   [ zigorDvrParamHuecoNom          .. ".0"     ] = 40,
+   [ zigorDvrParamFactorCorriente   .. ".0"	   ] = 1000,  -- 0.001
 
    --
    -- Configuraci�n de alarmas

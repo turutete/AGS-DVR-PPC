@@ -198,6 +198,9 @@ local edit_config_dvr = {
    [zigorDvrParamHuecoNom] = {
       check = check_number_values,
       check_args = {values={40,50,60}}, },
+   [zigorDvrParamFactorCorriente] = {
+      check = check_number,
+      check_args = {factor=1000, min=0, max=1000000}, },
 
    --- modbus
    [zigorModbusAddress] =  {

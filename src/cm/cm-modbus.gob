@@ -234,16 +234,17 @@ const typeHoldingReg HoldingReg[]={
 /*
  * IMPORTANTE ESTABLECER LIMITES DE LOS PARAMETROS EDITABLES!!!
  */
-   { 0, UINT16, zigorParamMBTCPTimeout, 	0, 0, 1, {1}, 		{65535} },
-   { 0, UINT16, zigorDvrParamVRedNom,		0, 0, 0, {0}, 		{1000000} },
-   { 0, UINT16, zigorDvrParamVMinDVR,		0, 0, 0, {0}, 		{10000} },
-   { 0, UINT16, zigorDvrParamNumEquipos,	0, 0, 0, {0}, 		{10000} },
-   { 0, UINT16, zigorDvrParamFactor,		0, 0, 0, {0}, 		{1000000} },
-   { 0, UINT16, zigorDvrParamFrecNom,		0, 0, 0, {0}, 		{10000} },
-   { 0, UINT16, zigorDvrParamHuecoNom,		0, 0, 0, {40}, 		{60} },
-   { 0, UINT16, zigorDvrObjOrdenMarcha,		0, 0, 1, {1}, 		{1} },
-   { 0, UINT16, zigorDvrObjOrdenParo,		0, 0, 1, {1}, 		{1} },
-   { 0, UINT16, zigorDvrObjOrdenReset,		0, 0, 1, {1}, 		{1} },
+   { 0, UINT16, zigorParamMBTCPTimeout, 	      0, 0, 1, {1}, 		  {65535} },
+   { 0, UINT16, zigorDvrParamVRedNom,		      0, 0, 0, {0}, 		{1000000} },
+   { 0, UINT16, zigorDvrParamVMinDVR,		      0, 0, 0, {0}, 		  {10000} },
+   { 0, UINT16, zigorDvrParamNumEquipos,	      0, 0, 0, {0}, 		  {10000} },
+   { 0, UINT16, zigorDvrParamFactor,		      0, 0, 0, {0}, 		{1000000} },
+   { 0, UINT16, zigorDvrParamFrecNom,		      0, 0, 0, {0}, 		  {10000} },
+   { 0, UINT16, zigorDvrParamHuecoNom,		      0, 0, 0, {40}, 		  {60} },
+   { 0, UINT16, zigorDvrParamFactorCorriente,	0, 0, 0, {0}, 		{1000000} },
+   { 0, UINT16, zigorDvrObjOrdenMarcha,	      0, 0, 1, {1}, 		      {1} },
+   { 0, UINT16, zigorDvrObjOrdenParo,		      0, 0, 1, {1}, 		      {1} },
+   { 0, UINT16, zigorDvrObjOrdenReset,		      0, 0, 1, {1}, 		      {1} },
 };
 
 typedef struct{
@@ -533,7 +534,7 @@ eMBRegInputCB( unsigned char * pucRegBuffer, unsigned short usAddress, unsigned 
 }
 
 /*
- * Function Code 0x03, 0x06, 0x010 Holding Registers (Lectura/Escritura de Parámetros)
+ * Function Code 0x03, 0x06, 0x010 Holding Registers (Lectura/Escritura de Parï¿½metros)
  */
 protected
 eMBErrorCode
@@ -541,7 +542,7 @@ eMBRegHoldingCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNRegs, eMBRegi
 {
     eMBErrorCode    eStatus = MB_ENOERR;
     int             iRegIndex;
-    signed short int val;  // ojo! así forzamos variable de 16bits para tratar el valor de 16bits de modbus
+    signed short int val;  // ojo! asï¿½ forzamos variable de 16bits para tratar el valor de 16bits de modbus
     int oldval;
     int res;
     static USHORT iAlarm=0;
@@ -1071,7 +1072,7 @@ set_oid_16(gpointer self, char *nombre_var, int n_instancia, ushort type, ushort
 }
 
 //--------------------
-// Aquí lo mas logico hubiera sido hacer una unica funcion de GET y devolver el tipo q corresponda en funcion del tipo del GValue (el marshalling famoso)
+// Aquï¿½ lo mas logico hubiera sido hacer una unica funcion de GET y devolver el tipo q corresponda en funcion del tipo del GValue (el marshalling famoso)
 //--------------------
 private
 int

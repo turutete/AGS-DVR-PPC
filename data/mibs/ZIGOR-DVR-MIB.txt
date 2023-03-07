@@ -549,6 +549,14 @@ zigorDvrParamHuecoNom OBJECT-TYPE
 		"Nominal sag."
 	::= { zigorDvrObjParams 6 }
 
+zigorDvrParamFactor OBJECT-TYPE
+	SYNTAX		INTEGER (0..1000000)
+	UNITS		"0.001"
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"Factor de conversion para corrientes."	
+	::= { zigorDvrObjParams 7 }	
 --
 -- Alarmas
 --

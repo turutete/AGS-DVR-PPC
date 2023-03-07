@@ -800,6 +800,14 @@ local function setsig_handler(sds, k, v, data)
       gobject.unblock(sds, set_handler_id)
    end
 
+   --Aplicar factor de conversión a las corrientes
+   if (k == zigorDvrObjISecundarioR .. ".0") or (k == zigorDvrObjISecundarioS .. ".0") or (k == zigorDvrObjISecundarioT .. ".0") then
+      local factor=access.get(sds, zigorDvrParamFactorCorriente .. ".0")
+      if num_equipos then
+         v = v*(factor/1000)
+      end
+   end
+
    -- Corriente y Potencia segun el numero de equipos en paralelo
    if (k == zigorDvrObjISecundarioR .. ".0") or (k == zigorDvrObjISecundarioS .. ".0") or (k == zigorDvrObjISecundarioT .. ".0") or
       (k == zigorDvrObjPSalidaR .. ".0") or (k == zigorDvrObjPSalidaS .. ".0") or (k == zigorDvrObjPSalidaT .. ".0") then
