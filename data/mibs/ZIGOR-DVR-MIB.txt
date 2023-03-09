@@ -549,7 +549,7 @@ zigorDvrParamHuecoNom OBJECT-TYPE
 		"Nominal sag."
 	::= { zigorDvrObjParams 6 }
 
-zigorDvrParamFactor OBJECT-TYPE
+zigorDvrParamFactorCorriente OBJECT-TYPE
 	SYNTAX		INTEGER (0..1000000)
 	UNITS		"0.001"
 	MAX-ACCESS	read-write
