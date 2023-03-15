@@ -556,6 +556,15 @@ local function configureSSH(sds)
            os.execute("/etc/init.d/dropbear stop")
    end
 end
+
+local function configureCurrentFactor(sds)
+   local currentFactor = access.get(sds, zigorSelectCurrentFactor .. ".0")
+   if currentFactor == 1 then
+      access.set(sds, zigorDvrParamFactorCorriente..".0", 1000)  --El dato se muestra en A
+   else
+      access.set(sds, zigorDvrParamFactorCorriente..".0", 10000) --El dato se muestra en dA
+   end
+end
 ----------------------------------------
 -- Ahora uso dofile... --local displays_dvr=require "displays-dvr"
 
@@ -604,7 +613,10 @@ local function setsig_handler(sds, k, v, data)
 	    if changes[zigorNetEnableSSH] then
                 configureSSH(sds)
 	    end
-		
+
+       if changes[zigorSelectCurrentFactor] then
+         configureCurrentFactor(sds)
+       end
 	    --
 	    changes={}
 	    -- grabar configuración sistema y reiniciar servicios en la próxima iteración del "mainloop"

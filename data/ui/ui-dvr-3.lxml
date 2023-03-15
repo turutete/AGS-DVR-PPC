@@ -118,7 +118,7 @@ $passwords
       <var key="$zigorDvrParamVRedNom.0" units="V" name="Tensión de red nominal (LL)" factor="10" />
       <var key="$zigorDvrParamHuecoNom.0" units="%" name="Hueco nominal" />
       <var key="$zigorDvrParamFactor.0" name="Factor de conversión para tensiones" factor="1000" />
-      <var key="$zigorDvrParamFactorCorriente.0" name="Unidad de medida de corrientes" factor="1000" />
+      <var key="$zigorSelectCurrentFactor.0" enum="enum_CurrentFactor" name="Unidad de corriente en parámetros" />
       <var key="$zigorDvrParamFrecNom.0" units="Hz" name="Frecuencia nominal" factor="10" />
     </node>
   </node>

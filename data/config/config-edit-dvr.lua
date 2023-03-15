@@ -226,6 +226,11 @@ local edit_config_dvr = {
       check = check_enum,
       check_args = {},
    },
+   ---
+   [zigorSelectCurrentFactor] =  {
+      check = check_enum,
+      check_args = {},
+   },
 }
 
 return edit_config_dvr

@@ -223,8 +223,12 @@ display_MBMode = {
    [ 1]    = { display = "RTU", },
    [ 2]    = { display = "TCP", },
 },
----
-
+---Factor Corrientes
+display_CurrentFactor = {
+   default = { display = "?",   },
+   [ 1]    = { display = "MT (0.1 A)", },
+   [ 2]    = { display = "BT (1 A)", },
+},
 }
 
 return displays_dvr

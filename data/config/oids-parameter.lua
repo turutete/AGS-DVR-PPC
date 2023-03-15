@@ -50,8 +50,9 @@ zigorDialUpSmsNum3 = zigorParamDialUp .. ".4"
 zigorDialUpSmsNum4 = zigorParamDialUp .. ".5"
 --
 zigorParamControl = zigorParameter .. ".4"
-zigorCtrlParamState = zigorParamControl .. ".1"
-zigorCtrlParamDemo  = zigorParamControl .. ".2"
+zigorCtrlParamState         = zigorParamControl .. ".1"
+zigorCtrlParamDemo          = zigorParamControl .. ".2"
+zigorSelectCurrentFactor    = zigorParamControl .. ".3"
 
 -- modbus
 zigorParamModbus = zigorParameter .. ".5"

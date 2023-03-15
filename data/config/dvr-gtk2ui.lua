@@ -470,6 +470,8 @@ ags = {
 	 enum_sino       = "enum_SiNo",
 	 _               = "treeview",  -- new
 	 loginui2        = "loginui2",
+    --
+    enum_currentfactor = "enum_CurrentFactor"
       },
       --
    },
@@ -709,6 +711,13 @@ ags = {
       --
       columns = columns_enum,
    },
+   enum_CurrentFactor = {
+      mod_new="gtk2treestore",
+      depends = {
+	 _ = "mainwin", -- requiere gtk inicializado.
+      },
+      columns = columns_enum,
+   }
 
    -------------------------------------
    -- Login

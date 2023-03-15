@@ -76,6 +76,8 @@ local param = {
    [ zigorModbusTCPTimeout .. ".0"       ] = 600,  -- timeout en segundos
    --
    [ zigorCtrlParamDemo .. ".0"     ] = 2,  -- desactivado por defecto
+   ---
+   [ zigorSelectCurrentFactor .. ".0"     ] = 1, -- Por defecto en dA
    --
    -- Par�metros particulares
    --
