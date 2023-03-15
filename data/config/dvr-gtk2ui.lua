@@ -471,7 +471,7 @@ ags = {
 	 _               = "treeview",  -- new
 	 loginui2        = "loginui2",
     --
-    enum_currentfactor = "enum_CurrentFactor"
+    enum_currentfactor = "enum_CurrentFactor",
       },
       --
    },
@@ -717,7 +717,7 @@ ags = {
 	 _ = "mainwin", -- requiere gtk inicializado.
       },
       columns = columns_enum,
-   }
+   },
 
    -------------------------------------
    -- Login
