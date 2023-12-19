@@ -33,7 +33,7 @@ local param = {
    --
    [ zigorSysCode .. ".0"           ] = "000000",
    [ zigorSysTimeZone .. ".0"       ] = 354,  -- Europe/Madrid
-   [ zigorSysVersion .. ".0"        ] = "DVR_MT_HMI 2.0.0.0",
+   [ zigorSysVersion .. ".0"        ] = "DVR_MT_HMI 2.0.1.0",
    [ zigorSysNotificationLang .. ".0" ] = 1,  -- en
    --
    [ zigorSysBacklightTimeout .. ".0" ] = 5,  -- minutes
