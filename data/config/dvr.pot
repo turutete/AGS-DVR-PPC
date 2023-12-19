@@ -355,6 +355,12 @@ msgstr ""
 msgid "Factor de conversión para tensiones"
 msgstr ""
 
+msgid "Factor de conversión para potenias"
+msgstr ""
+
+msgid "Unidad de medida de corrientes"
+msgstr ""
+
 msgid "Frecuencia nominal"
 msgstr ""
 

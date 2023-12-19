@@ -124,6 +124,7 @@ $passwords
 	  <var key="$zigorDvrParamHuecoNom.0" units="%" name="Hueco nominal" />
       <var key="$zigorDvrParamVMinDVR.0" units="V" name="Tensión mínima DVR (LN)" factor="10" />
       <var key="$zigorDvrParamFactor.0" name="Factor de conversión para tensiones" factor="1000" />
+      <var key="$zigorSelectPotencyFactor.0" enum="enum_PotencyFactor" name="Escala de medidas para potencia activa" />      
       <var key="$zigorSelectCurrentFactor.0" enum="enum_CurrentFactor" name="Unidad de corriente en parámetros" />
       <var key="$zigorDvrParamFrecNom.0" units="Hz" name="Frecuencia nominal" factor="10" />
     </node>

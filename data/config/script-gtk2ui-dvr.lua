@@ -498,6 +498,7 @@ local displays = {
    [ zigorNetEnableSSH .. ".0"             ] = displays_dvr.display_SiNo_GR,
    ---
    [ zigorSelectCurrentFactor .. ".0"      ] = displays_dvr.display_CurrentFactor,
+   [ zigorSelectPotencyFactor .. ".0"      ] = displays_dvr.display_PotencyFactor,
 }
 
 --- Actualizar la info de 'pic' si tabla de displays en otro fichero (y en ese fichero ahora el valor de pic convertir a texto)
@@ -1120,6 +1121,7 @@ do
    table_MBMode = display2enum(displays_dvr.display_MBMode)
    table_SiNo = display2enum(displays_dvr.display_SiNo_GR)
    table_CurrentFactor = display2enum(displays_dvr.display_CurrentFactor)
+   table_PotencyFactor = display2enum(displays_dvr.display_PotencyFactor)
    
    -- Inicialización enumerados a partir de tablas
    insert_enum(enum_AlarmCfgSeverity, table_AlarmCfgSeverity)
@@ -1131,6 +1133,7 @@ do
    insert_enum(enum_MBMode, table_MBMode)
    insert_enum(enum_SiNo, table_SiNo)
    insert_enum(enum_CurrentFactor, table_CurrentFactor)
+   insert_enum(enum_PotencyFactor, table_PotencyFactor)
    
    -- Inicializamos comboboxentry
    gobject.set_property(w_edit_val, "model",       enum_void )

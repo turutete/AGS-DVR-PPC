@@ -472,6 +472,7 @@ ags = {
 	 loginui2        = "loginui2",
     --
     enum_currentfactor = "enum_CurrentFactor",
+    enum_potencyfactor = "enum_PotencyFactor",
       },
       --
    },
@@ -712,6 +713,13 @@ ags = {
       columns = columns_enum,
    },
    enum_CurrentFactor = {
+      mod_new="gtk2treestore",
+      depends = {
+	 _ = "mainwin", -- requiere gtk inicializado.
+      },
+      columns = columns_enum,
+   },
+   enum_PotencyFactor = {
       mod_new="gtk2treestore",
       depends = {
 	 _ = "mainwin", -- requiere gtk inicializado.
