@@ -229,6 +229,11 @@ display_CurrentFactor = {
    [ 1]    = { display = "MT (0.1 A)", },
    [ 2]    = { display = "BT (1 A)", },
 },
+display_PotencyFactor = {
+   default = { display = "?",   },
+   [ 1]    = { display = "0.1 kW", },
+   [ 2]    = { display = "0.01 kW", },
+},
 }
 
 return displays_dvr

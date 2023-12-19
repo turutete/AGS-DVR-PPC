@@ -201,6 +201,9 @@ local edit_config_dvr = {
    [zigorDvrParamFactorCorriente] = {
       check = check_number,
       check_args = {factor=1000, min=0, max=1000000}, },
+   [zigorDvrParamFactorPotencia] = {
+      check = check_number,
+      check_args = {factor=100, min=0, max=1000000}, },
 
    --- modbus
    [zigorModbusAddress] =  {
@@ -228,6 +231,10 @@ local edit_config_dvr = {
    },
    ---
    [zigorSelectCurrentFactor] =  {
+      check = check_enum,
+      check_args = {},
+   },
+   [zigorSelectPotencyFactor] =  {
       check = check_enum,
       check_args = {},
    },

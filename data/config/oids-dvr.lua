@@ -78,6 +78,7 @@ zigorDvrParamFactor             = zigorDvrObjParams..".4"
 zigorDvrParamFrecNom            = zigorDvrObjParams..".5"
 zigorDvrParamHuecoNom           = zigorDvrObjParams..".6"
 zigorDvrParamFactorCorriente    = zigorDvrObjParams..".7"
+zigorDvrParamFactorPotencia     = zigorDvrObjParams..".8"
 
 --
 -- Alarmas

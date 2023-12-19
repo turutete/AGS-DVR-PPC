@@ -409,6 +409,9 @@ msgstr "Number of parallel units"
 msgid "Factor de conversión para tensiones"
 msgstr "Voltage Conversion Factor"
 
+msgid "Factor de conversión para potenias"
+msgstr "Potencies Conversion Factor"
+
 msgid "Unidad de medida de corrientes"
 msgstr "Unit of measurement for currents"
 

@@ -940,6 +940,14 @@ zigorCtrlParamDemo OBJECT-TYPE
 	DESCRIPTION
 		"ComboBox para cambiar Factor de conversión para corrientes"
 	::= { zigorParamControl 3 }
+	
+zigorCtrlParamDemo OBJECT-TYPE
+	SYNTAX		TruthValue
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION
+		"ComboBox para cambiar Factor de conversión para potencias"
+	::= { zigorParamControl 4 }
 
 -- MODBUS
 zigorModbusAddress OBJECT-TYPE

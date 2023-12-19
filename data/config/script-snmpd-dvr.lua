@@ -565,6 +565,15 @@ local function configureCurrentFactor(sds)
       access.set(sds, zigorDvrParamFactorCorriente..".0", 10000) --El dato se muestra en dA
    end
 end
+
+local function configurePotencyFactor(sds)
+   local currentFactor = access.get(sds, zigorSelectPotencyFactor .. ".0")
+   if currentFactor == 1 then
+      access.set(sds, zigorDvrParamFactorPotencia..".0", 100)  --El dato se muestra en 0.1 kW
+   else
+      access.set(sds, zigorDvrParamFactorPotencia..".0", 10)   --El dato se muestra en 0.01 kW
+   end
+end
 ----------------------------------------
 -- Ahora uso dofile... --local displays_dvr=require "displays-dvr"
 
@@ -616,6 +625,10 @@ local function setsig_handler(sds, k, v, data)
 
        if changes[zigorSelectCurrentFactor] then
          configureCurrentFactor(sds)
+       end
+
+       if changes[zigorSelectPotencyFactor] then
+         configurePotencyFactor(sds)
        end
 	    --
 	    changes={}
@@ -817,6 +830,19 @@ local function setsig_handler(sds, k, v, data)
       local factor=access.get(sds, zigorDvrParamFactorCorriente .. ".0")
       if factor then
          v = v*(factor/1000) -- factor = 1 o 10, depende de si se leen Amperios (A) o decimas de Amperios (dA)
+      end
+      -- Metemos la variable en el SDS
+      gobject.block(sds, set_handler_id)
+      access.set(sds, k, v)
+      gobject.unblock(sds, set_handler_id)
+      res=true -- no hacer el set, ya hecho
+   end
+
+   --Aplicar factor de conversión a las potencias
+   if (k == zigorDvrObjPSalidaR .. ".0") or (k == zigorDvrObjPSalidaS .. ".0") or (k == zigorDvrObjPSalidaT .. ".0") then
+      local factor=access.get(sds, zigorDvrParamFactorPotencia .. ".0")
+      if factor then
+         v = v*(factor/1000) -- factor = 0.1 o 0.01, depende de la escala de medidas para la potencia activa
       end
       -- Metemos la variable en el SDS
       gobject.block(sds, set_handler_id)

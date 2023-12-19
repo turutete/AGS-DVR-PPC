@@ -53,6 +53,7 @@ zigorParamControl = zigorParameter .. ".4"
 zigorCtrlParamState         = zigorParamControl .. ".1"
 zigorCtrlParamDemo          = zigorParamControl .. ".2"
 zigorSelectCurrentFactor    = zigorParamControl .. ".3"
+zigorSelectPotencyFactor    = zigorParamControl .. ".4"
 
 -- modbus
 zigorParamModbus = zigorParameter .. ".5"
