@@ -569,9 +569,9 @@ end
 local function configurePotencyFactor(sds)
    local currentFactor = access.get(sds, zigorSelectPotencyFactor .. ".0")
    if currentFactor == 1 then
-      access.set(sds, zigorDvrParamFactorPotencia..".0", 100)  --El dato se muestra en 0.1 kW
+      access.set(sds, zigorDvrParamFactorPotencia..".0", 1000)  --El dato se muestra en 0.1 kW
    else
-      access.set(sds, zigorDvrParamFactorPotencia..".0", 10)   --El dato se muestra en 0.01 kW
+      access.set(sds, zigorDvrParamFactorPotencia..".0", 10000)   --El dato se muestra en 1 kW
    end
 end
 ----------------------------------------
@@ -842,7 +842,7 @@ local function setsig_handler(sds, k, v, data)
    if (k == zigorDvrObjPSalidaR .. ".0") or (k == zigorDvrObjPSalidaS .. ".0") or (k == zigorDvrObjPSalidaT .. ".0") then
       local factor=access.get(sds, zigorDvrParamFactorPotencia .. ".0")
       if factor then
-         v = v*(factor/1000) -- factor = 0.1 o 0.01, depende de la escala de medidas para la potencia activa
+         v = v*(factor/1000) -- factor = 0.1 o 1, depende de la escala de medidas para la potencia activa
       end
       -- Metemos la variable en el SDS
       gobject.block(sds, set_handler_id)
