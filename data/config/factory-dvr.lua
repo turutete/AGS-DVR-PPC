@@ -78,6 +78,7 @@ local param = {
    [ zigorCtrlParamDemo .. ".0"     ] = 2,  -- desactivado por defecto
    ---
    [ zigorSelectCurrentFactor .. ".0"     ] = 1, -- Por defecto en dA
+   [ zigorSelectPotencyFactor .. ".0"     ] = 1, -- Por defecto en 0,1kW
    --
    -- Par�metros particulares
    --
