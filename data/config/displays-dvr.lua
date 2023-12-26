@@ -231,8 +231,8 @@ display_CurrentFactor = {
 },
 display_PotencyFactor = {
    default = { display = "?",   },
-   [ 1]    = { display = "MT (0.1 kW)", },
-   [ 2]    = { display = "BT (1 kW)", },
+   [ 1]    = { display = "MT (0.01 kW)", },
+   [ 2]    = { display = "BT (0.1 kW)", },
 },
 }
 
