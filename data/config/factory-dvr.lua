@@ -77,7 +77,8 @@ local param = {
    --
    [ zigorCtrlParamDemo .. ".0"     ] = 2,  -- desactivado por defecto
    ---
-   [ zigorSelectCurrentFactor .. ".0"     ] = 1, -- Por defecto en dA
+   [ zigorSelectCurrentFactor .. ".0"     ] = 2, -- BT
+   [ zigorSelectPotencyFactor .. ".0"     ] = 2, -- BT
    --
    -- Par�metros particulares
    --
@@ -87,7 +88,8 @@ local param = {
    [ zigorDvrParamFactor            .. ".0"	   ] = 1000,  -- 0.001
    [ zigorDvrParamFrecNom           .. ".0"	   ] = 500,   -- 0.1
    [ zigorDvrParamHuecoNom          .. ".0"     ] = 40,
-   [ zigorDvrParamFactorCorriente   .. ".0"	   ] = 10000,  -- 0.001
+   [ zigorDvrParamFactorCorriente   .. ".0"	   ] = 10,  -- BT, x10, 1A
+   [ zigorDvrParamFactorPotencia    .. ".0"	   ] = 10,  -- BT, x10, 0,1kW
 
    --
    -- Configuraci�n de alarmas

@@ -560,18 +560,18 @@ end
 local function configureCurrentFactor(sds)
    local currentFactor = access.get(sds, zigorSelectCurrentFactor .. ".0")
    if currentFactor == 1 then
-      access.set(sds, zigorDvrParamFactorCorriente..".0", 1000)  --El dato se muestra en A
+      access.set(sds, zigorDvrParamFactorCorriente..".0", 1)  --El dato se muestra en A
    else
-      access.set(sds, zigorDvrParamFactorCorriente..".0", 10000) --El dato se muestra en dA
+      access.set(sds, zigorDvrParamFactorCorriente..".0", 10) --El dato se muestra en dA
    end
 end
 
 local function configurePotencyFactor(sds)
    local currentFactor = access.get(sds, zigorSelectPotencyFactor .. ".0")
    if currentFactor == 1 then
-      access.set(sds, zigorDvrParamFactorPotencia..".0", 100)  --El dato se muestra en 0.1 kW
+      access.set(sds, zigorDvrParamFactorPotencia..".0", 1)  --El dato se muestra en 0.1 kW
    else
-      access.set(sds, zigorDvrParamFactorPotencia..".0", 10)   --El dato se muestra en 0.01 kW
+      access.set(sds, zigorDvrParamFactorPotencia..".0", 10)   --El dato se muestra en 1 kW
    end
 end
 ----------------------------------------
@@ -596,11 +596,13 @@ local function setsig_handler(sds, k, v, data)
    if is_substring(k, zigorParameter) or is_substring(k, zigorAlarmConfig) or is_substring(k, zigorDvrObjParams)  then
       if (k==zigorCtrlParamState .. ".0") then
 	 -- "Commit" configuración
-	 if v==1 then     -- temp(1)
+	   if v==1 then     -- temp(1)
 	    -- grabar configuración AGS (parámetros)
 	    local p="active-"..profile
 	    local f="factory-"..profile
 	    local param=require(p) or require(f)
+       configurePotencyFactor(sds) -- Factor de corrinetes inicia con valor del selector
+       configureCurrentFactor(sds) -- Factor de potencias inicia con valor del selector
 	    save_param_data(param, sds, "../share/config/" .. p .. ".lua") -- XXX "hardwired path"
 	    -- XXX ¿alarma de configuración salvada?
 	    -- Eventos en función de qué parámetros se han cambiado
@@ -829,7 +831,7 @@ local function setsig_handler(sds, k, v, data)
    if (k == zigorDvrObjISecundarioR .. ".0") or (k == zigorDvrObjISecundarioS .. ".0") or (k == zigorDvrObjISecundarioT .. ".0") then
       local factor=access.get(sds, zigorDvrParamFactorCorriente .. ".0")
       if factor then
-         v = v*(factor/1000) -- factor = 1 o 10, depende de si se leen Amperios (A) o decimas de Amperios (dA)
+         v = v*factor -- factor = 1 o 10, depende de si se leen Amperios (A) o decimas de Amperios (dA)
       end
       -- Metemos la variable en el SDS
       gobject.block(sds, set_handler_id)
@@ -842,7 +844,7 @@ local function setsig_handler(sds, k, v, data)
    if (k == zigorDvrObjPSalidaR .. ".0") or (k == zigorDvrObjPSalidaS .. ".0") or (k == zigorDvrObjPSalidaT .. ".0") then
       local factor=access.get(sds, zigorDvrParamFactorPotencia .. ".0")
       if factor then
-         v = v*(factor/1000) -- factor = 0.1 o 0.01, depende de la escala de medidas para la potencia activa
+         v = v*factor -- factor = 1 o 10, depende de la escala de medidas para la potencia activa
       end
       -- Metemos la variable en el SDS
       gobject.block(sds, set_handler_id)
