@@ -20,6 +20,10 @@ function check_vredNom(s, args)
       return true
    end
 
+   if val >= 4750 and val <= 4850 then
+      return true
+   end
+
    return false
 end
 
