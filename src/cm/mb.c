@@ -1,4 +1,4 @@
-/* 
+/*
  * FreeModbus Libary: A portable Modbus implementation for Modbus ASCII/RTU.
  * Copyright (c) 2006 Christian Walter <wolti@sil.at>
  * All rights reserved.
@@ -61,6 +61,8 @@
 
 static UCHAR    ucMBAddress;
 static eMBMode  eMBCurrentMode;
+
+
 
 static enum
 {
@@ -399,7 +401,7 @@ eMBPoll( void )
                 if( ( eMBCurrentMode == MB_ASCII ) && MB_ASCII_TIMEOUT_WAIT_BEFORE_SEND_MS )
                 {
                     vMBPortTimersDelay( MB_ASCII_TIMEOUT_WAIT_BEFORE_SEND_MS );
-                }                
+                }
                 eStatus = peMBFrameSendCur( ucMBAddress, ucMBFrame, usLength );
             }
             break;
@@ -429,4 +431,18 @@ eMBPoll( void )
     }
     // fin (jur)
     return MB_ENOERR;
+}
+
+void eMBIncommingIpsInit(char** ips, int num_of_ips)
+{
+	char* ips_validas[NUM_IPS_VALIDAS]={"",""}; //ips entrantes validas para modbus.
+
+	if (ips != NULL)
+	{
+
+		//Llamo a mbtcp.c --> eMBIpsInit para pasar las IPs validas hasta el punto en el que se realiza la conexion.
+		eMBIpsInit(ips, num_of_ips);
+
+	}
+
 }

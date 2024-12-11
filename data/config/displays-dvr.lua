@@ -176,7 +176,7 @@ display_DialUpPin = {
 			 end, },
 },
 display_Date = {
-   default = { display = function(v) 
+   default = { display = function(v)
 			    local tt=ZDateAndTime2timetable(v)
 			    return os.date("%d/%m/%Y %H:%M:%S", os.time(tt))
 			 end, },
@@ -221,7 +221,8 @@ display_MBParity = {
 
 display_MBMode = {
    default = { display = "?",   },
-   [ 1]    = { display = "RTU", },
+   -- [ 1]    = { display = "RTU", },
+   [ 1]    = { display = "--", },
    [ 2]    = { display = "TCP", },
 },
 ---

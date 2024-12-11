@@ -75,24 +75,24 @@ typedef struct{
 } typeAlarmCodes;
 
 const typeAlarmCodes AlarmCodes[]={
-   { zigorAlarmaStart,                00 }, 
+   { zigorAlarmaStart,                00 },
    { zigorAlarmaPasswdChange,         01 },
    { zigorAlarmaSagRecorded,          02 },
-   { zigorAlarmaErrorVInst,           10 }, 
-   { zigorAlarmaSaturado,             11 }, 
-   { zigorAlarmaVBusMax,              12 }, 
-   { zigorAlarmaVCondMax,             13 }, 
-   { zigorAlarmaVBusMin,              14 }, 
-   { zigorAlarmaVRed,                 15 }, 
-   { zigorAlarmaLimitIntVSal,         16 }, 
-   { zigorAlarmaDriver,               17 }, 
-   { zigorAlarmaParadoError,          18 }, 
-   { zigorAlarmaErrorDriver,          19 }, 
-   { zigorAlarmaErrorTermo,           20 }, 
-   { zigorAlarmaLimitando,            21 }, 
-   { zigorAlarmaPLL,                  22 }, 
-   { zigorAlarmaErrorComDSP,          23 }, 
-   { zigorAlarmaStatusChange,         24 }, 
+   { zigorAlarmaErrorVInst,           10 },
+   { zigorAlarmaSaturado,             11 },
+   { zigorAlarmaVBusMax,              12 },
+   { zigorAlarmaVCondMax,             13 },
+   { zigorAlarmaVBusMin,              14 },
+   { zigorAlarmaVRed,                 15 },
+   { zigorAlarmaLimitIntVSal,         16 },
+   { zigorAlarmaDriver,               17 },
+   { zigorAlarmaParadoError,          18 },
+   { zigorAlarmaErrorDriver,          19 },
+   { zigorAlarmaErrorTermo,           20 },
+   { zigorAlarmaLimitando,            21 },
+   { zigorAlarmaPLL,                  22 },
+   { zigorAlarmaErrorComDSP,          23 },
+   { zigorAlarmaStatusChange,         24 },
    { zigorAlarmaTemperaturaAlta,      25 },
    { NULL, 0 },
 };
@@ -343,20 +343,20 @@ GObject*
 new (char* cm_name, AgsCf* cf, CfTable cft) {
   GObject* ret = G_OBJECT(GET_NEW);
   CfTable  my_cft = config_get_table(CONFIGIF(cf), cft, cm_name);
-  
+
   CM_MODBUS(ret)->_priv->sds = config_get_object(CONFIGIF(cf), my_cft, "elsds");
   guint n_ioport = config_get_int(CONFIGIF(cf), my_cft, "n_ioport");
   CM_MODBUS(ret)->_priv->n_ioport = n_ioport;
   //printf("dbg-modbus>>>n_ioport:%d\n", n_ioport);
 
   myself = ret;
-  
+
   signal(SIGUSR2, self_handler);
 
   //g_timeout_add(3000, self_otros, (gpointer) ret);
   //self_main((gpointer) ret);
   //g_timeout_add(10, self_main, (gpointer) ret);
-  
+
   /* Opcion 1
   // como hay bucles indefinidos en la implementacion de freemodbus, ni siquiera utilizamos g_timeout_add, deshabilitando el uso del disparo por eventos...
   while(self_otros(ret)==TRUE);  // asegurar get de valores de parametros de modbus
@@ -391,51 +391,77 @@ private
 gboolean
 main(gpointer self) {
    printd(2, "modbus>>> main (init=%d)\n", init); fflush(stdout);
-   
-   if(init!=0) {
-      if(init==2) {
+
+   if(init!=0)
+   {
+      if(init==2)
+      {
          printf("modbus>>> disable y close\n"); fflush(stdout);
          eMBDisable();
          eMBClose();
       }
       gint mode = CM_MODBUS(self)->_priv->mode;
-      if(mode==2) {  // TCP (enumerado MBMode en MIB)
-         if( eMBTCPInit( CM_MODBUS(self)->_priv->tcpport )==MB_ENOERR ) {
+      if(mode==2)
+      {  // TCP (enumerado MBMode en MIB)
+         if( eMBTCPInit( CM_MODBUS(self)->_priv->tcpport )==MB_ENOERR )
+         {
             printf("modbus>>> eMBTCPInit\n"); fflush(stdout);
             init=0;
             //eMBEnable();
-	    if( eMBEnable()==MB_ENOERR ) {
-	       printf("modbus>>> TCP eMBEnable\n"); fflush(stdout);
-	    }
-	    else {
-	       printf("modbus>>> TCP eMBEnable KO!!\n"); fflush(stdout);
-	       // XXX exit?
-	    }
+            if( eMBEnable()==MB_ENOERR )
+            {
+            	printf("modbus>>> TCP eMBEnable\n"); fflush(stdout);
+
+          	  //pasamos las Ips que son validas si esque hay alguna configurada.
+          	   char* ips_validas[]={   self_get_oid_string(myself, zigorModbusValidClient1, 0),
+          	   	   	   	   	   	   	   self_get_oid_string(myself, zigorModbusValidClient2, 0)
+          	   	   	   	   	   	   };
+          	  // printf("cmodbus-gob --> ip1=%s \n",ips_validas[0]); fflush(stdout);
+          	  // printf("cmodbus-gob --> ip1=%s \n",ips_validas[1]); fflush(stdout);
+          	   eMBIncommingIpsInit(ips_validas, 2);
+
+
+            }
+            else
+            {
+            	printf("modbus>>> TCP eMBEnable KO!!\n"); fflush(stdout);
+            	// XXX exit?
+            }
          }
-         else {
+         else
+         {
             printf("modbus>>> eMBTCPInit KO!!\n"); fflush(stdout);
             exit(-1);  // ojo lanzar app con respawn!
          }
       }
-      else if(mode==1) {
+      else if(mode==1)
+      {
          eMBInit( MB_RTU, CM_MODBUS(self)->_priv->address, CM_MODBUS(self)->_priv->n_ioport, baudrate_t[CM_MODBUS(self)->_priv->baudrate-1], parity_t[CM_MODBUS(self)->_priv->parity-1] );
          printf("modbus>>> eMBInit\n"); fflush(stdout);
          init=0;
          //eMBEnable();
-	 if( eMBEnable()==MB_ENOERR ) {
-	    printf("modbus>>> RTU eMBEnable\n"); fflush(stdout);
-	 }
-	 else {
-	    printf("modbus>>> RTU eMBEnable KO!!\n"); fflush(stdout);
-	    // XXX exit?
-	 }
+         if( eMBEnable()==MB_ENOERR )
+         {
+        	 printf("modbus>>> RTU eMBEnable\n"); fflush(stdout);
+         }
+         else
+         {
+        	 printf("modbus>>> RTU eMBEnable KO!!\n"); fflush(stdout);
+        	 // XXX exit?
+         }
       }
    }
    if(init==0) {  // ya inicializado el modbus
-      eMBPoll();
-      printd(2, "modbus>>> eMBPoll\n"); fflush(stdout);
+
+	   char* ips_validas[]={   self_get_oid_string(myself, zigorModbusValidClient1, 0),
+	             	   	   	   	   	   	   	   self_get_oid_string(myself, zigorModbusValidClient2, 0)
+	             	   	   	   	   	   	   };
+	   eMBIncommingIpsInit(ips_validas, 2);
+
+	   eMBPoll();
+	   printd(2, "modbus>>> eMBPoll\n"); fflush(stdout);
    }
-      
+
    return TRUE;
 }
 
@@ -444,7 +470,7 @@ gboolean
 otros (gpointer self) {
       char *env;
       guint address, baudrate, parity, mode, tcpport;
-      
+
       printd(2, "modbus>>> Get de parametros de Modbus\n"); fflush(stdout);
 
       // Analizar si cambio de parametros de comunicacion
@@ -455,14 +481,14 @@ otros (gpointer self) {
       tcpport = self_get_oid_int(self, zigorParamMBTCPPort, 0);
 
       com_reset_timeout = self_get_oid_int(self, zigorParamMBTCPTimeout, 0);
-      
+
       if( (env=getenv("DEBUG_LEVEL"))!=NULL )
          debuglevel=atoi(env);
 
 
       if( (CM_MODBUS(self)->_priv->address!=address) || (CM_MODBUS(self)->_priv->baudrate!=baudrate) || (CM_MODBUS(self)->_priv->parity!=parity)
               || (CM_MODBUS(self)->_priv->mode!=mode) ) {   //|| (CM_MODBUS(self)->_priv->tcpport!=tcpport) ) {
-         
+
 	 // si cambio en algun parametro RTU y modo RTU reiniciar init RTU
          if( (CM_MODBUS(self)->_priv->address!=address) || (CM_MODBUS(self)->_priv->baudrate!=baudrate) || (CM_MODBUS(self)->_priv->parity!=parity) ) {
 	    if(mode==1) {
@@ -483,7 +509,7 @@ otros (gpointer self) {
          CM_MODBUS(self)->_priv->mode = mode;
          CM_MODBUS(self)->_priv->tcpport = tcpport;
       }
-      
+
       //return TRUE;
       if(address && baudrate && parity && mode && tcpport && com_reset_timeout) {
          printd(2, "modbus>>> return FALSE\n"); fflush(stdout);
@@ -611,7 +637,7 @@ eMBRegHoldingCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNRegs, eMBRegi
             {
 		total = self_get_oid_int(myself, zigorAlarmsPresent, 0);
 		//printf("modbus>>> EVENTOS. zigorAlarmsPresent: %d, iAlarm: %d\n", total, iAlarm);
-		
+
 		if(AlarmsReg[iRegIndex].cmd == ALARMS_PRESENT) {
 		   //printf("modbus>>> ALARMS_PRESENT\n");
 		   val = total;
@@ -635,7 +661,7 @@ eMBRegHoldingCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNRegs, eMBRegi
 		      iAlarm=1;
 		      //printf("modbus>>> Proteccion iAlarm: %d\n", iAlarm);
 		   }
-		      
+
 		   key = AlarmsReg[iRegIndex].oid;
 		   //printf("modbus>>> key: %s\n", key);
 		   for(i=0; i<iAlarm; i++) {
@@ -698,7 +724,7 @@ eMBRegHoldingCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNRegs, eMBRegi
             {
 		total = self_get_oid_int(myself, zigorAlarmLogTotalEntries, 0);
 		//printf("modbus>>> HISTORICO DE EVENTOS. zigorAlarmLogTotalEntries: %d, iAlarmLog: %d\n", total, iAlarmLog);
-		
+
 		if(AlarmLogReg[iRegIndex].cmd == ALARMS_PRESENT) {
 		   //printf("modbus>>> ALARMS_PRESENT\n");
 		   val = total;
@@ -721,7 +747,7 @@ eMBRegHoldingCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNRegs, eMBRegi
 		      iAlarmLog=1;
 		      //printf("modbus>>> Proteccion iAlarm: %d\n", iAlarmLog);
 		   }
-		      
+
 		   /*
 		   key = AlarmLogReg[iRegIndex].oid;
 		   printf("key: %s\n", key);
@@ -731,7 +757,7 @@ eMBRegHoldingCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNRegs, eMBRegi
 		   }
 		   */
 		   // ahora mas facil que el caso de los Eventos:
-		   
+
 		   if(AlarmLogReg[iRegIndex].cmd == ALARMS_COND) {
 		      val = self_get_oid_int(myself, AlarmLogReg[iRegIndex].oid, iAlarmLog);
 		      //printf("modbus>>> ALARMS_COND get int del key obtenido: %d\n", val);
@@ -788,7 +814,7 @@ eMBRegHoldingCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNRegs, eMBRegi
             {
 		total = self_get_oid_int(myself, zigorDvrGapLogTotalEntries, 0);
 		//printf("modbus>>> HISTORICO DE EVENTOS. zigorAlarmLogTotalEntries: %d, iAlarmLog: %d\n", total, iAlarmLog);
-		
+
 		if(DvrGapLogReg[iRegIndex].cmd == DVRGAPLOG_PRESENT) {
 		   //printf("modbus>>> ALARMS_PRESENT\n");
 		   val = total;
@@ -811,7 +837,7 @@ eMBRegHoldingCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNRegs, eMBRegi
 		      iDvrGapLog=1;
 		      //printf("modbus>>> Proteccion iAlarm: %d\n", iAlarmLog);
 		   }
-		   
+
 		   if(DvrGapLogReg[iRegIndex].cmd == DVRGAPLOG_TIME) {
 		      rets = self_get_oid_string(myself, DvrGapLogReg[iRegIndex].oid, iDvrGapLog);
 		      val = (self_toepoch(rets) >> DvrGapLogReg[iRegIndex].offset*16) & 0xFFFF;
@@ -845,7 +871,7 @@ eMBRegHoldingCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNRegs, eMBRegi
             }
         }
     }
-    //- - - - - - - 
+    //- - - - - - -
     else
     {
         eStatus = MB_ENOREG;
@@ -919,7 +945,7 @@ get_oid_16(gpointer self, char *nombre_var, int n_instancia, ushort type, ushort
   int len;
   int i1, i2;
   int ret;
-  
+
   //printf("modbus>>> get_oid_16 -> nombre_var: %s\tn_instancia: %d\n", nombre_var, n_instancia);
 
   if(type==STRING) {
@@ -935,13 +961,13 @@ get_oid_16(gpointer self, char *nombre_var, int n_instancia, ushort type, ushort
      else
         n = 0;
      //printf("modbus>>> get_oid_mb -> string -> %c (%d)\n", n, n);
-     
+
      // segundo byte:
      if(offset16*2+1<len) {
         n = n | s[offset16*2+1]<<8;
 	//printf("modbus>>> get_oid_mb -> string -> %c (%d)\n", s[offset16*2+1], s[offset16*2+1]);
      }
-     
+
      g_free(s);
      }
   }
@@ -954,7 +980,7 @@ get_oid_16(gpointer self, char *nombre_var, int n_instancia, ushort type, ushort
         ret = sscanf(s, "%d.%d.%*d.%*d", &i1, &i2);
      else if(offset16==1)
         ret = sscanf(s, "%*d.%*d.%d.%d", &i1, &i2);
-     
+
      if(ret!=2)
         n = 0;
      else
@@ -984,7 +1010,7 @@ set_oid_16(gpointer self, char *nombre_var, int n_instancia, ushort type, ushort
   char *s;
   char s2[128];  //XXX
   int i,len1,len2;
-  
+
   // soporte para set de enteros de 16 o 32 bits
   //printf("modbus>>> set_oid_16 -> %s, %d\n", nombre_var, n_instancia);
   if(type==STRING) {
@@ -1065,7 +1091,7 @@ set_oid_16(gpointer self, char *nombre_var, int n_instancia, ushort type, ushort
         }
      }
   }
-  
+
   //printf("modbus>>> set_oid_16 -> res: %d\n", res);
   return res;
 }
@@ -1087,7 +1113,7 @@ set_oid_int(gpointer self, char *nombre_var, int n_instancia, int valor) {
   g_value_set_int(&v, valor);
   sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
   res = access_set(ACCESSIF(CM_MODBUS(self)->_priv->sds), aux_str, &v);  //set: KO=-1, OK=0
-  
+
   return res;
 }
 
@@ -1097,7 +1123,7 @@ get_oid_int(gpointer self, char *nombre_var, int n_instancia) {
   GValue *v;
   char aux_str[50];
   int n=0;
-  
+
   if(n_instancia==-1)
      sprintf(aux_str, "%s", nombre_var);
   else
@@ -1118,12 +1144,12 @@ set_oid_string(gpointer self, char *nombre_var, int n_instancia, char *str) {
   GValue v= {0,};
   char aux_str[50];
   int res=-1;  // new
-  
+
   g_value_init(&v, G_TYPE_STRING);
   g_value_set_string(&v, str);
   sprintf(aux_str, "%s.%d", nombre_var, n_instancia);
   res = access_set(ACCESSIF(CM_MODBUS(self)->_priv->sds), aux_str, &v);
-  
+
   return res;
 }
 
@@ -1134,7 +1160,7 @@ get_oid_string(gpointer self, char *nombre_var, int n_instancia) {
   GValue *v;
   char aux_str[50];
   char* s=NULL;
-  
+
   if(n_instancia==-1)
      sprintf(aux_str, "%s", nombre_var);
   else
@@ -1157,7 +1183,7 @@ get_oid_string(gpointer self, char *nombre_var, int n_instancia) {
   GString *v;
   char aux_str[50];
   char *s;
-  
+
   if(n_instancia==-1)
      sprintf(aux_str, "%s", nombre_var);
   else
@@ -1189,7 +1215,7 @@ toepoch(char *zdateandtime) {
    struct tm t;
    time_t t_of_day;
    int i;
-   
+
    i = atoi( self_substr(zdateandtime, 0, 4) );
    //printf("i:%d\n", i);
    t.tm_year = i-1900;
@@ -1211,7 +1237,7 @@ toepoch(char *zdateandtime) {
    t.tm_isdst = -1; // Is DST on? 1 = yes, 0 = no, -1 = unknown
    t_of_day = mktime(&t);
    //printf("seconds since the Epoch: %ld\n", (long) t_of_day);
-   
+
    return t_of_day;
 }
 

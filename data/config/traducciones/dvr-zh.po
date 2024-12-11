@@ -1247,3 +1247,8 @@ msgstr "最大母线电压报警"
 
 msgid "Después de guardar la IP será "
 msgstr "保存IP後會 "
+
+msgid "Modbus TCP: Cliente válido"
+msgstr "Modbus TCP：有效客戶端"
+msgid "Modbus TCP: Cliente válido (Redundante)"
+msgstr "Modbus TCP：有效客戶端（冗餘"

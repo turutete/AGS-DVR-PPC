@@ -963,10 +963,10 @@ local function setsig_handler(sds, k, v, data)
    if (k == zigorModbusMode .. ".0") then
       print("zigorModbusMode") io.flush()
       if access.get(sds,k)~=v then
-         if v==1  then  -- paso de modo TCP a RTU es el critico
+         --if v==1  then  -- paso de modo TCP a RTU es el critico
             os.execute("killall -KILL ags-modbus")
 	    print("Cambio en Modo Modbus, executing killall...")
-	 end
+	 --end
       end
    end
    if (k == zigorModbusTCPPort .. ".0") then
@@ -983,7 +983,9 @@ local function setsig_handler(sds, k, v, data)
       k == zigorModbusBaudrate .. ".0" or
       k == zigorModbusParity .. ".0" or
       k == zigorModbusMode .. ".0" or
-      k == zigorModbusTCPTimeout .. ".0" then
+      k == zigorModbusTCPTimeout .. ".0" or
+      k == zigorModbusValidClient1 .. ".0" or
+      k == zigorModbusValidClient2 .. ".0" then
          print("Cambios en parametros de Modbus") io.flush()
          if access.get(sds,k)~=v then
 	    print("Envio de SIGUSR2 para releer")
